@@ -1,22 +1,24 @@
 import motor.motor_asyncio
 from bson.objectid import ObjectId
 
+
 MONGO_DETAILS = "mongodb://localhost:27017"
 
 client = motor.motor_asyncio.AsyncIOMotorClient(MONGO_DETAILS)
 
 database = client.dicoms
 
-student_collection = database.get_collection("dicoms_collection")
+dicom_collection = database.get_collection("dicoms_collection")
+
 
 # helpers
 
 
-def dicom_helper(student) -> dict:
+def dicom_helper(dicom) -> dict:
     return {
-        "seriesID": dicom["seriesID"],
-        "studyID": dicom["studyID"],
-
+        "id": str(dicom["_id"]),
+        "series_id": dicom["series_id"],
+        "study_id": dicom["study_id"],
     }
 
 # Retrieve all dicoms present in the database
@@ -34,11 +36,12 @@ async def add_dicom(dicom_data: dict) -> dict:
     return dicom_helper(new_dicom)
 
 
-# Retrieve a dicom with a matching ID
-async def retrieve_dicom(seriesID: str) -> dict:
-    dicom = await dicom_collection.find_one({"_id": ObjectId(seriesID)})
+# Retrieve a dicom with a matching SeriesUID
+async def retrieve_dicom(series_id: str) -> dict:
+    dicom = await dicom_collection.find_one({"series_id": series_id})
     if dicom:
         return dicom_helper(dicom)
+
 
 
 
