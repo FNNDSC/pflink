@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Body
 from fastapi.encoders import jsonable_encoder
 
-from database import (
+from controllers.dicom import (
     add_dicom,
     retrieve_dicom,
     retrieve_dicoms,
