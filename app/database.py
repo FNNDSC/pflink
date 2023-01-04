@@ -7,6 +7,9 @@ MONGO_DETAILS = "mongodb://localhost:27017"
 client = motor.motor_asyncio.AsyncIOMotorClient(MONGO_DETAILS)
 
 database = client.dicoms
+pfdcm_db = client.pfdcm
+
+pfdcm_info = pfdcm_db.get_collection("pfdcm_collection")
 
 dicom_collection = database.get_collection("dicoms_collection")
 
