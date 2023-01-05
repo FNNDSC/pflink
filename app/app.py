@@ -3,12 +3,14 @@ from pydantic   import BaseModel, Field
 from typing     import Optional, List, Tuple
 from routes.dicom import router as DicomRouter
 from routes.pfdcm import router as PfdcmRouter
+from routes.cube import router as CubeRouter
 from models.basic import helloRouter_create
     
 app = FastAPI()
 
 app.include_router(DicomRouter, tags=["Dicom"], prefix="/dicom")
 app.include_router(PfdcmRouter, tags=["Pfdcm"], prefix="/pfdcm")
+app.include_router(CubeRouter, tags=["Cube"], prefix="/cube")
 
 # /hello dependencies
 # these modules provide some information on the host
