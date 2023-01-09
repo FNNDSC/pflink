@@ -6,8 +6,6 @@ from    pydantic            import BaseModel, Field
 from    typing              import Optional, List, Dict
 from    datetime            import datetime
 
-from    db                  import pfdb
-import  pudb
 
 class PACSqueryCore(BaseModel):
     """The PACS Query model"""
@@ -57,3 +55,8 @@ class PACSqueyReturnModel(BaseModel):
 class ValueStr(BaseModel):
     value           : str = "" 
 
+def ResponseModel(message):
+    return {
+        "code": 200,
+        "message": message,
+    }
