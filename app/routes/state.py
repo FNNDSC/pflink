@@ -44,5 +44,31 @@ async def get_about_pfdcm():
     x = requests.get(pfdcm_about_api)
     return PACSqueyReturnModel(response=x.text)
 
+@router.post("/{mrn}", response_description="Just some example JSON")
+async def post_dicom(mrn):
+    pfdcm_list = []
+    pfdcm_list = await retrieve_pfdcms()
+    
+    pfdcm_url = pfdcm_list[0]['server_ip'] + ":" + pfdcm_list[0]['server_port']
+    pfdcm_dicom_api = f'{pfdcm_url}/api/v1/PACS/thread/pypx/'
+    headers = {'Content-Type': 'application/json','accept': 'application/json'}
+    myobj = {
+  "PACSservice": {
+    "value": 'orthanc'
+  },
+  "listenerService": {
+    "value": "default"
+  },
+  "PACSdirective": {
+    "PatientID": mrn,
+    "withFeedBack": False,
+    "then": "status",
+    "thenArgs": "",
+    "dblogbasepath": '/home/dicom/log',
+    "json_response": True
+  }
+}
 
+    x = requests.post(pfdcm_dicom_api, json = myobj, headers=headers)
+    return PACSqueyReturnModel(response=str(x.text))
 
