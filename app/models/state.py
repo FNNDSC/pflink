@@ -49,7 +49,7 @@ class PACSqueyReturnModel(BaseModel):
     """
     A full model that is returned from a query call
     """
-    response        : str
+    response        : dict
 
 # Some "helper" classes
 class ValueStr(BaseModel):

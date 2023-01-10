@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Body
 from fastapi.encoders import jsonable_encoder
 import requests
+import json
 from models.state import (
     PACSqueyReturnModel,
     ResponseModel,
@@ -50,7 +51,7 @@ async def post_dicom(mrn):
     pfdcm_list = await retrieve_pfdcms()
     
     pfdcm_url = pfdcm_list[0]['server_ip'] + ":" + pfdcm_list[0]['server_port']
-    pfdcm_dicom_api = f'{pfdcm_url}/api/v1/PACS/thread/pypx/'
+    pfdcm_dicom_api = f'{pfdcm_url}/api/v1/PACS/sync/pypx/'
     headers = {'Content-Type': 'application/json','accept': 'application/json'}
     myobj = {
   "PACSservice": {
@@ -70,5 +71,6 @@ async def post_dicom(mrn):
 }
 
     x = requests.post(pfdcm_dicom_api, json = myobj, headers=headers)
-    return PACSqueyReturnModel(response=str(x.text))
+    d_results = json.loads(x.text)
+    return PACSqueyReturnModel(response=d_results["pypx"]["then"]["00-status"])
 
