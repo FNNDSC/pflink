@@ -15,16 +15,6 @@ from controllers.pfdcm import (
 router = APIRouter()
 
 
-@router.get("/{mrn}", response_description="Just some example JSON")
-async def get_dicom(mrn):
-    pfdcm_list = []
-    pfdcm_list = await retrieve_pfdcms()
-    
-    pfdcm_url = pfdcm_list[0]['server_ip'] + ":" + pfdcm_list[0]['server_port']
-    pfdcm_dicom_api = f'{pfdcm_url}/api/v1/dicom/?mrn={mrn}'
-    x = requests.get(pfdcm_dicom_api)
-    return PACSqueyReturnModel(response=x.text)
-
 @router.get("/hello/", response_description="Hello from PFDCM")
 async def get_hello_pfdcm():
     pfdcm_list = []
