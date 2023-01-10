@@ -2,7 +2,7 @@ from fastapi import APIRouter, Body
 from fastapi.encoders import jsonable_encoder
 import requests
 import json
-from models.state import (
+from models.dicom import (
     PACSqueyReturnModel,
     ResponseModel,
 )
@@ -23,7 +23,8 @@ async def get_hello_pfdcm():
     pfdcm_url = pfdcm_list[0]['server_ip'] + ":" + pfdcm_list[0]['server_port']
     pfdcm_hello_api = f'{pfdcm_url}/api/v1/hello/'
     x = requests.get(pfdcm_hello_api)
-    return PACSqueyReturnModel(response=x.text)
+    d_results = json.loads(x.text)
+    return PACSqueyReturnModel(response=d_results)
 
 @router.get("/about/", response_description="About PFDCM")
 async def get_about_pfdcm():
@@ -33,7 +34,8 @@ async def get_about_pfdcm():
     pfdcm_url = pfdcm_list[0]['server_ip'] + ":" + pfdcm_list[0]['server_port']
     pfdcm_about_api = f'{pfdcm_url}/api/v1/about/'
     x = requests.get(pfdcm_about_api)
-    return PACSqueyReturnModel(response=x.text)
+    d_results = json.loads(x.text)
+    return PACSqueyReturnModel(response=d_results)
 
 @router.post("/status/", response_description="Just some example JSON")
 async def post_dicom(series_id,study_id):
