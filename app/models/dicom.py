@@ -7,33 +7,12 @@ from    typing              import Optional, List, Dict
 from    datetime            import datetime
 
 
-class PACSqueryCore(BaseModel):
+class DicomQuerySchema(BaseModel):
     """The PACS Query model"""
-    AccessionNumber                     : str   = ""
-    PatientID                           : str   = ""
-    PatientName                         : str   = ""
-    PatientBirthDate                    : str   = ""
-    PatientAge                          : str   = ""
-    PatientSex                          : str   = ""
-    StudyDate                           : str   = ""
-    StudyDescription                    : str   = ""
     StudyInstanceUID                    : str   = ""
-    Modality                            : str   = ""
-    ModalitiesInStudy                   : str   = ""
-    PerformedStationAETitle             : str   = ""
-    NumberOfSeriesRelatedInstances      : str   = ""
-    InstanceNumber                      : str   = ""
-    SeriesDate                          : str   = ""
-    SeriesDescription                   : str   = ""
     SeriesInstanceUID                   : str   = ""
-    ProtocolName                        : str   = ""
-    AcquisitionProtocolDescription      : str   = ""
-    AcquisitionProtocolName             : str   = ""
-    withFeedBack                        : bool  = False
     then                                : str   = ""
     thenArgs                            : str   = ""
-    json_response                       : bool  = True
-
 class PACSasync(BaseModel):
     """A model returned when an async PACS directive is indicated"""
     directiveType                       : str   = "async"

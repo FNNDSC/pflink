@@ -34,7 +34,7 @@ async def about_pfdcm() -> dict:
     return d_results
     
 # Get the status about a dicom inside pfdcm using its series_uid & study_uid
-async def dicom_status(study_id: str, series_id: str) -> dict:
+async def dicom_status(dicom: dict) -> dict:
     pfdcm_list = []
     pfdcm_list = await retrieve_pfdcms()
     
@@ -64,13 +64,19 @@ async def dicom_status(study_id: str, series_id: str) -> dict:
     return d_results  
 
 # Retrieve/push/register a dicom using pfdcm (WIP)
-async def dicom_do(verb: str, study_id: str, series_id: str) -> dict:
+async def dicom_do(dicom: dict) -> dict:
     if verb=="retrieve":
         thenArgs = ""
     elif verb == "push":
-        thenArgs = "{\"db\":\"/home/dicom/log\",\"swift\":\"local\",\"swiftServicesPACS\":\"orthanc\",\"swiftPackEachDICOM\":true}"
+        thenArgs = "{\"db\":\"/home/dicom/log\", \
+                     \"swift\":\"local\", \
+                     \"swiftServicesPACS\":\"orthanc\", \
+                     \"swiftPackEachDICOM\":true}"
     elif verb=="register":
-        thenArgs = "{\"db\":\"/home/dicom/log\",\"CUBE\":\"local\",\"swiftServicesPACS\":\"orthanc\",\"parseAllFilesWithSubStr\":\"dcm\"}"
+        thenArgs = "{\"db\":\"/home/dicom/log\", \
+                     \"CUBE\":\"local\", \
+                     \"swiftServicesPACS\":\"orthanc\", \
+                     \"parseAllFilesWithSubStr\":\"dcm\"}"
     pfdcm_list = []
     pfdcm_list = await retrieve_pfdcms()
     

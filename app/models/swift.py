@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 class SwiftSchema(BaseModel):
     swift_key: str = Field(...)
     swift_services_pacs   : str = Field(...)
-    swift_packeach_dicom : bool = Field(...)
+
     
 
 def SwiftPutModel(data):
