@@ -5,7 +5,7 @@ import json
 
 
 from controllers.pfdcm import (
-    retrieve_pfdcms,
+    retrieve_pfdcm,
 )
 
         
@@ -35,26 +35,26 @@ async def about_pfdcm() -> dict:
     
 # Get the status about a dicom inside pfdcm using its series_uid & study_uid
 async def dicom_status(dicom: dict) -> dict:
-    pfdcm_list = []
-    pfdcm_list = await retrieve_pfdcms()
+    pfdcm_name = dicom.PFDCMservice
+    pfdcm_server = await retrieve_pfdcm(pfdcm_name)
     
-    pfdcm_url = pfdcm_list[0]['server_ip'] + ":" + pfdcm_list[0]['server_port']
+    pfdcm_url = pfdcm_server['server_ip'] + ":" +pfdcm_server['server_port']
     pfdcm_dicom_api = f'{pfdcm_url}/api/v1/PACS/sync/pypx/'
     headers = {'Content-Type': 'application/json','accept': 'application/json'}
     myobj = {
         "PACSservice": {
-          "value": 'orthanc'
+          "value": dicom.PACSservice
         },
         "listenerService": {
-          "value": "default"
+          "value": dicom.listenerService
          },
         "PACSdirective": {
-          "SeriesInstanceUID": series_id,
-          "StudyInstanceUID": study_id,
+          "SeriesInstanceUID": dicom.SeriesInstanceUID,
+          "StudyInstanceUID": dicom.StudyInstanceUID,
           "withFeedBack": True,
-          "then": "status",
+          "then": 'status',
           "thenArgs": "",
-          "dblogbasepath": '/home/dicom/log',
+          "dblogbasepath": dicom.dblogbasepath,
           "json_response": True
         }
       }

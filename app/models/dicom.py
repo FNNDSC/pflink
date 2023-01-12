@@ -1,24 +1,30 @@
 str_description = """
-    The data models/schemas for the PACS QR collection.
+    The data models/schemas for DICOM operations.
 """
 
 from    pydantic            import BaseModel, Field
 from    typing              import Optional, List, Dict
 from    datetime            import datetime
 
-
-class DicomQuerySchema(BaseModel):
-    """The PACS Query model"""
+class DicomThenSchema(BaseModel):
+    """A model returned when an async PACS directive is indicated"""
+    db                       : str   = ""
+    swift                    : str   = ""
+    swiftServicesPACS        : str   = ""                          
+    swiftPackEachDICOM       : bool  = True  
+    CUBE                     : str   = ""
+    parseAllFilesWithSubStr  : str   = ""
+    
+class DicomStatusQuerySchema(BaseModel):
+    """The Dicom status Query model"""
+    PFDCMservice                        : str   = ""
+    PACSservice                         : str   = ""
+    listenerService                     : str   = ""
     StudyInstanceUID                    : str   = ""
     SeriesInstanceUID                   : str   = ""
-    then                                : str   = ""
-    thenArgs                            : str   = ""
-class PACSasync(BaseModel):
-    """A model returned when an async PACS directive is indicated"""
-    directiveType                       : str   = "async"
-    response                            : dict
-    timestamp                           : str
-    PACSdirective                       : dict
+    dblogbasepath                       : str   = ""
+
+    
 
 class time(BaseModel):
     """A simple model that has a time string field"""
