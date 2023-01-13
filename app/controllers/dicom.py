@@ -62,6 +62,12 @@ async def dicom_status(dicom: dict) -> dict:
     response = requests.post(pfdcm_dicom_api, json = myobj, headers=headers)
     d_results = json.loads(response.text)  
     return d_results  
+    
+async def run_dicom_workflow(dicom : dict) -> dict:
+    await dicom_do("retrieve",dicom.StudyInstanceUID,dicom.SeriesInstanceUID)
+    await dicom_do("push",dicom.StudyInstanceUID,dicom.SeriesInstanceUID)
+    await dicom_do("register",dicom.StudyInstanceUID,dicom.SeriesInstanceUID)
+    return []
 
 # Retrieve/push/register a dicom using pfdcm (WIP)
 async def dicom_do(verb : str,study_id : str,series_id : str) -> dict:

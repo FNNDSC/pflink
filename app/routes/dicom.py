@@ -12,7 +12,7 @@ from controllers.dicom import (
     hello_pfdcm,
     about_pfdcm,
     dicom_status,
-    dicom_do,
+    run_dicom_workflow,
 )
 
 router = APIRouter()
@@ -33,8 +33,8 @@ async def post_dicom(dicom: DicomStatusQuerySchema = Body(...)):
     response = await dicom_status(dicom)
     return PACSqueyReturnModel(response=response)
     
-@router.post("/do={verb}/", response_description="Retrieve/push/register dicom")
-async def post_dicom(verb,study_id,series_id):
-    response = await dicom_do(verb,study_id,series_id)
+@router.post("/do/", response_description="Retrieve/push/register dicom")
+async def post_dicom(dicom : DicomActionQuerySchema = Body(...)):
+    response = await run_dicom_workflow(dicom)
     return PACSqueyReturnModel(response=response)
 
