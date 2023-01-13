@@ -3,9 +3,9 @@ from bson.objectid import ObjectId
 import requests
 import json
 
-
 from controllers.pfdcm import (
     retrieve_pfdcm,
+    retrieve_pfdcms,
 )
 
         
@@ -64,19 +64,25 @@ async def dicom_status(dicom: dict) -> dict:
     return d_results  
 
 # Retrieve/push/register a dicom using pfdcm (WIP)
-async def dicom_do(dicom: dict) -> dict:
+async def dicom_do(verb : str,study_id : str,series_id : str) -> dict:
     if verb=="retrieve":
         thenArgs = ""
     elif verb == "push":
-        thenArgs = "{\"db\":\"/home/dicom/log\", \
-                     \"swift\":\"local\", \
-                     \"swiftServicesPACS\":\"orthanc\", \
-                     \"swiftPackEachDICOM\":true}"
+
+         thenArgs = {'db':'/home/dicom/log',
+                     'swift':"local", 
+                     'swiftServicesPACS':'orthanc',
+                     'swiftPackEachDICOM':True}
+                   
     elif verb=="register":
-        thenArgs = "{\"db\":\"/home/dicom/log\", \
-                     \"CUBE\":\"local\", \
-                     \"swiftServicesPACS\":\"orthanc\", \
-                     \"parseAllFilesWithSubStr\":\"dcm\"}"
+        thenArgs = {
+                     "db": "/home/dicom/log",
+                     "CUBE": "local",
+                     "swiftServicesPACS": "orthanc",
+                     "parseAllFilesWithSubStr": "dcm"
+                   }
+    thenArgs = json.dumps(thenArgs,separators=(',', ':'))
+    
     pfdcm_list = []
     pfdcm_list = await retrieve_pfdcms()
     
@@ -97,7 +103,7 @@ async def dicom_do(dicom: dict) -> dict:
     "then": verb,
     "thenArgs": thenArgs,
     "dblogbasepath": '/home/dicom/log',
-    "json_response": True
+    "json_response": False
   }
 }
 

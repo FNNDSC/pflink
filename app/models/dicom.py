@@ -24,7 +24,15 @@ class DicomStatusQuerySchema(BaseModel):
     SeriesInstanceUID                   : str   = ""
     dblogbasepath                       : str   = ""
 
-    
+class DicomActionQuerySchema(BaseModel):
+    """The Dicom status Query model"""
+    PFDCMservice                        : str   = ""
+    PACSservice                         : str   = ""
+    listenerService                     : str   = ""
+    StudyInstanceUID                    : str   = ""
+    SeriesInstanceUID                   : str   = ""
+    dblogbasepath                       : str   = ""
+    thenArgs                            : DicomThenSchema
 
 class time(BaseModel):
     """A simple model that has a time string field"""

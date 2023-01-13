@@ -4,6 +4,7 @@ import requests
 import json
 from models.dicom import (
     DicomStatusQuerySchema,
+    DicomActionQuerySchema,
     PACSqueyReturnModel,
     ResponseModel,
 )
@@ -32,8 +33,8 @@ async def post_dicom(dicom: DicomStatusQuerySchema = Body(...)):
     response = await dicom_status(dicom)
     return PACSqueyReturnModel(response=response)
     
-@router.post("/do/", response_description="Retrieve/push/register dicom")
-async def post_dicom(dicom: DicomStatusQuerySchema = Body(...)):
-    response = await dicom_do(dicom)
+@router.post("/do={verb}/", response_description="Retrieve/push/register dicom")
+async def post_dicom(verb,study_id,series_id):
+    response = await dicom_do(verb,study_id,series_id)
     return PACSqueyReturnModel(response=response)
 
