@@ -1,6 +1,7 @@
 import motor.motor_asyncio
 from bson.objectid import ObjectId
-
+import requests
+import json
 
 MONGO_DETAILS = "mongodb://localhost:27017"
 
@@ -42,3 +43,23 @@ async def retrieve_pfdcm(service_name: str) -> dict:
     pfdcm = await pfdcm_collection.find_one({"service_name": service_name})
     if pfdcm:
         return pfdcm_helper(pfdcm)
+        
+# Get a 'hello' response from pfdcm
+async def hello_pfdcm(pfdcm : dict) -> dict:
+    pfdcm_name = pfdcm.PFDCMservice
+    pfdcm_server = await retrieve_pfdcm(pfdcm_name)    
+    pfdcm_url = pfdcm_server['server_ip'] + ":" +pfdcm_server['server_port']
+    pfdcm_hello_api = f'{pfdcm_url}/api/v1/hello/'
+    response = requests.get(pfdcm_hello_api)
+    d_results = json.loads(response.text)
+    return d_results
+
+# Get details about pfdcm
+async def about_pfdcm(pfdcm : dict) -> dict:
+    pfdcm_name = pfdcm.PFDCMservice
+    pfdcm_server = await retrieve_pfdcm(pfdcm_name)    
+    pfdcm_url = pfdcm_server['server_ip'] + ":" +pfdcm_server['server_port']
+    pfdcm_about_api = f'{pfdcm_url}/api/v1/about/'    
+    response = requests.get(pfdcm_about_api)
+    d_results = json.loads(response.text)
+    return d_results

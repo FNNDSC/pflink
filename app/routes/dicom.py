@@ -9,24 +9,11 @@ from models.dicom import (
     ResponseModel,
 )
 from controllers.dicom import (
-    hello_pfdcm,
-    about_pfdcm,
     dicom_status,
     run_dicom_workflow,
 )
 
 router = APIRouter()
-
-
-@router.get("/hello/", response_description="Hello from PFDCM")
-async def get_hello_pfdcm():
-    response = await hello_pfdcm()
-    return PACSqueyReturnModel(response=response)
-
-@router.get("/about/", response_description="About PFDCM")
-async def get_about_pfdcm():
-    response = await about_pfdcm()
-    return PACSqueyReturnModel(response=response)
 
 @router.post("/status/", response_description="Status of a dicom")
 async def post_dicom(dicom: DicomStatusQuerySchema = Body(...)):

@@ -5,13 +5,17 @@ from controllers.pfdcm import (
     add_pfdcm,
     retrieve_pfdcm,
     retrieve_pfdcms,
+    hello_pfdcm,
+    about_pfdcm,
     
 )
 from models.pfdcm import (
     PfdcmSchema,
+    PfdcmQuerySchema,
     PfdcmGetModel,
     PfdcmPutModel,
     ErrorResponseModel,
+    PfdcmQueryReturnModel,
 )
 
 router = APIRouter()
@@ -37,7 +41,15 @@ async def get_pfdcm_data(service_name):
         return PfdcmGetModel(pfdcm, "pfdcm data retrieved successfully")
     return ErrorResponseModel("An error occurred.", 404, "Dicom doesn't exist.")
 
+@router.post("/hello/", response_description="Hello from PFDCM")
+async def get_hello_pfdcm(pfdcm : PfdcmQuerySchema = Body(...)):
+    response = await hello_pfdcm(pfdcm)
+    return PfdcmQueryReturnModel(response=response)
 
+@router.post("/about/", response_description="About PFDCM")
+async def get_about_pfdcm(pfdcm : PfdcmQuerySchema = Body(...)):
+    response = await about_pfdcm(pfdcm)
+    return PfdcmQueryReturnModel(response=response)
 
 
 

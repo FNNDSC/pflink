@@ -33,6 +33,19 @@ class DicomActionQuerySchema(BaseModel):
     SeriesInstanceUID                   : str   = ""
     dblogbasepath                       : str   = ""
     thenArgs                            : DicomThenSchema
+    
+class DicomStatusResponseSchema(BaseModel):
+    StudyFound                          : bool = False
+    Retrieved                           : str  = ""
+    Pushed                              : str  = ""
+    Registered                          : str  = ""
+    FeedCreated                         : bool = False
+    FeedName                            : str  = ""
+    WorkflowStarted                     : bool = False
+    FeedProgress                        : str  = ""
+    FeedStatus                          : str  = ""
+    Message                             : str  = ""
+    Error                               : str  = ""
 
 class time(BaseModel):
     """A simple model that has a time string field"""

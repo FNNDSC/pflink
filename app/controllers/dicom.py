@@ -7,31 +7,10 @@ from controllers.pfdcm import (
     retrieve_pfdcm,
     retrieve_pfdcms,
 )
+from models.dicom import (
+    DicomStatusResponseSchema,
+)
 
-        
-# Get a 'hello' response from pfdcm
-async def hello_pfdcm() -> dict:
-    pfdcm_list = []
-    pfdcm_list = await retrieve_pfdcms()
-    
-    pfdcm_url = pfdcm_list[0]['server_ip'] + ":" + pfdcm_list[0]['server_port']
-    pfdcm_hello_api = f'{pfdcm_url}/api/v1/hello/'
-    
-    response = requests.get(pfdcm_hello_api)
-    d_results = json.loads(response.text)
-    return d_results
-
-# Get details about pfdcm
-async def about_pfdcm() -> dict:
-    pfdcm_list = []
-    pfdcm_list = await retrieve_pfdcms()
-    
-    pfdcm_url = pfdcm_list[0]['server_ip'] + ":" + pfdcm_list[0]['server_port']
-    pfdcm_about_api = f'{pfdcm_url}/api/v1/about/'
-    
-    response = requests.get(pfdcm_about_api)
-    d_results = json.loads(response.text)
-    return d_results
     
 # Get the status about a dicom inside pfdcm using its series_uid & study_uid
 async def dicom_status(dicom: dict) -> dict:
@@ -61,15 +40,25 @@ async def dicom_status(dicom: dict) -> dict:
 
     response = requests.post(pfdcm_dicom_api, json = myobj, headers=headers)
     d_results = json.loads(response.text)  
-    return d_results  
+    exists =  d_results['pypx']['then']['00-status']['study']
+    if exists:
+        return parseResponse(exists[0][dicom.StudyInstanceUID][0]['images'])
+    return DicomStatusResponseSchema(Message = "Study not found.",
+                                     StudyFound = False)
     
-async def run_dicom_workflow(dicom : dict) -> dict:
+ 
+# Retrieve/push/register a dicom using pfdcm (WIP)   
+async def run_dicom_workflow(dicom : dict) -> dict:   
+    ## Step 1:
+    ## Step 2:
+    ## Step 3:
     await dicom_do("retrieve",dicom.StudyInstanceUID,dicom.SeriesInstanceUID)
     await dicom_do("push",dicom.StudyInstanceUID,dicom.SeriesInstanceUID)
     await dicom_do("register",dicom.StudyInstanceUID,dicom.SeriesInstanceUID)
-    return []
+    statusResponse = await dicom_status(dicom)
+    return statusResponse
 
-# Retrieve/push/register a dicom using pfdcm (WIP)
+### Helper Methods ###
 async def dicom_do(verb : str,study_id : str,series_id : str) -> dict:
     if verb=="retrieve":
         thenArgs = ""
@@ -115,4 +104,26 @@ async def dicom_do(verb : str,study_id : str,series_id : str) -> dict:
 
     response = requests.post(pfdcm_dicom_api, json = myobj, headers=headers)
     d_results = json.loads(response.text) 
-    return d_results   
+    return d_results
+    
+## Parse JSON object for status
+##
+##
+##
+##
+def parseResponse( response : dict) -> dict:
+    totalImages = response["requested"]["count"]
+    totalRetrieved = response["packed"]["count"]
+    totalPushed = response["pushed"]["count"]
+    totalRegistered = response["registered"]["count"]
+    
+    status = DicomStatusResponseSchema(
+               Retrieved  = str (round((totalRetrieved/totalImages)*100)) + "%",
+               Pushed = str(round((totalPushed/totalImages)*100)) + "%",
+               Registered = str(round((totalRegistered/totalImages)*100)) + "%",
+               StudyFound = True
+             )
+    if totalImages<0:
+        return DicomStatusResponseSchema(Message =  "Run workflow query to get status.",
+                                         StudyFound = True)
+    return status

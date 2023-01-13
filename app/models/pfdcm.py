@@ -7,6 +7,12 @@ class PfdcmSchema(BaseModel):
     service_name: str = Field(...)
     server_ip   : str = Field(...)
     server_port : str = Field(...)
+    
+class PfdcmQuerySchema(BaseModel):
+    PFDCMservice: str = ""
+    
+class PfdcmQueryReturnModel(BaseModel):
+    response: dict
 
 def PfdcmPutModel(data):
     info     :data
