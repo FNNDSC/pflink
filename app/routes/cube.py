@@ -15,7 +15,12 @@ from models.cube import (
 router = APIRouter()
 
 
-@router.get("/", response_description="cube setup info")
+@router.get(
+    "/",
+    response_description="cube setup info",
+    summary="GET CUBE setup info like url and port",
+    
+)
 async def get_cube():
     cubes = await retrieve_cubes()
     if cubes:
