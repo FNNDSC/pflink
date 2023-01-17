@@ -2,6 +2,9 @@ import motor.motor_asyncio
 from bson.objectid import ObjectId
 import requests
 import json
+from chrisclient import client
+
+cl = client.Client('http://localhost:8000/api/v1/', 'chris', 'chris1234')
 
 from controllers.pfdcm import (
     retrieve_pfdcm,
@@ -55,8 +58,10 @@ async def run_dicom_workflow(dicom : dict) -> dict:
     await dicom_do("retrieve",dicom.StudyInstanceUID,dicom.SeriesInstanceUID)
     await dicom_do("push",dicom.StudyInstanceUID,dicom.SeriesInstanceUID)
     await dicom_do("register",dicom.StudyInstanceUID,dicom.SeriesInstanceUID)
-    statusResponse = await dicom_status(dicom)
-    return statusResponse
+    params = {"name" : dicom.StudyInstanceUID}
+    
+    response = startFeed(params)
+    return response
 
 ### Helper Methods ###
 async def dicom_do(verb : str,study_id : str,series_id : str) -> dict:
@@ -127,3 +132,20 @@ def parseResponse( response : dict) -> dict:
         return DicomStatusResponseSchema(Message =  "Run workflow query to get status.",
                                          StudyFound = True)
     return status
+    
+def startFeed(params: dict) -> dict:
+    files = cl.get_pacs_files(params)
+    path = files['data'][0]['fname']
+    
+    dircopy_id = cl.get_plugins({'name':'pl-dircopy'})['data'][0]['id']
+    
+    # create a feed
+    response = cl.create_plugin_instance(dircopy_id,{'title' : 'new-feed','dir' : path})
+    
+    feed_id = response['id']
+    
+    pipeline_id = cl.get_pipelines({'name':'tar_gzip'})['data'][0]['id']
+    
+    response = cl.create_workflow(pipeline_id,{'previous_plugin_inst_id':feed_id})
+    
+    return response
