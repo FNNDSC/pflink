@@ -15,6 +15,13 @@ class DicomThenSchema(BaseModel):
     CUBE                     : str   = ""
     parseAllFilesWithSubStr  : str   = ""
     
+class DicomCubeQuerySchema(BaseModel):
+    User                                : str  = "" 
+    Cube                                : str  = "" 
+    Client                              : str  = ""
+    Pipeline                            : str  = ""
+    App                                 : str  = ""
+        
 class DicomStatusQuerySchema(BaseModel):
     """The Dicom status Query model"""
     PFDCMservice                        : str   = ""
@@ -69,6 +76,7 @@ class DicomActionQuerySchema(BaseModel):
     AcquisitionProtocolName             : str   = ""
     dblogbasepath                       : str   = ""
     thenArgs                            : DicomThenSchema
+    cubeArgs                            : DicomCubeQuerySchema
     
 class DicomStatusResponseSchema(BaseModel):
     StudyFound                          : bool = False
@@ -82,7 +90,7 @@ class DicomStatusResponseSchema(BaseModel):
     FeedStatus                          : str  = ""
     Message                             : str  = ""
     Error                               : str  = ""
-
+        
 class time(BaseModel):
     """A simple model that has a time string field"""
     time            : str

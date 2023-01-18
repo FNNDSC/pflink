@@ -2,9 +2,9 @@ import motor.motor_asyncio
 from bson.objectid import ObjectId
 import requests
 import json
-from chrisclient import client
+from controllers.PythonChrisClient import PythonChrisClient
+from datetime import datetime
 
-cl = client.Client('http://localhost:8000/api/v1/', 'chris', 'chris1234')
 
 from controllers.pfdcm import (
     retrieve_pfdcm,
@@ -58,9 +58,16 @@ async def run_dicom_workflow(dicom : dict) -> dict:
     await dicom_do("retrieve",dicom.StudyInstanceUID,dicom.SeriesInstanceUID)
     await dicom_do("push",dicom.StudyInstanceUID,dicom.SeriesInstanceUID)
     await dicom_do("register",dicom.StudyInstanceUID,dicom.SeriesInstanceUID)
-    params = {"name" : dicom.StudyInstanceUID}
     
-    response = startFeed(params)
+    ## Step 4: Create a feed on registered PACS files
+    current_dateTime = datetime.now()
+    feedName = "pflink-" + dicom.SeriesInstanceUID + "-" + dicom.cubeArgs.App + str(current_dateTime)
+    feedParams = {"dicomStudyUID" : dicom.StudyInstanceUID,
+                  "pipeline_name" : dicom.cubeArgs.Pipeline,
+                  "plugin_name"   : "pl-dircopy",
+                  "feed_name"     : feedName}
+    
+    response = startFeed(feedParams)
     return response
 
 ### Helper Methods ###
@@ -133,19 +140,35 @@ def parseResponse( response : dict) -> dict:
                                          StudyFound = True)
     return status
     
+##  Create a new feed in CUBE with the provided params
+##
+##
+##
+##    
 def startFeed(params: dict) -> dict:
-    files = cl.get_pacs_files(params)
-    path = files['data'][0]['fname']
+
+    ## Create a Chris Client
+    cl = PythonChrisClient()
     
-    dircopy_id = cl.get_plugins({'name':'pl-dircopy'})['data'][0]['id']
+    ## Get the Swift path
+    swiftSearchParams = {"name": params["dicomStudyUID"]}
+    path = cl.getSwiftPath(swiftSearchParams)
     
-    # create a feed
-    response = cl.create_plugin_instance(dircopy_id,{'title' : 'new-feed','dir' : path})
+    ## Get plugin Id 
+    pluginSearchParams = {"name": params["plugin_name"]}   
+    plugin_id = cl.getPluginId(pluginSearchParams)
     
-    feed_id = response['id']
+    ## create a feed
+    feedParams = {'title' : params["feed_name"],'dir' : path}
+    feedResponse = cl.createFeed(plugin_id,feedParams)
+    feed_id = feedResponse['id']
     
-    pipeline_id = cl.get_pipelines({'name':'tar_gzip'})['data'][0]['id']
+    ## Get pipeline id
+    pipelineSearchParams = {'name':params["pipeline_name"]}
+    pipeline_id = cl.getPipelineId(pipelineSearchParams)
     
-    response = cl.create_workflow(pipeline_id,{'previous_plugin_inst_id':feed_id})
+    ## Create a workflow
+    wfParams = {'previous_plugin_inst_id':feed_id}
+    wfResponse = cl.createWorkflow(pipeline_id, wfParams)
     
-    return response
+    return wfResponse
