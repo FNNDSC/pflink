@@ -65,9 +65,11 @@ async def run_dicom_workflow(dicom : dict) -> dict:
     feedParams = {"dicomStudyUID" : dicom.StudyInstanceUID,
                   "pipeline_name" : dicom.cubeArgs.Pipeline,
                   "plugin_name"   : "pl-dircopy",
-                  "feed_name"     : feedName}
+                  "feed_name"     : feedName,
+                  "pfdcm_name"    : dicom.PFDCMservice,
+                  "cube_name"     : dicom.thenArgs.CUBE}
     
-    response = startFeed(feedParams)
+    response = await startFeed(feedParams)
     return response
 
 ### Helper Methods ###
@@ -145,10 +147,19 @@ def parseResponse( response : dict) -> dict:
 ##
 ##
 ##    
-def startFeed(params: dict) -> dict:
-
+async def startFeed(params: dict) -> dict:
+    pfdcm_name = params["pfdcm_name"]
+    pfdcm_server = await retrieve_pfdcm(pfdcm_name)
+    
+    pfdcm_url = pfdcm_server['server_ip'] + ":" +pfdcm_server['server_port']
+    cubeResource = params["cube_name"]
+    pfdcm_smdb_cube_api = f'{pfdcm_url}/api/v1/SMDB/CUBE/{cubeResource}/' 
+    response = requests.get(pfdcm_smdb_cube_api)
+    d_results = json.loads(response.text)  
+    
+    print(d_results["cubeInfo"]["url"],d_results["cubeInfo"]["username"],d_results["cubeInfo"]["password"])
     ## Create a Chris Client
-    cl = PythonChrisClient()
+    cl = PythonChrisClient("http://localhost:8000/api/v1/","chris","chris1234")
     
     ## Get the Swift path
     swiftSearchParams = {"name": params["dicomStudyUID"]}
