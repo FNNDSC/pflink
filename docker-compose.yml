@@ -1,6 +1,10 @@
 version: '3.8'
 
 services:
+  pflink:
+    image : pflink
+    container_name: pflink
+    network_mode: host
   mongodb:
     image : mongo
     container_name: mongodb
