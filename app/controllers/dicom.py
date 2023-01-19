@@ -4,6 +4,7 @@ import requests
 import json
 from controllers.PythonChrisClient import PythonChrisClient
 from datetime import datetime
+import time
 
 
 from controllers.pfdcm import (
@@ -14,9 +15,17 @@ from models.dicom import (
     DicomStatusResponseSchema,
 )
 
+job_checklist = {
+                  1 : "retrieve",
+                  2 : "push",
+                  3 : "register",
+                  4 : "create feed",
+                  5 : "create workflow"
+                }
     
 # Get the status about a dicom inside pfdcm using its series_uid & study_uid
 async def dicom_status(dicom: dict) -> dict:
+    
     pfdcm_name = dicom.PFDCMservice
     pfdcm_server = await retrieve_pfdcm(pfdcm_name)
     
@@ -44,33 +53,50 @@ async def dicom_status(dicom: dict) -> dict:
     response = requests.post(pfdcm_dicom_api, json = myobj, headers=headers)
     d_results = json.loads(response.text)  
     exists =  d_results['pypx']['then']['00-status']['study']
+    dicomResponse = DicomStatusResponseSchema()
     if exists:
-        return parseResponse(exists[0][dicom.StudyInstanceUID][0]['images'])
-    return DicomStatusResponseSchema(Message = "Study not found.",
-                                     StudyFound = False)
+        dicomResponse = parseResponse(exists[0][dicom.StudyInstanceUID][0]['images'])
+    else:
+        dicomResponse.Message = "Study not found"
+
+    cl = PythonChrisClient("http://localhost:8000/api/v1/","chris","chris1234")
+    resp = cl.getFeed({"plugin_name" : "pl-dircopy", "title" : dicom.StudyInstanceUID})
+    if resp['total']>0:
+        dicomResponse.FeedCreated = True
+        dicomResponse.FeedName = resp['data'][0]['title']
+        wfResp = cl.getWorkflow({"title" : dicom.StudyInstanceUID})
+        if wfResp['total']>0:
+            dicomResponse.WorkflowStarted = True
+            instResp = cl.getWorkflowDetails(wfResp['data'][0]['id'])
+            #print(instResp)
+        
+    return dicomResponse                      
     
  
 # Retrieve/push/register a dicom using pfdcm (WIP)   
-async def run_dicom_workflow(dicom : dict) -> dict:   
-    ## Step 1:
-    ## Step 2:
-    ## Step 3:
-    await dicom_do("retrieve",dicom.StudyInstanceUID,dicom.SeriesInstanceUID)
-    await dicom_do("push",dicom.StudyInstanceUID,dicom.SeriesInstanceUID)
-    await dicom_do("register",dicom.StudyInstanceUID,dicom.SeriesInstanceUID)
-    
-    ## Step 4: Create a feed on registered PACS files
-    current_dateTime = datetime.now()
-    feedName = "pflink-" + dicom.SeriesInstanceUID + "-" + dicom.cubeArgs.App + str(current_dateTime)
-    feedParams = {"dicomStudyUID" : dicom.StudyInstanceUID,
+async def run_dicom_workflow(dicom : dict) -> dict:
+    response = await dicom_status(dicom)
+    while not response.WorkflowStarted:
+        if response.StudyFound:
+            await dicom_do("retrieve",dicom.StudyInstanceUID,dicom.SeriesInstanceUID)
+        if response.Retrieved == "100%":
+            await dicom_do("push",dicom.StudyInstanceUID,dicom.SeriesInstanceUID)
+        if response.Pushed == "100%":
+            await dicom_do("register",dicom.StudyInstanceUID,dicom.SeriesInstanceUID)
+        if response.Registered == "100%":
+            feedName = dicom.StudyInstanceUID
+            feedParams = {"dicomStudyUID" : dicom.StudyInstanceUID,
                   "pipeline_name" : dicom.cubeArgs.Pipeline,
                   "plugin_name"   : "pl-dircopy",
                   "feed_name"     : feedName,
                   "pfdcm_name"    : dicom.PFDCMservice,
                   "cube_name"     : dicom.thenArgs.CUBE}
     
-    response = await startFeed(feedParams)
-    return response
+            response = await startFeed(feedParams)
+        time.sleep(5)
+        response = await dicom_status(dicom)
+    
+    return []
 
 ### Helper Methods ###
 async def dicom_do(verb : str,study_id : str,series_id : str) -> dict:
@@ -157,13 +183,17 @@ async def startFeed(params: dict) -> dict:
     response = requests.get(pfdcm_smdb_cube_api)
     d_results = json.loads(response.text)  
     
-    print(d_results["cubeInfo"]["url"],d_results["cubeInfo"]["username"],d_results["cubeInfo"]["password"])
+    #print(d_results["cubeInfo"]["url"],d_results["cubeInfo"]["username"],d_results["cubeInfo"]["password"])
     ## Create a Chris Client
     cl = PythonChrisClient("http://localhost:8000/api/v1/","chris","chris1234")
     
+    resp = cl.getFeed({"plugin_name" : "pl-dircopy", "title" : params["dicomStudyUID"]})
+    if resp['total']>0:
+        return {}
     ## Get the Swift path
     swiftSearchParams = {"name": params["dicomStudyUID"]}
     path = cl.getSwiftPath(swiftSearchParams)
+    
     
     ## Get plugin Id 
     pluginSearchParams = {"name": params["plugin_name"]}   
@@ -179,7 +209,7 @@ async def startFeed(params: dict) -> dict:
     pipeline_id = cl.getPipelineId(pipelineSearchParams)
     
     ## Create a workflow
-    wfParams = {'previous_plugin_inst_id':feed_id}
+    wfParams = {'previous_plugin_inst_id':feed_id, 'title' : params["feed_name"]}
     wfResponse = cl.createWorkflow(pipeline_id, wfParams)
     
     return wfResponse

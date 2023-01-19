@@ -37,3 +37,15 @@ class PythonChrisClient(ChrisClient):
     def createWorkflow(self, pipeline_id: str,params: dict):
         response = self.cl.create_workflow(pipeline_id,params)
         return response
+        
+    def getFeed(self, searchParams: dict):
+        response = self.cl.get_plugin_instances(searchParams)
+        return response
+        
+    def getWorkflow(self, searchParams: dict):
+        response = self.cl.get_workflows(searchParams)
+        return response
+        
+    def getWorkflowDetails(self, workflow_id : str):
+        response = self.cl.get_workflow_plugin_instances(workflow_id)
+        return response
