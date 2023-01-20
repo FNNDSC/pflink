@@ -5,7 +5,8 @@ import json
 from controllers.PythonChrisClient import PythonChrisClient
 from datetime import datetime
 import time
-
+import threading
+import asyncio
 
 from controllers.pfdcm import (
     retrieve_pfdcm,
@@ -53,18 +54,28 @@ async def dicom_status(dicom: dict) -> dict:
     response = requests.post(pfdcm_dicom_api, json = myobj, headers=headers)
     d_results = json.loads(response.text)  
     exists =  d_results['pypx']['then']['00-status']['study']
+    feedTemplate = dicom.feedArgs.FeedName
+
     dicomResponse = DicomStatusResponseSchema()
+    d_dicom = d_results['pypx']['data']
+    feedName = feedTemplate
+    
+        
     if exists:
         dicomResponse = parseResponse(exists[0][dicom.StudyInstanceUID][0]['images'])
     else:
         dicomResponse.Message = "Study not found"
+    if d_dicom:
+        feedName = parseFeedTemplate(feedTemplate, d_dicom[0])        
+        dicomResponse.DicomData = d_dicom[0]
+
 
     cl = PythonChrisClient("http://localhost:8000/api/v1/","chris","chris1234")
-    resp = cl.getFeed({"plugin_name" : "pl-dircopy", "title" : dicom.StudyInstanceUID})
+    resp = cl.getFeed({"plugin_name" : "pl-dircopy", "title" : feedName})
     if resp['total']>0:
         dicomResponse.FeedCreated = True
         dicomResponse.FeedName = resp['data'][0]['title']
-        wfResp = cl.getWorkflow({"title" : dicom.StudyInstanceUID})
+        wfResp = cl.getWorkflow({"title" : feedName})
         if wfResp['total']>0:
             dicomResponse.WorkflowStarted = True
             instResp = cl.getWorkflowDetails(wfResp['data'][0]['id'])
@@ -73,8 +84,11 @@ async def dicom_status(dicom: dict) -> dict:
     return dicomResponse                      
     
  
-# Retrieve/push/register a dicom using pfdcm (WIP)   
-async def run_dicom_workflow(dicom : dict) -> dict:
+# Retrieve/push/register a dicom using pfdcm (WIP) 
+#
+#
+         
+async def run_dicom_workflow(dicom:dict) -> dict:
     response = await dicom_status(dicom)
     while not response.WorkflowStarted:
         if response.StudyFound:
@@ -84,21 +98,41 @@ async def run_dicom_workflow(dicom : dict) -> dict:
         if response.Pushed == "100%":
             await dicom_do("register",dicom.StudyInstanceUID,dicom.SeriesInstanceUID)
         if response.Registered == "100%":
-            feedName = dicom.StudyInstanceUID
+            feedName = parseFeedTemplate(dicom.feedArgs.FeedName,response.DicomData)
             feedParams = {"dicomStudyUID" : dicom.StudyInstanceUID,
-                  "pipeline_name" : dicom.cubeArgs.Pipeline,
+                  "pipeline_name" : dicom.feedArgs.Pipeline,
                   "plugin_name"   : "pl-dircopy",
                   "feed_name"     : feedName,
                   "pfdcm_name"    : dicom.PFDCMservice,
                   "cube_name"     : dicom.thenArgs.CUBE}
     
             response = await startFeed(feedParams)
-        time.sleep(5)
+        time.sleep(2)
         response = await dicom_status(dicom)
     
-    return []
+    return response
 
 ### Helper Methods ###
+
+# Given a feed name template, substitute dicom values
+# for specified dicom tags
+def parseFeedTemplate(feedTemplate : str, dcmData : dict) -> str:
+    items = feedTemplate.split('%')
+    feedName = ""
+    for item in items:
+        if item == "":
+            continue;
+        tags = item.split('-')
+        dicomTag = tags[0]
+        try:        
+            dicomValue = dcmData[dicomTag]["value"]
+        except:
+            dicomValue = dicomTag
+        item = item.replace(dicomTag,dicomValue)
+        feedName = feedName + item
+    return feedName
+    
+    
 async def dicom_do(verb : str,study_id : str,series_id : str) -> dict:
     if verb=="retrieve":
         thenArgs = ""

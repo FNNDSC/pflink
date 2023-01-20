@@ -15,12 +15,10 @@ class DicomThenSchema(BaseModel):
     CUBE                     : str   = ""
     parseAllFilesWithSubStr  : str   = ""
     
-class DicomCubeQuerySchema(BaseModel):
+class DicomFeedQuerySchema(BaseModel):
+    FeedName                            : str  = "" 
     User                                : str  = "" 
-    Cube                                : str  = "" 
-    Client                              : str  = ""
     Pipeline                            : str  = ""
-    App                                 : str  = ""
         
 class DicomStatusQuerySchema(BaseModel):
     """The Dicom status Query model"""
@@ -48,6 +46,7 @@ class DicomStatusQuerySchema(BaseModel):
     AcquisitionProtocolDescription      : str   = ""
     AcquisitionProtocolName             : str   = ""
     dblogbasepath                       : str   = ""
+    feedArgs                            : DicomFeedQuerySchema
 
 class DicomActionQuerySchema(BaseModel):
     """The Dicom status Query model"""
@@ -76,10 +75,11 @@ class DicomActionQuerySchema(BaseModel):
     AcquisitionProtocolName             : str   = ""
     dblogbasepath                       : str   = ""
     thenArgs                            : DicomThenSchema
-    cubeArgs                            : DicomCubeQuerySchema
+    feedArgs                            : DicomFeedQuerySchema
     
 class DicomStatusResponseSchema(BaseModel):
     StudyFound                          : bool = False
+    DicomData                           : dict = {}
     Retrieved                           : str  = ""
     Pushed                              : str  = ""
     Registered                          : str  = ""
