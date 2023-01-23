@@ -232,7 +232,6 @@ async def startFeed(params: dict) -> dict:
     response = requests.get(pfdcm_smdb_cube_api)
     d_results = json.loads(response.text)  
     
-    #print(d_results["cubeInfo"]["url"],d_results["cubeInfo"]["username"],d_results["cubeInfo"]["password"])
     ## Create a Chris Client
     cl = PythonChrisClient("http://localhost:8000/api/v1/","chris","chris1234")
     
