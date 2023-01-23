@@ -79,7 +79,22 @@ async def dicom_status(dicom: dict) -> dict:
         if wfResp['total']>0:
             dicomResponse.WorkflowStarted = True
             instResp = cl.getWorkflowDetails(wfResp['data'][0]['id'])
-            #print(instResp)
+            finishedNodes = 1
+            feedStatus = "In Progress"
+            feedError = ""
+            for pInst in instResp['data']:
+                status = pInst['status']
+                if status == "finishedSuccessfully":
+                    finishedNodes += 1
+                if status == "cancelled" or status == "finishedWithError":
+                    feedStatus = "Failed"
+                    feedError += pInst['plugin_name'] + " : " + pInst['status'] + ", "
+            dicomResponse.FeedProgress = str (round(finishedNodes/(len(instResp['data']) + 1)*100)) + "%"
+            if finishedNodes == len(instResp['data']) + 1:
+                feedStatus = "Completed"
+            dicomResponse.FeedStatus = feedStatus
+            dicomResponse.Error = feedError
+                    
         
     return dicomResponse                      
     
@@ -221,7 +236,7 @@ async def startFeed(params: dict) -> dict:
     ## Create a Chris Client
     cl = PythonChrisClient("http://localhost:8000/api/v1/","chris","chris1234")
     
-    resp = cl.getFeed({"plugin_name" : "pl-dircopy", "title" : params["dicomStudyUID"]})
+    resp = cl.getFeed({"plugin_name" : "pl-dircopy", "title" : params["feed_name"]})
     if resp['total']>0:
         return {}
     ## Get the Swift path
