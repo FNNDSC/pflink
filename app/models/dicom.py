@@ -24,7 +24,6 @@ class DicomStatusQuerySchema(BaseModel):
     """The Dicom status Query model"""
     PFDCMservice                        : str   = ""
     PACSservice                         : str   = ""
-    listenerService                     : str   = ""
     AccessionNumber                     : str   = ""
     PatientID                           : str   = ""
     PatientName                         : str   = ""
@@ -52,7 +51,6 @@ class DicomActionQuerySchema(BaseModel):
     """The Dicom status Query model"""
     PFDCMservice                        : str   = ""
     PACSservice                         : str   = ""
-    listenerService                     : str   = ""
     AccessionNumber                     : str   = ""
     PatientID                           : str   = ""
     PatientName                         : str   = ""
@@ -79,7 +77,6 @@ class DicomActionQuerySchema(BaseModel):
     
 class DicomStatusResponseSchema(BaseModel):
     StudyFound                          : bool = False
-    DicomData                           : dict = {}
     Retrieved                           : str  = ""
     Pushed                              : str  = ""
     Registered                          : str  = ""

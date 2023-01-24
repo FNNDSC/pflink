@@ -14,7 +14,7 @@ app = FastAPI(
 app.include_router(BasicRouter, tags=["Basic Information"], prefix="")
 app.include_router(PfdcmRouter, tags=["Pfdcm Service Addresses "], prefix="/pfdcm")
 app.include_router(CubeRouter, tags=["Cube Service Addresses"], prefix="/cube")
-app.include_router(DicomRouter, tags=["Dicom Services"], prefix="/dicom")
+app.include_router(DicomRouter, tags=["Workflow Services"], prefix="/workflow")
 
 
 

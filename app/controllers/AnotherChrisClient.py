@@ -1,28 +1,35 @@
-### An Abstract Base Class to implement in multiple Chris Clients ###
-from abc import ABC, abstractmethod
+### aiochris ChRIS Client Implementation ###
+import asyncio
+from chris import ChrisClient
 
-class ChrisClient(ABC):
+class AIOChrisClient(ABC):
 
-    @abstractmethod
-    def getClient(params:dict):
+    async def __int__(self,url: str, username: str, password: str):
+        self.cl = await ChrisClient.from_login(
+        username=username,
+        password=password,
+        url=url
+        )
+        
+    async def getClient(params:dict):
+        return self.cl
+        
+    
+    async def getPluginId(searchParams:dict):
         pass
         
-    @abstractmethod
-    def getPluginId(searchParams:dict):
+    
+    async def getSwiftPath(searchParams:dict):
         pass
         
-    @abstractmethod
-    def getSwiftPath(searchParams:dict):
+   
+    async def createFeed(params:dict):
         pass
         
-    @abstractmethod
-    def createFeed(params:dict):
+    
+    async def getPipelineId(searchParams:dict):
         pass
         
-    @abstractmethod
-    def getPipelineId(searchParams:dict):
-        pass
-        
-    @abstractmethod
-    def createWorkflow(params:dict):
+    
+    async def createWorkflow(params:dict):
         pass 

@@ -23,10 +23,8 @@ job_checklist = {
                   4 : "create feed",
                   5 : "create workflow"
                 }
-    
-# Get the status about a dicom inside pfdcm using its series_uid & study_uid
-async def dicom_status(dicom: dict) -> dict:
-    
+                
+async def dicom_data(dicom: dict) -> dict:
     pfdcm_name = dicom.PFDCMservice
     pfdcm_server = await retrieve_pfdcm(pfdcm_name)
     
@@ -38,11 +36,29 @@ async def dicom_status(dicom: dict) -> dict:
           "value": dicom.PACSservice
         },
         "listenerService": {
-          "value": dicom.listenerService
+          "value": "default"
          },
         "PACSdirective": {
-          "SeriesInstanceUID": dicom.SeriesInstanceUID,
+          "AccessionNumber": dicom.AccessionNumber,
+          "PatientID": dicom.PatientID,
+          "PatientName": dicom.PatientName,
+          "PatientBirthDate": dicom.PatientBirthDate,
+          "PatientAge": dicom.PatientAge,
+          "PatientSex": dicom.PatientSex,
+          "StudyDate": dicom.StudyDate,
+          "StudyDescription": dicom.StudyDescription,
           "StudyInstanceUID": dicom.StudyInstanceUID,
+          "Modality": dicom.Modality,
+          "ModalitiesInStudy": dicom.ModalitiesInStudy,
+          "PerformedStationAETitle": dicom.PerformedStationAETitle,
+          "NumberOfSeriesRelatedInstances": dicom.NumberOfSeriesRelatedInstances,
+          "InstanceNumber": dicom.InstanceNumber,
+          "SeriesDate": dicom.SeriesDate,
+          "SeriesDescription": dicom.SeriesDescription,
+          "SeriesInstanceUID": dicom.SeriesInstanceUID,
+          "ProtocolName": dicom.ProtocolName,
+          "AcquisitionProtocolDescription": dicom.AcquisitionProtocolDescription,
+          "AcquisitionProtocolName": dicom.AcquisitionProtocolName,
           "withFeedBack": True,
           "then": 'status',
           "thenArgs": "",
@@ -52,7 +68,12 @@ async def dicom_status(dicom: dict) -> dict:
       }
 
     response = requests.post(pfdcm_dicom_api, json = myobj, headers=headers)
-    d_results = json.loads(response.text)  
+    return json.loads(response.text)  
+    
+# Get the status about a dicom inside pfdcm using its series_uid & study_uid
+async def dicom_status(dicom: dict) -> dict:
+    
+    d_results = await dicom_data(dicom) 
     exists =  d_results['pypx']['then']['00-status']['study']
     feedTemplate = dicom.feedArgs.FeedName
 
@@ -62,14 +83,16 @@ async def dicom_status(dicom: dict) -> dict:
     
         
     if exists:
-        dicomResponse = parseResponse(exists[0][dicom.StudyInstanceUID][0]['images'])
+        try:
+            dicomResponse = parseResponse(exists[0][dicom.StudyInstanceUID][0]['images'])
+        except:
+            dicomResponse.Message = "Please specify details of the dicom"
     else:
         dicomResponse.Message = "Study not found"
     if d_dicom:
         feedName = parseFeedTemplate(feedTemplate, d_dicom[0])        
-        dicomResponse.DicomData = d_dicom[0]
-
-
+    if feedName == "":
+        feedName = "/*/"
     cl = PythonChrisClient("http://localhost:8000/api/v1/","chris","chris1234")
     resp = cl.getFeed({"plugin_name" : "pl-dircopy", "title" : feedName})
     if resp['total']>0:
@@ -113,7 +136,8 @@ async def run_dicom_workflow(dicom:dict) -> dict:
         if response.Pushed == "100%":
             await dicom_do("register",dicom.StudyInstanceUID,dicom.SeriesInstanceUID)
         if response.Registered == "100%":
-            feedName = parseFeedTemplate(dicom.feedArgs.FeedName,response.DicomData)
+            dicomData = await dicom_data(dicom)
+            feedName = parseFeedTemplate(dicom.feedArgs.FeedName,dicomData['pypx']['data'][0])
             feedParams = {"dicomStudyUID" : dicom.StudyInstanceUID,
                   "pipeline_name" : dicom.feedArgs.Pipeline,
                   "plugin_name"   : "pl-dircopy",
