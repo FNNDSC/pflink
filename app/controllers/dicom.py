@@ -11,7 +11,6 @@ import asyncio
 
 from controllers.pfdcm import (
     retrieve_pfdcm,
-    retrieve_pfdcms,
 )
 from models.dicom import (
     DicomStatusResponseSchema,
@@ -30,15 +29,12 @@ job_checklist = {
                 }
 
               
-async def dicom_data(dicom: dict) -> dict:
+def dicom_data(dicom: dict, pfdcm_url:str) -> dict:
     '''
     Given a dictionary object containing relevant key-value pairs for a PACS query,
     return a dictionary object containing the details of DICOM series if present
     '''  
-    pfdcm_name = dicom.PFDCMservice
-    pfdcm_server = await retrieve_pfdcm(pfdcm_name)
-    
-    pfdcm_url = pfdcm_server['server_ip'] + ":" +pfdcm_server['server_port']
+
     pfdcm_dicom_api = f'{pfdcm_url}/api/v1/PACS/sync/pypx/'
     headers = {'Content-Type': 'application/json','accept': 'application/json'}
     myobj = {
@@ -81,13 +77,13 @@ async def dicom_data(dicom: dict) -> dict:
     return json.loads(response.text)  
     
 
-async def dicom_status(dicom: dict) -> dict:
+def dicom_status(dicom: dict, pfdcm_url:str) -> dict:
     '''
     Given a dictionary object containing relevant key-value pairs for a PFDCM query &
     CUBE query, return a dictionary object containing the details of status of a 
     workflow in `pflink`
     '''
-    d_results = await dicom_data(dicom) 
+    d_results = dicom_data(dicom, pfdcm_url) 
     exists =  d_results['pypx']['then']['00-status']['study']
     feedTemplate = dicom.feedArgs.FeedName
 
@@ -138,7 +134,7 @@ async def dicom_status(dicom: dict) -> dict:
  
 
          
-async def run_dicom_workflow(dicom:dict) -> dict:
+def run_dicom_workflow(dicom:dict, pfdcm_url:str) -> dict:
     """
     Given a dictionary object containing key-value pairs for PFDCM query & CUBE
     query, return a dictionary object as response after completing a series of
@@ -150,22 +146,19 @@ async def run_dicom_workflow(dicom:dict) -> dict:
         4) Create a new feed on the registered PACS files in CUBE
         5) Start a workflow specified by the used on top the newly created feed
     """
-    pfdcm_name = dicom.PFDCMservice
-    pfdcm_server = await retrieve_pfdcm(pfdcm_name)
-    
-    pfdcm_url = pfdcm_server['server_ip'] + ":" +pfdcm_server['server_port']
-    response = await dicom_status(dicom)
+
+    response = dicom_status(dicom, pfdcm_url)
     while not response.WorkflowStarted:
         if response.StudyFound:
-            await dicom_do("retrieve",dicom,pfdcm_url)
+            dicom_do("retrieve",dicom,pfdcm_url)
         else:
             break
         if response.Retrieved == "100%":
-            await dicom_do("push",dicom,pfdcm_url)
+            dicom_do("push",dicom,pfdcm_url)
         if response.Pushed == "100%":
-            await dicom_do("register",dicom,pfdcm_url)
+            dicom_do("register",dicom,pfdcm_url)
         if response.Registered == "100%":
-            dicomData = await dicom_data(dicom)
+            dicomData = dicom_data(dicom,pfdcm_url)
             feedName = parseFeedTemplate(dicom.feedArgs.FeedName,dicomData['pypx']['data'][0])
             feedParams = {"dicomStudyUID" : dicom.StudyInstanceUID,
                   "pipeline_name" : dicom.feedArgs.Pipeline,
@@ -174,9 +167,9 @@ async def run_dicom_workflow(dicom:dict) -> dict:
                   "pfdcm_name"    : dicom.PFDCMservice,
                   "cube_name"     : dicom.thenArgs.CUBE}
     
-            response = await startFeed(feedParams,pfdcm_url)
+            response = startFeed(feedParams,pfdcm_url)
         time.sleep(2)
-        response = await dicom_status(dicom)
+        response = dicom_status(dicom, pfdcm_url)
     
     return response
 
@@ -202,7 +195,7 @@ def parseFeedTemplate(feedTemplate : str, dcmData : dict) -> str:
     
 
 # A reusable method to either retrieve, push or register dicoms using pfdcm   
-async def dicom_do(verb : str,dicom : dict, url : str) -> dict:
+def dicom_do(verb : str,dicom : dict, url : str) -> dict:
     if verb=="retrieve":
         thenArgs = ""
     elif verb == "push":
@@ -293,7 +286,6 @@ def parseResponse( response : dict) -> dict:
 ##    
 def startFeed(params: dict, pfdcm_url : str) -> dict:
     
-    pfdcm_url = pfdcm_server['server_ip'] + ":" +pfdcm_server['server_port']
     cubeResource = params["cube_name"]
     pfdcm_smdb_cube_api = f'{pfdcm_url}/api/v1/SMDB/CUBE/{cubeResource}/' 
     response = requests.get(pfdcm_smdb_cube_api)
