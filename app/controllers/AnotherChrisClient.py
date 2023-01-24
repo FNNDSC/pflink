@@ -1,14 +1,15 @@
 ### aiochris ChRIS Client Implementation ###
 import asyncio
-from chris import ChrisClient
+from chris import ChrisClient as cClient
+from controllers.ChrisClient import ChrisClient
 
-class AIOChrisClient(ABC):
+class AIOChrisClient(ChrisClient):
 
-    async def __int__(self,url: str, username: str, password: str):
-        self.cl = await ChrisClient.from_login(
-        username=username,
-        password=password,
-        url=url
+    async def __init__(self,url: str, username: str, password: str):
+        self.cl = await cClient.from_login(
+                  username=username,
+                  password=password,
+                  url=url
         )
         
     async def getClient(params:dict):
@@ -16,7 +17,8 @@ class AIOChrisClient(ABC):
         
     
     async def getPluginId(searchParams:dict):
-        pass
+        plugin_id = await self.cl.search_plugins(searchParams)['data'][0]['id']
+        return plugin_id
         
     
     async def getSwiftPath(searchParams:dict):
@@ -33,3 +35,7 @@ class AIOChrisClient(ABC):
     
     async def createWorkflow(params:dict):
         pass 
+    
+    async def getFeed(self, searchParams: dict):
+        response = self.cl.get_feeds(searchParams)
+        return response
