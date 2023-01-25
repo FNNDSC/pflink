@@ -1,5 +1,4 @@
 import motor.motor_asyncio
-from bson.objectid import ObjectId
 import requests
 import json
 from controllers.PythonChrisClient import PythonChrisClient
@@ -7,7 +6,6 @@ from controllers.PythonChrisClient import PythonChrisClient
 from datetime import datetime
 import time
 import threading
-import asyncio
 
 from controllers.pfdcm import (
     retrieve_pfdcm,
@@ -111,6 +109,7 @@ def dicom_status(dicom: dict, pfdcm_url:str) -> dict:
         dicomResponse.FeedName = resp['data'][0]['title']
         wfResp = cl.getWorkflow({"title" : feedName})
         if wfResp['total']>0:
+            print(wfResp['total'])
             dicomResponse.WorkflowStarted = True
             instResp = cl.getWorkflowDetails(wfResp['data'][0]['id'])
             finishedNodes = 1
@@ -131,10 +130,14 @@ def dicom_status(dicom: dict, pfdcm_url:str) -> dict:
         
     return dicomResponse                      
     
- 
-
+def run_dicom_workflow(dicom:dict, pfdcm_url:str) -> dict:    
+    t = threading.Thread(target = run_dicom_workflow_do, args=(dicom,pfdcm_url))
+    t.start()
+    #t.join()
+    return DicomStatusResponseSchema(FeedName = dicom.feedArgs.FeedName,
+                                     Message = "POST the same request replacing the API endpoint with /status/ to get the status")
          
-def run_dicom_workflow(dicom:dict, pfdcm_url:str) -> dict:
+def run_dicom_workflow_do(dicom:dict, pfdcm_url:str) -> dict:
     """
     Given a dictionary object containing key-value pairs for PFDCM query & CUBE
     query, return a dictionary object as response after completing a series of
@@ -165,7 +168,8 @@ def run_dicom_workflow(dicom:dict, pfdcm_url:str) -> dict:
                   "plugin_name"   : "pl-dircopy",
                   "feed_name"     : feedName,
                   "pfdcm_name"    : dicom.PFDCMservice,
-                  "cube_name"     : dicom.thenArgs.CUBE}
+                  "cube_name"     : dicom.thenArgs.CUBE,
+                  "user_name"     : dicom.feedArgs.User}
     
             response = startFeed(feedParams,pfdcm_url)
         time.sleep(2)
@@ -291,10 +295,20 @@ def startFeed(params: dict, pfdcm_url : str) -> dict:
     response = requests.get(pfdcm_smdb_cube_api)
     d_results = json.loads(response.text)  
     
-    ## Create a Chris Client
-    cl = PythonChrisClient("http://localhost:8000/api/v1/","chris","chris1234")
     
+    create_user_api = "http://localhost:8000/api/v1/users/"
+    headers = {'Content-Type': 'application/json','accept': 'application/json'}
+    myobj = {
+             "username" : params["user_name"],
+             "password" : params["user_name"] +"1234",
+             "email"    :  params["user_name"]+"@email.com",
+             }
+    resp = requests.post(create_user_api,json=myobj,headers=headers)
+    
+    ## Create a Chris Client
+    cl = PythonChrisClient("http://localhost:8000/api/v1/",params["user_name"],params["user_name"] +"1234")
     resp = cl.getFeed({"plugin_name" : "pl-dircopy", "title" : params["feed_name"]})
+    print(resp['total'])
     if resp['total']>0:
         return {}
     ## Get the Swift path

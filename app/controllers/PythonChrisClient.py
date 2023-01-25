@@ -49,3 +49,4 @@ class PythonChrisClient(ChrisClient):
     def getWorkflowDetails(self, workflow_id : str):
         response = self.cl.get_workflow_plugin_instances(workflow_id)
         return response
+
