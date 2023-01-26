@@ -1,18 +1,22 @@
 import motor.motor_asyncio
 import requests
 import json
+import concurrent.futures
 from controllers.PythonChrisClient import PythonChrisClient
 #from controllers.AnotherChrisClient import AIOChrisClient
 from datetime import datetime
 import time
-import threading
-
+from    fastapi.concurrency import  run_in_threadpool
+from    concurrent.futures  import  ThreadPoolExecutor, Future
+import asyncio
 from controllers.pfdcm import (
     retrieve_pfdcm,
 )
 from models.dicom import (
     DicomStatusResponseSchema,
 )
+
+threadpool      = ThreadPoolExecutor()
 
 '''
 A list of tasks performed by `pflink` when a POST request is made using the
@@ -128,16 +132,24 @@ def dicom_status(dicom: dict, pfdcm_url:str) -> dict:
             dicomResponse.FeedStatus = feedStatus
             dicomResponse.Error = feedError                   
         
-    return dicomResponse                      
+    return dicomResponse    
+                      
+def run_workflow(dicom:dict, pfdcm_url:str):
+    asyncio.run(run_dicom_workflow(dicom,pfdcm_url))
     
-def run_dicom_workflow(dicom:dict, pfdcm_url:str) -> dict:    
-    t = threading.Thread(target = run_dicom_workflow_do, args=(dicom,pfdcm_url))
-    t.start()
-    #t.join()
-    return DicomStatusResponseSchema(FeedName = dicom.feedArgs.FeedName,
-                                     Message = "POST the same request replacing the API endpoint with /status/ to get the status")
+async def run_dicom_workflow(dicom:dict, pfdcm_url:str) -> dict: 
+    task = asyncio.create_task(run_dicom_workflow_do(dicom,pfdcm_url))
+    await task
+
+    #return DicomStatusResponseSchema(FeedName = dicom.feedArgs.FeedName,
+                                     #Message = "POST the same request replacing the API endpoint with /status/ to get the status")
+                                     
+async def threaded_workflow_do(dicom:dict, pfdcm_url:str) -> Future:
+    loop = asyncio.get_running_loop()
+    future = loop.run_in_executor(threadpool, run_workflow, dicom, pfdcm_url)
+    return future
          
-def run_dicom_workflow_do(dicom:dict, pfdcm_url:str) -> dict:
+async def run_dicom_workflow_do(dicom:dict, pfdcm_url:str) -> dict:
     """
     Given a dictionary object containing key-value pairs for PFDCM query & CUBE
     query, return a dictionary object as response after completing a series of
@@ -149,8 +161,9 @@ def run_dicom_workflow_do(dicom:dict, pfdcm_url:str) -> dict:
         4) Create a new feed on the registered PACS files in CUBE
         5) Start a workflow specified by the used on top the newly created feed
     """
-
+    print("here")
     response = dicom_status(dicom, pfdcm_url)
+    
     while not response.WorkflowStarted:
         if response.StudyFound:
             dicom_do("retrieve",dicom,pfdcm_url)
@@ -174,6 +187,7 @@ def run_dicom_workflow_do(dicom:dict, pfdcm_url:str) -> dict:
             response = startFeed(feedParams,pfdcm_url)
         time.sleep(2)
         response = dicom_status(dicom, pfdcm_url)
+        print(response.WorkflowStarted)
     
     return response
 
@@ -306,7 +320,8 @@ def startFeed(params: dict, pfdcm_url : str) -> dict:
     resp = requests.post(create_user_api,json=myobj,headers=headers)
     
     ## Create a Chris Client
-    cl = PythonChrisClient("http://localhost:8000/api/v1/",params["user_name"],params["user_name"] +"1234")
+    #cl = PythonChrisClient("http://localhost:8000/api/v1/",params["user_name"],params["user_name"] +"1234")
+    cl = PythonChrisClient("http://localhost:8000/api/v1/","chris","chris1234")
     resp = cl.getFeed({"plugin_name" : "pl-dircopy", "title" : params["feed_name"]})
     print(resp['total'])
     if resp['total']>0:
@@ -328,7 +343,7 @@ def startFeed(params: dict, pfdcm_url : str) -> dict:
     ## Get pipeline id
     pipelineSearchParams = {'name':params["pipeline_name"]}
     pipeline_id = cl.getPipelineId(pipelineSearchParams)
-    
+    print(pipeline_id)
     ## Create a workflow
     wfParams = {'previous_plugin_inst_id':feed_id, 'title' : params["feed_name"]}
     wfResponse = cl.createWorkflow(pipeline_id, wfParams)

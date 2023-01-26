@@ -4,3 +4,4 @@ motor==2.5.1
 pydantic[email]
 requests
 python-chrisclient
+asyncio

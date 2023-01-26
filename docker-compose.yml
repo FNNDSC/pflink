@@ -1,6 +1,11 @@
 version: '3.8'
 
 services:
+  pflink:
+    image : pflink
+    container_name: pflink
+    network_mode: "host"
+
   mongodb:
     image : mongo
     container_name: mongodb
@@ -12,3 +17,4 @@ services:
     volumes:
       - /home/sandip/pflink/database:/data/db
     restart: unless-stopped
+
