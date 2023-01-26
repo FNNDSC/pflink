@@ -6,7 +6,6 @@ from controllers.PythonChrisClient import PythonChrisClient
 #from controllers.AnotherChrisClient import AIOChrisClient
 from datetime import datetime
 import time
-from    fastapi.concurrency import  run_in_threadpool
 from    concurrent.futures  import  ThreadPoolExecutor, Future
 import asyncio
 from controllers.pfdcm import (
@@ -18,17 +17,6 @@ from models.dicom import (
 
 threadpool      = ThreadPoolExecutor()
 
-'''
-A list of tasks performed by `pflink` when a POST request is made using the
-/workflow/do/ API endpoint
-'''
-job_checklist = {
-                  1 : "retrieve",
-                  2 : "push",
-                  3 : "register",
-                  4 : "create feed",
-                  5 : "create workflow"
-                }
 
               
 def dicom_data(dicom: dict, pfdcm_url:str) -> dict:
@@ -176,7 +164,9 @@ async def run_dicom_workflow_do(dicom:dict, pfdcm_url:str) -> dict:
         if response.Registered == "100%":
             dicomData = dicom_data(dicom,pfdcm_url)
             feedName = parseFeedTemplate(dicom.feedArgs.FeedName,dicomData['pypx']['data'][0])
-            feedParams = {"dicomStudyUID" : dicom.StudyInstanceUID,
+            feedParams = {
+                  "dicomSeriesUID": dicom.SeriesInstanceUID,
+                  "dicomStudyUID" : dicom.StudyInstanceUID,
                   "pipeline_name" : dicom.feedArgs.Pipeline,
                   "plugin_name"   : "pl-dircopy",
                   "feed_name"     : feedName,
@@ -320,14 +310,14 @@ def startFeed(params: dict, pfdcm_url : str) -> dict:
     resp = requests.post(create_user_api,json=myobj,headers=headers)
     
     ## Create a Chris Client
-    #cl = PythonChrisClient("http://localhost:8000/api/v1/",params["user_name"],params["user_name"] +"1234")
-    cl = PythonChrisClient("http://localhost:8000/api/v1/","chris","chris1234")
+    cl = PythonChrisClient("http://localhost:8000/api/v1/",params["user_name"],params["user_name"] +"1234")
+    #cl = PythonChrisClient("http://localhost:8000/api/v1/","chris","chris1234")
     resp = cl.getFeed({"plugin_name" : "pl-dircopy", "title" : params["feed_name"]})
     print(resp['total'])
     if resp['total']>0:
         return {}
     ## Get the Swift path
-    swiftSearchParams = {"name": params["dicomStudyUID"]}
+    swiftSearchParams = {"StudyInstanceUID": params["dicomStudyUID"],"SeriesInstanceUID" : params["dicomSeriesUID"]}
     path = cl.getSwiftPath(swiftSearchParams)
     
     

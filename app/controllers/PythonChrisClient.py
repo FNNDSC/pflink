@@ -20,8 +20,10 @@ class PythonChrisClient(ChrisClient):
 
     def getSwiftPath(self, searchParams:dict):
         files = self.cl.get_pacs_files(searchParams)
-        path = files['data'][0]['fname']
-        return path
+        filePath = files['data'][0]['fname']
+        fileName = filePath.split('/')[-1]
+        dirPath = filePath.replace(fileName,'')
+        return dirPath
         
 
     def createFeed(self, plugin_id: str,params: dict):
