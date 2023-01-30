@@ -1,7 +1,7 @@
 ### aiochris ChRIS Client Implementation ###
 import asyncio
 from chris import ChrisClient as cClient
-from controllers.ChrisClient import ChrisClient
+from controllers.client.ChrisClient import ChrisClient
 
 class AIOChrisClient(ChrisClient):
 

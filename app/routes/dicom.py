@@ -5,9 +5,10 @@ from models.dicom import (
     DicomStatusQuerySchema,
     DicomActionQuerySchema,
     PACSqueyReturnModel,
+    DicomStatusResponseSchema,
 )
 from controllers.dicom import (
-    dicom_status,
+    workflow_status,
     run_dicom_workflow,
     threaded_workflow_do,
 )
@@ -23,7 +24,7 @@ async def post_dicom(dicom: DicomStatusQuerySchema = Body(...)):
     pfdcm_name = dicom.PFDCMservice
     pfdcm_server = await retrieve_pfdcm(pfdcm_name)    
     pfdcm_url = pfdcm_server['server_ip'] + ":" +pfdcm_server['server_port']
-    response = dicom_status(dicom,pfdcm_url)
+    response = workflow_status(pfdcm_url,dicom)
     return PACSqueyReturnModel(response=response)
     
 @router.post("/do/", response_description="Retrieve/push/register dicom")   
@@ -31,10 +32,9 @@ async def post_do_dicom(dicom : DicomActionQuerySchema = Body(...)):
     pfdcm_name = dicom.PFDCMservice
     pfdcm_server = await retrieve_pfdcm(pfdcm_name)    
     pfdcm_url = pfdcm_server['server_ip'] + ":" +pfdcm_server['server_port']
-    #response = await run_dicom_workflow(dicom,pfdcm_url)
-    #return PACSqueyReturnModel(response=response)
     response = await threaded_workflow_do(dicom,pfdcm_url)
-    return {}
+    return DicomStatusResponseSchema(FeedName = dicom.feedArgs.FeedName,
+                                     Message = "POST the same request replacing the API endpoint with /status/ to get the status") 
 
 
 

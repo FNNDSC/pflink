@@ -1,7 +1,7 @@
 ### Python Chris Client Implementation ###
 
 from chrisclient import client
-from controllers.ChrisClient import ChrisClient
+from controllers.client.ChrisClient import ChrisClient
 
 class PythonChrisClient(ChrisClient):
 
@@ -31,9 +31,11 @@ class PythonChrisClient(ChrisClient):
         return response
         
 
-    def getPipelineId(self, searchParams:dict):
-        pipeline_id = self.cl.get_pipelines(searchParams)['data'][0]['id']
-        return pipeline_id
+    def getPipelineId(self, searchParams:dict) -> int:
+        pipeline_res = self.cl.get_pipelines(searchParams)['data']
+        if pipeline_res:
+            return pipeline_res[0]['id']
+        return -1
         
 
     def createWorkflow(self, pipeline_id: str,params: dict):

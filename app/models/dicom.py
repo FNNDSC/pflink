@@ -15,10 +15,17 @@ class DicomThenSchema(BaseModel):
     CUBE                     : str   = ""
     parseAllFilesWithSubStr  : str   = ""
     
+class WorkflowPluginInstanceSchema(BaseModel):
+    PluginName                          : str  = ""
+    Version                             : str  = ""
+    Params                              : dict
+    PassUserCreds                       : bool = False
+    
 class DicomFeedQuerySchema(BaseModel):
     FeedName                            : str  = "" 
     User                                : str  = "" 
     Pipeline                            : str  = ""
+    NodeArgs                            : WorkflowPluginInstanceSchema
         
 class DicomStatusQuerySchema(BaseModel):
     """The Dicom status Query model"""
@@ -77,10 +84,14 @@ class DicomActionQuerySchema(BaseModel):
     
 class DicomStatusResponseSchema(BaseModel):
     StudyFound                          : bool = False
+    StudyRetrieved                      : bool = False
+    StudyPushed                         : bool = False
+    StudyRegistered                     : bool = False
     Retrieved                           : str  = ""
     Pushed                              : str  = ""
     Registered                          : str  = ""
     FeedCreated                         : bool = False
+    FeedId                              : str  = ""
     FeedName                            : str  = ""
     WorkflowStarted                     : bool = False
     FeedProgress                        : str  = ""
