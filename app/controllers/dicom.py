@@ -339,3 +339,19 @@ def startFeed(params: dict, pfdcm_url : str) -> dict:
     wfResponse = cl.createWorkflow(pipeline_id, wfParams)
     
     return wfResponse
+
+async def get_pfdcm_status():
+    pass    
+async def do_pfdcm_retrieve():
+    pass
+async def do_pfdcm_push():
+    pass
+async def do_pfdcm_register():
+    pass
+async def do_cube_create_feed():
+    pass
+async def do_cube_create_workflow():
+    pass
+async def do_cube_create_node():
+    pass
+    
