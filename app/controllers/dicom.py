@@ -65,51 +65,75 @@ async def run_dicom_workflow_do(dicom:dict, pfdcm_url:str) -> dict:
         4) Create a new feed on the registered PACS files in CUBE
         5) Start a workflow specified by the used on top the newly created feed
     """
+    MAX_RETRIES = 10
     cubeResource = dicom.thenArgs.CUBE
     pfdcm_smdb_cube_api = f'{pfdcm_url}/api/v1/SMDB/CUBE/{cubeResource}/' 
     response = requests.get(pfdcm_smdb_cube_api)
-    d_results = json.loads(response.text)  
-   
+    d_results = json.loads(response.text) 
+     
+    
     
     ## Create a Chris Client
     client = do_cube_create_user("http://localhost:8000/api/v1/",dicom.feedArgs.User)
     
-    ## Get the Swift path
-    swiftSearchParams = {"StudyInstanceUID": dicom.StudyInstanceUID,"SeriesInstanceUID" : dicom.SeriesInstanceUID}
-    dataPath = client.getSwiftPath(swiftSearchParams)
-    
     response = workflow_status(pfdcm_url, dicom)
     if response.StudyFound:
-        while not response.WorkflowStarted:
+        pfdcmResponse = get_pfdcm_status(pfdcm_url,dicom)
+        feedName = dicom.feedArgs.FeedName
+        d_dicom = pfdcmResponse['pypx']['data']
+        feedName = parseFeedTemplate(feedName, d_dicom[0])
+
+        while not response.WorkflowStarted and MAX_RETRIES>0:
             if response.StudyRetrieved:
                 if response.StudyPushed:
                     if response.StudyRegistered:
                         if response.FeedCreated:
-                            feedId = response.FeedId
-                            print(feedId)
+                        
+                            # Get previous inst Id
+                            pluginInstSearchParams = {'plugin_name' : 'pl-dircopy', 'title' : feedName}
+                            pvInstId = client.getPluginInstances(pluginInstSearchParams)['data'][0]['id']
                             workflowName = response.FeedName
+                            
                             # Check if user runs a new pipeline or node
                             if dicom.feedArgs.Pipeline:
-                                do_cube_create_workflow(client,dicom.feedArgs.Pipeline,feedId,workflowName)
+                                print("adding pipeline")
+                                do_cube_create_workflow(client,dicom.feedArgs.Pipeline,pvInstId,workflowName)
                             else:
-                                do_cube_create_node(client,nodeArgs,feedId)
-                        # wait and create a feed
-                        print("Creating a feed")
-                        feed_id = do_cube_create_feed(client,"new-feed-$$",dataPath)
-                        print(feed_id)
-                    # wait and register study
-                    do_pfdcm_register(dicom,pfdcm_url)
-                # wait and push study
-                do_pfdcm_push(dicom,pfdcm_url)
-            # wait and retrieve study
-            do_pfdcm_retrieve(dicom,pfdcm_url)
+                                print("adding new node")
+                                do_cube_create_node(client,dicom.feedArgs,pvInstId)
+                        else:        
+                            # wait and create a feed
+                            print("Creating a feed")
+                        
+                            ## Get the Swift path
+                            dataPath = client.getSwiftPath(dicom.PACSdirective)
+                            if feedName=="":
+                               raise Exception("Please enter a valid feed name.") 
+                            feed_id = do_cube_create_feed(client,feedName,dataPath)
+                    else:    
+                        # wait and register study
+                        print("registering study")
+                        do_pfdcm_register(dicom,pfdcm_url)
+                else: 
+                    print("pushing study")   
+                    # wait and push study
+                    do_pfdcm_push(dicom,pfdcm_url)
+            else: 
+                print("retrieveing study")   
+                # wait and retrieve study
+                do_pfdcm_retrieve(dicom,pfdcm_url)
            
             # wait here for n seconds b4 polling again
+            print("sleeping for 2 seconds")
             time.sleep(2)
             response = workflow_status(pfdcm_url, dicom)
-
-    # return immediately as study cannot be found
-    return response
+            MAX_RETRIES -= 1
+            
+        #end of while loop
+        return response
+    else:
+        # return immediately as study cannot be found
+        return response
     
     
     
@@ -130,26 +154,26 @@ def get_pfdcm_status(pfdcm_url,dicom):
           "value": "default"
          },
         "PACSdirective": {
-          "AccessionNumber": dicom.AccessionNumber,
-          "PatientID": dicom.PatientID,
-          "PatientName": dicom.PatientName,
-          "PatientBirthDate": dicom.PatientBirthDate,
-          "PatientAge": dicom.PatientAge,
-          "PatientSex": dicom.PatientSex,
-          "StudyDate": dicom.StudyDate,
-          "StudyDescription": dicom.StudyDescription,
-          "StudyInstanceUID": dicom.StudyInstanceUID,
-          "Modality": dicom.Modality,
-          "ModalitiesInStudy": dicom.ModalitiesInStudy,
-          "PerformedStationAETitle": dicom.PerformedStationAETitle,
-          "NumberOfSeriesRelatedInstances": dicom.NumberOfSeriesRelatedInstances,
-          "InstanceNumber": dicom.InstanceNumber,
-          "SeriesDate": dicom.SeriesDate,
-          "SeriesDescription": dicom.SeriesDescription,
-          "SeriesInstanceUID": dicom.SeriesInstanceUID,
-          "ProtocolName": dicom.ProtocolName,
-          "AcquisitionProtocolDescription": dicom.AcquisitionProtocolDescription,
-          "AcquisitionProtocolName": dicom.AcquisitionProtocolName,
+          "AccessionNumber": dicom.PACSdirective.AccessionNumber,
+          "PatientID": dicom.PACSdirective.PatientID,
+          "PatientName": dicom.PACSdirective.PatientName,
+          "PatientBirthDate": dicom.PACSdirective.PatientBirthDate,
+          "PatientAge": dicom.PACSdirective.PatientAge,
+          "PatientSex": dicom.PACSdirective.PatientSex,
+          "StudyDate": dicom.PACSdirective.StudyDate,
+          "StudyDescription": dicom.PACSdirective.StudyDescription,
+          "StudyInstanceUID": dicom.PACSdirective.StudyInstanceUID,
+          "Modality": dicom.PACSdirective.Modality,
+          "ModalitiesInStudy": dicom.PACSdirective.ModalitiesInStudy,
+          "PerformedStationAETitle": dicom.PACSdirective.PerformedStationAETitle,
+          "NumberOfSeriesRelatedInstances": dicom.PACSdirective.NumberOfSeriesRelatedInstances,
+          "InstanceNumber": dicom.PACSdirective.InstanceNumber,
+          "SeriesDate": dicom.PACSdirective.SeriesDate,
+          "SeriesDescription": dicom.PACSdirective.SeriesDescription,
+          "SeriesInstanceUID": dicom.PACSdirective.SeriesInstanceUID,
+          "ProtocolName": dicom.PACSdirective.ProtocolName,
+          "AcquisitionProtocolDescription": dicom.PACSdirective.AcquisitionProtocolDescription,
+          "AcquisitionProtocolName": dicom.PACSdirective.AcquisitionProtocolName,
           "withFeedBack": True,
           "then": 'status',
           "thenArgs": "",
@@ -177,26 +201,26 @@ def pfdcm_do(verb : str,thenArgs:dict,dicom : dict, url : str) -> dict:
              "value": "default"
          },
          "PACSdirective": {
-             "AccessionNumber": dicom.AccessionNumber,
-             "PatientID": dicom.PatientID,
-             "PatientName": dicom.PatientName,
-             "PatientBirthDate": dicom.PatientBirthDate,
-             "PatientAge": dicom.PatientAge,
-             "PatientSex": dicom.PatientSex,
-             "StudyDate": dicom.StudyDate,
-             "StudyDescription": dicom.StudyDescription,
-             "StudyInstanceUID": dicom.StudyInstanceUID,
-             "Modality": dicom.Modality,
-             "ModalitiesInStudy": dicom.ModalitiesInStudy,
-             "PerformedStationAETitle": dicom.PerformedStationAETitle,
-             "NumberOfSeriesRelatedInstances": dicom.NumberOfSeriesRelatedInstances,
-             "InstanceNumber": dicom.InstanceNumber,
-             "SeriesDate": dicom.SeriesDate,
-             "SeriesDescription": dicom.SeriesDescription,
-             "SeriesInstanceUID": dicom.SeriesInstanceUID,
-             "ProtocolName": dicom.ProtocolName,
-             "AcquisitionProtocolDescription": dicom.AcquisitionProtocolDescription,
-             "AcquisitionProtocolName": dicom.AcquisitionProtocolName,
+             "AccessionNumber": dicom.PACSdirective.AccessionNumber,
+             "PatientID": dicom.PACSdirective.PatientID,
+             "PatientName": dicom.PACSdirective.PatientName,
+             "PatientBirthDate": dicom.PACSdirective.PatientBirthDate,
+             "PatientAge": dicom.PACSdirective.PatientAge,
+             "PatientSex": dicom.PACSdirective.PatientSex,
+             "StudyDate": dicom.PACSdirective.StudyDate,
+             "StudyDescription": dicom.PACSdirective.StudyDescription,
+             "StudyInstanceUID": dicom.PACSdirective.StudyInstanceUID,
+             "Modality": dicom.PACSdirective.Modality,
+             "ModalitiesInStudy": dicom.PACSdirective.ModalitiesInStudy,
+             "PerformedStationAETitle": dicom.PACSdirective.PerformedStationAETitle,
+             "NumberOfSeriesRelatedInstances": dicom.PACSdirective.NumberOfSeriesRelatedInstances,
+             "InstanceNumber": dicom.PACSdirective.InstanceNumber,
+             "SeriesDate": dicom.PACSdirective.SeriesDate,
+             "SeriesDescription": dicom.PACSdirective.SeriesDescription,
+             "SeriesInstanceUID": dicom.PACSdirective.SeriesInstanceUID,
+             "ProtocolName": dicom.PACSdirective.ProtocolName,
+             "AcquisitionProtocolDescription": dicom.PACSdirective.AcquisitionProtocolDescription,
+             "AcquisitionProtocolName": dicom.PACSdirective.AcquisitionProtocolName,
              "withFeedBack": True,
              "then": verb,
              "thenArgs": thenArgs,
@@ -257,38 +281,47 @@ def get_feed_status(pfdcmResponse: dict, dicom: dict):
     cubeResponse = {
         "FeedName" : "",
         "FeedCreated" : False,
-        "FeedProgress" : "",
+        "FeedProgress" : "Not started",
         "WorkflowStarted": False,
         "FeedStatus" : "",
         "FeedError" : "",
         "FeedId" : ""}
         
-    cl = PythonChrisClient("http://localhost:8000/api/v1/","chris","chris1234")   
-    resp = cl.getFeed({"plugin_name" : "pl-dircopy", "title" : feedName})
+    cl = do_cube_create_user("http://localhost:8000/api/v1/",dicom.feedArgs.User)   
+    resp = cl.getFeed({"name_exact" : feedName})
     if resp['total']>0:
         cubeResponse['FeedCreated'] = True
-        cubeResponse['FeedName'] = resp['data'][0]['title']
+        cubeResponse['FeedName'] = resp['data'][0]['name']
         cubeResponse['FeedId'] = resp['data'][0]['id']
-        wfResp = cl.getWorkflow({"title" : feedName})
-        print(resp['data'][0])
-        if wfResp['total']>0:
+        
+        # total jobs in the feed
+        created = resp['data'][0]['created_jobs']
+        waiting = resp['data'][0]['waiting_jobs']
+        scheduled = resp['data'][0]['scheduled_jobs']
+        started = resp['data'][0]['started_jobs']
+        registering = resp['data'][0]['registering_jobs']
+        finished = resp['data'][0]['finished_jobs']
+        errored = resp['data'][0]['errored_jobs']
+        cancelled = resp['data'][0]['cancelled_jobs']
+        
+        total = created + waiting + scheduled + started + registering + finished + errored + cancelled
+
+        if total>1:
             cubeResponse['WorkflowStarted'] = True
-            instResp = cl.getWorkflowDetails(wfResp['data'][0]['id'])
-            finishedNodes = 1
-            feedStatus = "In Progress"
-            feedError = ""
-            for pInst in instResp['data']:
-                status = pInst['status']
-                if status == "finishedSuccessfully":
-                    finishedNodes += 1
-                if status == "cancelled" or status == "finishedWithError":
-                    feedStatus = "Failed"
-                    feedError += pInst['plugin_name'] + " : " + pInst['status'] + ", "
-            cubeResponse['FeedProgress'] = str (round(finishedNodes/(len(instResp['data']) + 1)*100)) + "%"
-            if finishedNodes == len(instResp['data']) + 1:
-                feedStatus = "Completed"
+            feedProgress = round((finished/total) * 100)
+            cubeResponse['FeedProgress'] = str(feedProgress) + "%"
+            feedStatus = ""
+            if errored>0 or cancelled>0:
+                cubeResponse['FeedError'] = str(errored + cancelled) + " job(s) failed"
+                feedStatus = "Failed"
+            else:
+                if feedProgress==100:
+                    feedStatus = "Complete"
+                else:
+                    feedStatus = "In progress"
+             
             cubeResponse['FeedStatus'] = feedStatus
-            cubeResponse['FeedError'] = feedError
+            
             
     return cubeResponse
     
@@ -298,7 +331,7 @@ def do_cube_create_feed(client,feedName,dataPath):
     Create a new feed in `CUBE` if not already present
     """
     # check if feed already present
-    resp = client.getFeed({"plugin_name" : "pl-dircopy", "title" : feedName})
+    resp = client.getFeed({"name_exact" : feedName})
     if resp['total']>0:
         return resp['data'][0]['id']
     else:    
@@ -317,7 +350,6 @@ def do_cube_create_workflow(client,pipelineName,feedId,workflowName):
     """
     resp = client.getWorkflow({'title':workflowName})
     if resp['total']>0:
-        print(resp)
         return resp
     else:
         ## Get pipeline id
@@ -332,11 +364,18 @@ def do_cube_create_workflow(client,pipelineName,feedId,workflowName):
         return wfResponse
             
     
-def do_cube_create_node():
+def do_cube_create_node(client,feedArgs,feedId):
     """
     Create a new node (plugin instance) on an existing feed in `CUBE`
     """
-    pass
+    pluginSearchParams = {"name": feedArgs.nodeArgs.PluginName, "version": feedArgs.nodeArgs.Version}   
+    plugin_id = client.getPluginId(pluginSearchParams)
+    feedParams = feedArgs.nodeArgs.Params
+    feedParams["previous_id"] = feedId
+    if feedArgs.nodeArgs.PassUserCreds:
+        feedParams["username"] = feedArgs.User
+        feedParams["password"] = feedArgs.User + "1234"
+    feedResponse = client.createFeed(plugin_id,feedParams)
     
 def do_cube_create_user(cubeUrl,userName):
     """
@@ -390,27 +429,29 @@ def parse_response(pfdcmResponse : dict, cubeResponse : dict ) -> dict:
     study = pfdcmResponse['pypx']['then']['00-status']['study']
     if study:
         status.StudyFound = True
-        images = study[0][data[0]['StudyInstanceUID']['value']][0]['images']   
+        images = study[0][data[0]['StudyInstanceUID']['value']][0]['images'] 
+  
         totalImages = images["requested"]["count"]
         totalRetrieved = images["packed"]["count"]
         totalPushed = images["pushed"]["count"]
         totalRegistered = images["registered"]["count"]
         
-        totalRetrievedPerc = round((totalRetrieved/totalImages)*100)
-        totalPushedPerc = round((totalPushed/totalImages)*100)
-        totalRegisteredPerc = round((totalRegistered/totalImages)*100)
+        if totalImages>0:       
+            totalRetrievedPerc = round((totalRetrieved/totalImages)*100)
+            totalPushedPerc = round((totalPushed/totalImages)*100)
+            totalRegisteredPerc = round((totalRegistered/totalImages)*100)
         
-        status.Retrieved  = str (totalRetrievedPerc) + "%"
-        status.Pushed = str(totalPushedPerc) + "%"
-        status.Registered = str(totalRegisteredPerc) + "%"
+            status.Retrieved  = str (totalRetrievedPerc) + "%"
+            status.Pushed = str(totalPushedPerc) + "%"
+            status.Registered = str(totalRegisteredPerc) + "%"
         
         
-        if totalRetrievedPerc == 100:
-            status.StudyRetrieved = True
-        if totalPushedPerc == 100:
-            status.StudyPushed = True
-        if totalRegisteredPerc == 100:
-            status.StudyRegistered = True
+            if totalRetrievedPerc == 100:
+                status.StudyRetrieved = True
+            if totalPushedPerc == 100:
+                status.StudyPushed = True
+            if totalRegisteredPerc == 100:
+                status.StudyRegistered = True
     else:
         status.Error = "Study not found. Please enter valid study info"
         

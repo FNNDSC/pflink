@@ -25,12 +25,10 @@ class DicomFeedQuerySchema(BaseModel):
     FeedName                            : str  = "" 
     User                                : str  = "" 
     Pipeline                            : str  = ""
-    NodeArgs                            : WorkflowPluginInstanceSchema
-        
-class DicomStatusQuerySchema(BaseModel):
-    """The Dicom status Query model"""
-    PFDCMservice                        : str   = ""
-    PACSservice                         : str   = ""
+    nodeArgs                            : WorkflowPluginInstanceSchema
+    
+class PACSqueryCore(BaseModel):
+    """The PACS Query model"""
     AccessionNumber                     : str   = ""
     PatientID                           : str   = ""
     PatientName                         : str   = ""
@@ -51,6 +49,12 @@ class DicomStatusQuerySchema(BaseModel):
     ProtocolName                        : str   = ""
     AcquisitionProtocolDescription      : str   = ""
     AcquisitionProtocolName             : str   = ""
+        
+class DicomStatusQuerySchema(BaseModel):
+    """The Dicom status Query model"""
+    PFDCMservice                        : str   = ""
+    PACSservice                         : str   = ""
+    PACSdirective                       : PACSqueryCore
     dblogbasepath                       : str   = ""
     feedArgs                            : DicomFeedQuerySchema
 
@@ -59,25 +63,7 @@ class DicomActionQuerySchema(BaseModel):
     PFDCMservice                        : str   = ""
     PACSservice                         : str   = ""
     AccessionNumber                     : str   = ""
-    PatientID                           : str   = ""
-    PatientName                         : str   = ""
-    PatientBirthDate                    : str   = ""
-    PatientAge                          : str   = ""
-    PatientSex                          : str   = ""
-    StudyDate                           : str   = ""
-    StudyDescription                    : str   = ""
-    StudyInstanceUID                    : str   = ""
-    Modality                            : str   = ""
-    ModalitiesInStudy                   : str   = ""
-    PerformedStationAETitle             : str   = ""
-    NumberOfSeriesRelatedInstances      : str   = ""
-    InstanceNumber                      : str   = ""
-    SeriesDate                          : str   = ""
-    SeriesDescription                   : str   = ""
-    SeriesInstanceUID                   : str   = ""
-    ProtocolName                        : str   = ""
-    AcquisitionProtocolDescription      : str   = ""
-    AcquisitionProtocolName             : str   = ""
+    PACSdirective                       : PACSqueryCore
     dblogbasepath                       : str   = ""
     thenArgs                            : DicomThenSchema
     feedArgs                            : DicomFeedQuerySchema

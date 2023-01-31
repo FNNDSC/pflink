@@ -35,15 +35,14 @@ class PythonChrisClient(ChrisClient):
         pipeline_res = self.cl.get_pipelines(searchParams)['data']
         if pipeline_res:
             return pipeline_res[0]['id']
-        return -1
-        
+        return -1        
 
     def createWorkflow(self, pipeline_id: str,params: dict):
         response = self.cl.create_workflow(pipeline_id,params)
         return response
         
     def getFeed(self, searchParams: dict):
-        response = self.cl.get_plugin_instances(searchParams)
+        response = self.cl.get_feeds(searchParams)
         return response
         
     def getWorkflow(self, searchParams: dict):
@@ -52,5 +51,9 @@ class PythonChrisClient(ChrisClient):
         
     def getWorkflowDetails(self, workflow_id : str):
         response = self.cl.get_workflow_plugin_instances(workflow_id)
+        return response
+        
+    def getPluginInstances(self, searchParams : dict):
+        response = self.cl.get_plugin_instances(searchParams)
         return response
 
