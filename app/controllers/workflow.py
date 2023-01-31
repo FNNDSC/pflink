@@ -10,7 +10,7 @@ import asyncio
 from controllers.pfdcm import (
     retrieve_pfdcm,
 )
-from models.dicom import (
+from models.workflow import (
     DicomStatusResponseSchema,
 )
 

@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routes.pfdcm import router as PfdcmRouter
 from routes.basic import router as BasicRouter
-from routes.dicom import router as DicomRouter
+from routes.workflow import router as WorkflowRouter
 
     
 app = FastAPI(
@@ -19,8 +19,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(BasicRouter, tags=["Basic Information"], prefix="")
-app.include_router(PfdcmRouter, tags=["Pfdcm Service Addresses "], prefix="/pfdcm")
-app.include_router(DicomRouter, tags=["Workflow Services"], prefix="/workflow")
+app.include_router(PfdcmRouter, tags=["Pfdcm Service Info "], prefix="/pfdcm")
+app.include_router(WorkflowRouter, tags=["Workflow Services"], prefix="/workflow")
 
 
 

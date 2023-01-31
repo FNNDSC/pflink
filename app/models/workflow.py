@@ -1,5 +1,5 @@
 str_description = """
-    The data models/schemas for DICOM operations.
+    The data models/schemas for workflow operations.
 """
 
 from    pydantic            import BaseModel, Field
@@ -62,7 +62,6 @@ class DicomActionQuerySchema(BaseModel):
     """The Dicom status Query model"""
     PFDCMservice                        : str   = ""
     PACSservice                         : str   = ""
-    AccessionNumber                     : str   = ""
     PACSdirective                       : PACSqueryCore
     dblogbasepath                       : str   = ""
     thenArgs                            : DicomThenSchema

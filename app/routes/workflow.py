@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Body
 import asyncio
 
-from models.dicom import (
+from models.workflow import (
     DicomStatusQuerySchema,
     DicomActionQuerySchema,
     PACSqueyReturnModel,
     DicomStatusResponseSchema,
 )
-from controllers.dicom import (
+from controllers.workflow import (
     workflow_status,
     run_dicom_workflow,
     threaded_workflow_do,
