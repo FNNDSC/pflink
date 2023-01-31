@@ -23,6 +23,12 @@ def workflow_status(
 ) -> dict:
     """
     Return the status of a workflow in `pflink`
+    by asking `pfdcm` & `cube`. The sequence is as
+    follows:
+        1) Ask `pfdcm` about the status of a study
+        2) Ask `cube` about the status of the feed created using the study
+        3) Parse both the results to a response schema
+        4) Return the response
     """
     # Ask `pfdcm` for study
     pfdcm_resp = get_pfdcm_status(pfdcm_url,dicom)
@@ -39,7 +45,14 @@ def workflow_status(
 
  
     
-async def threaded_workflow_do(dicom:dict, pfdcm_url:str) -> Future:
+async def threaded_workflow_do(
+    dicom:dict, 
+    pfdcm_url:str
+) -> Future:
+    """
+    asynchronous wrapper around run_workflow that runs the method 
+    using concurrent.futures
+    """
     loop = asyncio.get_running_loop()
     future = loop.run_in_executor(threadpool, run_workflow, dicom, pfdcm_url)
     return future
@@ -48,7 +61,13 @@ async def threaded_workflow_do(dicom:dict, pfdcm_url:str) -> Future:
 def run_workflow(dicom:dict, pfdcm_url:str):
     asyncio.run(run_dicom_workflow(dicom,pfdcm_url))
     
-async def run_dicom_workflow(dicom:dict, pfdcm_url:str) -> dict: 
+async def run_dicom_workflow(
+    dicom:dict, 
+    pfdcm_url:str
+) -> dict:
+    """
+    Create asuncronous task of `run_dicom_workflow_do`
+    """ 
     task = asyncio.create_task(run_dicom_workflow_do(dicom,pfdcm_url))
     await task
 
@@ -57,15 +76,21 @@ async def run_dicom_workflow_do(dicom:dict, pfdcm_url:str) -> dict:
     """
     Given a dictionary object containing key-value pairs for PFDCM query & CUBE
     query, return a dictionary object as response after completing a series of
-    tasks. The sequence of tasks is as followa:
-        1) Check if dicoms are already present in pfdcm
-            a) if not, retrieve dicoms from PACS to pfdcm
-        2) Push dicoms to CUBE swift storage
-        3) Register dicoms to CUBE
-        4) Create a new feed on the registered PACS files in CUBE
-        5) Start a workflow specified by the used on top the newly created feed
+    tasks. The sequence of tasks is as follows:
+        1) Use the `status` API to get the present status of the workflow
+        2) If study not found, return immediately
+        3) If Study is found, enter inside the while loop
+            a) If study not retrieved, retrieve study using `pfdcm`
+            b) If study not pushed, push study using `pfdcm`
+            c) If study not registrered, register study using `pfdcm`
+            d) If feed not created, create a new feed in `cube`
+              i)  if `pipeline` name is specified, add a new pipeline
+              ii) else add a new node
+              
+        4) End while loop if MAX_RETRIES == 0 or a workflow is already added in
+           the feed
     """
-    MAX_RETRIES = 10
+    MAX_RETRIES = 100
     cubeResource = dicom.thenArgs.CUBE
     pfdcm_smdb_cube_api = f'{pfdcm_url}/api/v1/SMDB/CUBE/{cubeResource}/' 
     response = requests.get(pfdcm_smdb_cube_api)
@@ -90,7 +115,7 @@ async def run_dicom_workflow_do(dicom:dict, pfdcm_url:str) -> dict:
                         if response.FeedCreated:
                         
                             # Get previous inst Id
-                            pluginInstSearchParams = {'plugin_name' : 'pl-dircopy', 'title' : feedName}
+                            pluginInstSearchParams = {'plugin_name' : 'pl-dircopy', 'feed_id' : response.FeedId}
                             pvInstId = client.getPluginInstances(pluginInstSearchParams)['data'][0]['id']
                             workflowName = response.FeedName
                             
@@ -143,6 +168,7 @@ async def run_dicom_workflow_do(dicom:dict, pfdcm_url:str) -> dict:
 def get_pfdcm_status(pfdcm_url,dicom):
     """
     Get the status of PACS from `pfdcm`
+    by running the syncronous API of `pfdcm`
     """
     pfdcm_dicom_api = f'{pfdcm_url}/api/v1/PACS/sync/pypx/'
     headers = {'Content-Type': 'application/json','accept': 'application/json'}
@@ -186,9 +212,15 @@ def get_pfdcm_status(pfdcm_url,dicom):
     return json.loads(response.text) 
 
    
-def pfdcm_do(verb : str,thenArgs:dict,dicom : dict, url : str) -> dict:
+def pfdcm_do(
+    verb : str,
+    thenArgs:dict,
+    dicom : dict, 
+    url : str
+) -> dict:
     """
-    # A reusable method to either retrieve, push or register dicoms using pfdcm
+    A reusable method to either retrieve, push or register dicoms using pfdcm
+    by running the threaded API of `pfdcm`
     """
     thenArgs = json.dumps(thenArgs,separators=(',', ':'))    
     pfdcm_dicom_api = f'{url}/api/v1/PACS/sync/pypx/'
@@ -271,12 +303,6 @@ def get_feed_status(pfdcmResponse: dict, dicom: dict):
     """
     Get the status of a feed inside `CUBE`
     """
-    feedName = dicom.feedArgs.FeedName
-    d_dicom = pfdcmResponse['pypx']['data']
-    if d_dicom:
-        feedName = parseFeedTemplate(feedName, d_dicom[0])        
-    if feedName == "":
-        feedName = "/*/"
         
     cubeResponse = {
         "FeedName" : "",
@@ -286,6 +312,13 @@ def get_feed_status(pfdcmResponse: dict, dicom: dict):
         "FeedStatus" : "",
         "FeedError" : "",
         "FeedId" : ""}
+        
+    feedName = dicom.feedArgs.FeedName
+    d_dicom = pfdcmResponse['pypx']['data']
+    if d_dicom:
+        feedName = parseFeedTemplate(feedName, d_dicom[0])        
+    if feedName == "":
+        cubeResponse['FeedError'] = "Please enter a valid feed name"
         
     cl = do_cube_create_user("http://localhost:8000/api/v1/",dicom.feedArgs.User)   
     resp = cl.getFeed({"name_exact" : feedName})
@@ -398,7 +431,10 @@ def do_cube_create_user(cubeUrl,userName):
     return authClient
 
 
-def parseFeedTemplate(feedTemplate : str, dcmData : dict) -> str:
+def parseFeedTemplate(
+    feedTemplate : str, 
+    dcmData : dict
+) -> str:
     """
     # Given a feed name template, substitute dicom values
     # for specified dicom tags
@@ -420,9 +456,12 @@ def parseFeedTemplate(feedTemplate : str, dcmData : dict) -> str:
     
 
 
-def parse_response(pfdcmResponse : dict, cubeResponse : dict ) -> dict:
+def parse_response(
+    pfdcmResponse : dict, 
+    cubeResponse : dict 
+) -> dict:
     """
-    Parse JSON object for status
+    Parse JSON object for workflow status response
     """
     status = DicomStatusResponseSchema()
     data = pfdcmResponse['pypx']['data']
