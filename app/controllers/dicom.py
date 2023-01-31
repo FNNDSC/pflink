@@ -1,7 +1,6 @@
 import motor.motor_asyncio
 import requests
 import json
-import concurrent.futures
 from controllers.client.PythonChrisClient import PythonChrisClient
 #from controllers.AnotherChrisClient import AIOChrisClient
 from datetime import datetime
@@ -41,8 +40,6 @@ def workflow_status(
     
     # return the response
     return workflow_response
-
-
  
     
 async def threaded_workflow_do(
