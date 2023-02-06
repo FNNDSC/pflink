@@ -80,9 +80,9 @@ async def threaded_workflow_do(dicom:dict, pfdcm_url:str) -> dict:
         feedName = parseFeedTemplate(feedName, d_dicom[0])
 
         while not response.WorkflowStarted and MAX_RETRIES>0:
-            if not response.Retrieved == "":
-                if not response.Pushed == "":
-                    if not response.Registered == "":
+            if not response.Retrieved == "0%":
+                if not response.Pushed == "0%":
+                    if not response.Registered == "0%":
                         if response.FeedCreated:
                         
                             # Get previous inst Id
@@ -121,7 +121,7 @@ async def threaded_workflow_do(dicom:dict, pfdcm_url:str) -> dict:
            
             # wait here for n seconds b4 polling again
             print("sleeping for 2 seconds")
-            time.sleep(2)
+            await asyncio.sleep(2)
             response = workflow_status(pfdcm_url, dicom)
             MAX_RETRIES -= 1
             
@@ -194,7 +194,7 @@ def pfdcm_do(
     by running the threaded API of `pfdcm`
     """
     thenArgs = json.dumps(thenArgs,separators=(',', ':'))    
-    pfdcm_dicom_api = f'{url}/api/v1/PACS/sync/pypx/'
+    pfdcm_dicom_api = f'{url}/api/v1/PACS/thread/pypx/'
     headers = {'Content-Type': 'application/json','accept': 'application/json'}
     myobj = {
         "PACSservice": {
