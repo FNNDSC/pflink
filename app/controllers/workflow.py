@@ -41,35 +41,9 @@ def workflow_status(
     # return the response
     return workflow_response
  
-    
-async def threaded_workflow_do(
-    dicom:dict, 
-    pfdcm_url:str
-) -> Future:
-    """
-    asynchronous wrapper around run_workflow that runs the method 
-    using concurrent.futures
-    """
-    loop = asyncio.get_running_loop()
-    future = loop.run_in_executor(threadpool, run_workflow, dicom, pfdcm_url)
-    return future
-     
-                      
-def run_workflow(dicom:dict, pfdcm_url:str):
-    asyncio.run(run_dicom_workflow(dicom,pfdcm_url))
-    
-async def run_dicom_workflow(
-    dicom:dict, 
-    pfdcm_url:str
-) -> dict:
-    """
-    Create asuncronous task of `run_dicom_workflow_do`
-    """ 
-    task = asyncio.create_task(run_dicom_workflow_do(dicom,pfdcm_url))
-    await task
 
                                               
-async def run_dicom_workflow_do(dicom:dict, pfdcm_url:str) -> dict:
+async def threaded_workflow_do(dicom:dict, pfdcm_url:str) -> dict:
     """
     Given a dictionary object containing key-value pairs for PFDCM query & CUBE
     query, return a dictionary object as response after completing a series of
@@ -106,9 +80,9 @@ async def run_dicom_workflow_do(dicom:dict, pfdcm_url:str) -> dict:
         feedName = parseFeedTemplate(feedName, d_dicom[0])
 
         while not response.WorkflowStarted and MAX_RETRIES>0:
-            if response.StudyRetrieved:
-                if response.StudyPushed:
-                    if response.StudyRegistered:
+            if not response.Retrieved == "":
+                if not response.Pushed == "":
+                    if not response.Registered == "":
                         if response.FeedCreated:
                         
                             # Get previous inst Id
