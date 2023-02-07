@@ -1,10 +1,12 @@
 import motor.motor_asyncio
 import requests
 import json
+import aiohttp
 from controllers.client.PythonChrisClient import PythonChrisClient
 #from controllers.AnotherChrisClient import AIOChrisClient
 from datetime import datetime
 import time
+import threading
 from    concurrent.futures  import  ThreadPoolExecutor, Future
 import asyncio
 from controllers.pfdcm import (
@@ -13,6 +15,16 @@ from controllers.pfdcm import (
 from models.workflow import (
     DicomStatusResponseSchema,
 )
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
 
 threadpool      = ThreadPoolExecutor()
 
@@ -40,36 +52,13 @@ def workflow_status(
     
     # return the response
     return workflow_response
- 
-    
-async def threaded_workflow_do(
-    dicom:dict, 
-    pfdcm_url:str
-) -> Future:
-    """
-    asynchronous wrapper around run_workflow that runs the method 
-    using concurrent.futures
-    """
-    loop = asyncio.get_running_loop()
-    future = loop.run_in_executor(threadpool, run_workflow, dicom, pfdcm_url)
-    return future
-     
-                      
-def run_workflow(dicom:dict, pfdcm_url:str):
-    asyncio.run(run_dicom_workflow(dicom,pfdcm_url))
-    
-async def run_dicom_workflow(
-    dicom:dict, 
-    pfdcm_url:str
-) -> dict:
-    """
-    Create asuncronous task of `run_dicom_workflow_do`
-    """ 
-    task = asyncio.create_task(run_dicom_workflow_do(dicom,pfdcm_url))
-    await task
 
-                                              
-async def run_dicom_workflow_do(dicom:dict, pfdcm_url:str) -> dict:
+async def  threaded_workflow_do(dicom:dict, pfdcm_url:str) -> dict:
+    await threaded_workflow_do_while(dicom, pfdcm_url)
+
+
+                                                 
+async def threaded_workflow_do_while(dicom:dict, pfdcm_url:str) -> dict:
     """
     Given a dictionary object containing key-value pairs for PFDCM query & CUBE
     query, return a dictionary object as response after completing a series of
@@ -92,70 +81,76 @@ async def run_dicom_workflow_do(dicom:dict, pfdcm_url:str) -> dict:
     pfdcm_smdb_cube_api = f'{pfdcm_url}/api/v1/SMDB/CUBE/{cubeResource}/' 
     response = requests.get(pfdcm_smdb_cube_api)
     d_results = json.loads(response.text) 
-     
     
     
     ## Create a Chris Client
+    #client = do_cube_create_user("http://havana.tch.harvard.edu:8000/api/v1/",dicom.feedArgs.User)
     client = do_cube_create_user("http://localhost:8000/api/v1/",dicom.feedArgs.User)
     
     response = workflow_status(pfdcm_url, dicom)
-    if response.StudyFound:
-        pfdcmResponse = get_pfdcm_status(pfdcm_url,dicom)
-        feedName = dicom.feedArgs.FeedName
-        d_dicom = pfdcmResponse['pypx']['data']
-        feedName = parseFeedTemplate(feedName, d_dicom[0])
-
-        while not response.WorkflowStarted and MAX_RETRIES>0:
-            if response.StudyRetrieved:
-                if response.StudyPushed:
-                    if response.StudyRegistered:
-                        if response.FeedCreated:
-                        
-                            # Get previous inst Id
-                            pluginInstSearchParams = {'plugin_name' : 'pl-dircopy', 'feed_id' : response.FeedId}
-                            pvInstId = client.getPluginInstances(pluginInstSearchParams)['data'][0]['id']
-                            workflowName = response.FeedName
-                            
-                            # Check if user runs a new pipeline or node
-                            if dicom.feedArgs.Pipeline:
-                                print("adding pipeline")
-                                do_cube_create_workflow(client,dicom.feedArgs.Pipeline,pvInstId,workflowName)
-                            else:
-                                print("adding new node")
-                                do_cube_create_node(client,dicom.feedArgs,pvInstId)
-                        else:        
-                            # wait and create a feed
-                            print("Creating a feed")
-                        
-                            ## Get the Swift path
-                            dataPath = client.getSwiftPath(dicom.PACSdirective)
-                            if feedName=="":
-                               raise Exception("Please enter a valid feed name.") 
-                            feed_id = do_cube_create_feed(client,feedName,dataPath)
-                    else:    
-                        # wait and register study
-                        print("registering study")
-                        do_pfdcm_register(dicom,pfdcm_url)
-                else: 
-                    print("pushing study")   
-                    # wait and push study
-                    do_pfdcm_push(dicom,pfdcm_url)
-            else: 
-                print("retrieveing study")   
-                # wait and retrieve study
-                do_pfdcm_retrieve(dicom,pfdcm_url)
-           
-            # wait here for n seconds b4 polling again
-            print("sleeping for 2 seconds")
-            time.sleep(2)
-            response = workflow_status(pfdcm_url, dicom)
-            MAX_RETRIES -= 1
-            
-        #end of while loop
-        return response
-    else:
+    if not response.StudyFound:
         # return immediately as study cannot be found
         return response
+    pfdcmResponse = get_pfdcm_status(pfdcm_url,dicom)
+    feedName = dicom.feedArgs.FeedName
+    d_dicom = pfdcmResponse['pypx']['data']
+    feedName = parseFeedTemplate(feedName, d_dicom[0])
+
+    while not response.WorkflowStarted and MAX_RETRIES>0:
+        if response.StudyRetrieved:
+            if response.StudyPushed:
+                if response.StudyRegistered:
+                    if response.FeedCreated:
+                        
+                        # Get previous inst Id
+                        pluginInstSearchParams = {'plugin_name' : 'pl-dircopy', 'feed_id' : response.FeedId}
+                        pvInstId = client.getPluginInstances(pluginInstSearchParams)['data'][0]['id']
+                        workflowName = response.FeedName
+                            
+                        # Check if user runs a new pipeline or node
+                        if dicom.feedArgs.Pipeline:
+                            print(f"adding pipeline {feedName}")
+                            do_cube_create_workflow(client,dicom.feedArgs.Pipeline,pvInstId,workflowName)
+                        else:
+                            print(f"adding new node {feedName}")
+                            do_cube_create_node(client,dicom.feedArgs,pvInstId)
+                    else:        
+                        # wait and create a feed
+                        print(f"Creating a feed {feedName}")
+                        
+                        ## Get the Swift path
+                        dataPath = client.getSwiftPath(dicom.PACSdirective)
+                        if feedName=="":
+                           raise Exception("Please enter a valid feed name.") 
+                        feed_id = do_cube_create_feed(client,feedName,dataPath)
+                else:    
+                    # wait and register study
+                    print(f"registering study {feedName}")
+                    st = time.time()
+                    await do_pfdcm_register(dicom,pfdcm_url)
+                    
+            else: 
+                print(f"pushing study {feedName}")   
+                # wait and push study
+                await do_pfdcm_push(dicom,pfdcm_url)
+
+        else: 
+            print(f"retrieveing study {feedName}")   
+            # wait and retrieve study
+            await do_pfdcm_retrieve(dicom,pfdcm_url)          
+        
+        MAX_RETRIES -= 1        
+        # wait here for n seconds b4 polling again
+        print(f"sleeping for 2 seconds")
+        await asyncio.sleep(2)
+        st = time.time()
+        response = workflow_status(pfdcm_url, dicom)
+        et = time.time()
+        elapsed_time = et - st
+        print(f'{bcolors.OKGREEN}Execution time to get status:{elapsed_time} seconds{bcolors.ENDC}')
+           
+    #end of while loop
+    return response
     
     
     
@@ -209,7 +204,7 @@ def get_pfdcm_status(pfdcm_url,dicom):
     return json.loads(response.text) 
 
    
-def pfdcm_do(
+async def pfdcm_do(
     verb : str,
     thenArgs:dict,
     dicom : dict, 
@@ -220,7 +215,7 @@ def pfdcm_do(
     by running the threaded API of `pfdcm`
     """
     thenArgs = json.dumps(thenArgs,separators=(',', ':'))    
-    pfdcm_dicom_api = f'{url}/api/v1/PACS/sync/pypx/'
+    pfdcm_dicom_api = f'{url}/api/v1/PACS/thread/pypx/'
     headers = {'Content-Type': 'application/json','accept': 'application/json'}
     myobj = {
         "PACSservice": {
@@ -257,19 +252,20 @@ def pfdcm_do(
              "json_response": False
          }
     }
-
+    st = time.time()
     response = requests.post(pfdcm_dicom_api, json = myobj, headers=headers)
-    d_results = json.loads(response.text) 
-    return d_results 
+    et = time.time()
+    elapsed_time = et - st
+    print(f'{bcolors.WARNING}Execution time to {verb}:{elapsed_time} seconds{bcolors.ENDC}')
          
-def do_pfdcm_retrieve(dicom:dict, pfdcm_url:str):
+async def do_pfdcm_retrieve(dicom:dict, pfdcm_url:str):
     """
     Retrieve PACS using pfdcm
     """
     thenArgs = ""   
-    pfdcm_do("retrieve",thenArgs,dicom,pfdcm_url)
+    await pfdcm_do("retrieve",thenArgs,dicom,pfdcm_url)
     
-def do_pfdcm_push(dicom:dict, pfdcm_url:str):
+async def do_pfdcm_push(dicom:dict, pfdcm_url:str):
     """
     Push PACS to a Swift store using `pfdcm`
     """
@@ -281,9 +277,9 @@ def do_pfdcm_push(dicom:dict, pfdcm_url:str):
                      'swiftPackEachDICOM': dicom.thenArgs.swiftPackEachDICOM}
                    
     
-    pfdcm_do("push",thenArgs,dicom,pfdcm_url)
+    await pfdcm_do("push",thenArgs,dicom,pfdcm_url)
     
-def do_pfdcm_register(dicom:dict, pfdcm_url:str):
+async def do_pfdcm_register(dicom:dict, pfdcm_url:str):
     """
     Register PACS files to a `CUBE`
     """
@@ -293,7 +289,7 @@ def do_pfdcm_register(dicom:dict, pfdcm_url:str):
                      "swiftServicesPACS": dicom.thenArgs.swiftServicesPACS,
                      "parseAllFilesWithSubStr": dicom.thenArgs.parseAllFilesWithSubStr
                    }
-    pfdcm_do("register",thenArgs,dicom,pfdcm_url)
+    await pfdcm_do("register",thenArgs,dicom,pfdcm_url)
 
 ### CUBE SPECIFIC METHODS ###    
 def get_feed_status(pfdcmResponse: dict, dicom: dict):
@@ -317,7 +313,8 @@ def get_feed_status(pfdcmResponse: dict, dicom: dict):
     if feedName == "":
         cubeResponse['FeedError'] = "Please enter a valid feed name"
         
-    cl = do_cube_create_user("http://localhost:8000/api/v1/",dicom.feedArgs.User)   
+    #cl = do_cube_create_user("http://havana.tch.harvard.edu:8000/api/v1/",dicom.feedArgs.User) 
+    cl = do_cube_create_user("http://localhost:8000/api/v1/",dicom.feedArgs.User)  
     resp = cl.getFeed({"name_exact" : feedName})
     if resp['total']>0:
         cubeResponse['FeedCreated'] = True
