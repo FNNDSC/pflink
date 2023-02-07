@@ -33,11 +33,14 @@ async def post_dicom(dicom: DicomStatusQuerySchema = Body(...)):
     
 @router.post("/do/", response_description="Retrieve/push/register dicom")   
 async def post_do_dicom(background_tasks: BackgroundTasks,dicom : DicomActionQuerySchema = Body(...)):
+async def post_do_dicom( 
+    background_tasks: BackgroundTasks, 
+    dicom : DicomActionQuerySchema = Body(...)
+):
     pfdcm_name = dicom.PFDCMservice
     pfdcm_server = await retrieve_pfdcm(pfdcm_name)    
     pfdcm_url = pfdcm_server['server_ip'] + ":" +pfdcm_server['server_port']
     background_tasks.add_task(threaded_workflow_do,dicom,pfdcm_url)
-    #background_tasks.add_task(sleep_and_print)
     return DicomStatusResponseSchema(FeedName = dicom.feedArgs.FeedName,
                                      Message = "POST the same request replacing the API endpoint with /status/ to get the status") 
 

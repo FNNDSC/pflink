@@ -88,7 +88,61 @@ async def threaded_workflow_do_while(dicom:dict, pfdcm_url:str) -> dict:
     client = do_cube_create_user("http://localhost:8000/api/v1/",dicom.feedArgs.User)
     
     response = workflow_status(pfdcm_url, dicom)
-    if not response.StudyFound:
+    if response.StudyFound:
+        pfdcmResponse = get_pfdcm_status(pfdcm_url,dicom)
+        feedName = dicom.feedArgs.FeedName
+        d_dicom = pfdcmResponse['pypx']['data']
+        feedName = parseFeedTemplate(feedName, d_dicom[0])
+
+        while not response.WorkflowStarted and MAX_RETRIES>0:
+            if not response.Retrieved == "0%":
+                if not response.Pushed == "0%":
+                    if not response.Registered == "0%":
+                        if response.FeedCreated:
+                        
+                            # Get previous inst Id
+                            pluginInstSearchParams = {'plugin_name' : 'pl-dircopy', 'feed_id' : response.FeedId}
+                            pvInstId = client.getPluginInstances(pluginInstSearchParams)['data'][0]['id']
+                            workflowName = response.FeedName
+                            
+                            # Check if user runs a new pipeline or node
+                            if dicom.feedArgs.Pipeline:
+                                print("adding pipeline")
+                                do_cube_create_workflow(client,dicom.feedArgs.Pipeline,pvInstId,workflowName)
+                            else:
+                                print("adding new node")
+                                do_cube_create_node(client,dicom.feedArgs,pvInstId)
+                        else:        
+                            # wait and create a feed
+                            print("Creating a feed")
+                        
+                            ## Get the Swift path
+                            dataPath = client.getSwiftPath(dicom.PACSdirective)
+                            if feedName=="":
+                               raise Exception("Please enter a valid feed name.") 
+                            feed_id = do_cube_create_feed(client,feedName,dataPath)
+                    else:    
+                        # wait and register study
+                        print("registering study")
+                        do_pfdcm_register(dicom,pfdcm_url)
+                else: 
+                    print("pushing study")   
+                    # wait and push study
+                    do_pfdcm_push(dicom,pfdcm_url)
+            else: 
+                print("retrieveing study")   
+                # wait and retrieve study
+                do_pfdcm_retrieve(dicom,pfdcm_url)
+           
+            # wait here for n seconds b4 polling again
+            print("sleeping for 2 seconds")
+            await asyncio.sleep(2)
+            response = workflow_status(pfdcm_url, dicom)
+            MAX_RETRIES -= 1
+            
+        #end of while loop
+        return response
+    else:
         # return immediately as study cannot be found
         return response
     pfdcmResponse = get_pfdcm_status(pfdcm_url,dicom)
