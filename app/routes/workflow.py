@@ -32,7 +32,6 @@ async def post_dicom(dicom: DicomStatusQuerySchema = Body(...)):
     return PACSqueyReturnModel(response=response)
     
 @router.post("/do/", response_description="Retrieve/push/register dicom")   
-async def post_do_dicom(background_tasks: BackgroundTasks,dicom : DicomActionQuerySchema = Body(...)):
 async def post_do_dicom( 
     background_tasks: BackgroundTasks, 
     dicom : DicomActionQuerySchema = Body(...)
