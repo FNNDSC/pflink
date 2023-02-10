@@ -1,18 +1,27 @@
 from fastapi import APIRouter, Body, BackgroundTasks
 
 from controllers.fnf import (
+    update_status,
     post_workflow,
+    manage_workflow,
+    retrieve_workflows,
 )
 
 from models.fnf import (
-    FnfSchema,
+    FnfRequestSchema,
     FnfResponseSchema,
 )
 
 router = APIRouter()
 
-
-@router.post("/api/v1/", response_description="post a workflow")
-async def run_workflow(background_tasks: BackgroundTasks,request: FnfSchema = Body(...)) ->dict:
-    response = await post_workflow( background_tasks,request)
-    return response
+@router.get("/",response_description="All workflows retrieved")
+async def get_workflows():
+    workflows = await retrieve_workflows()
+    return workflows
+    
+@router.post("/",response_description="POST new workflow request")
+async def create_workflow(background_tasks:BackgroundTasks, data:FnfRequestSchema) ->FnfResponseSchema:
+    response = await post_workflow(data)
+    background_tasks.add_task(update_status,response["key"])
+    background_tasks.add_task(manage_workflow,response["key"])
+    return response["response"]

@@ -1,9 +1,12 @@
 from pydantic import BaseModel, Field
 from enum import Enum
 
-State = Enum('State',['INIT', 'PROG', 'FIN'])
+class State(Enum):
+    INIT = 1
+    PROGRESS = 2
+    FINISHED = 3
 
-class FnfSchema(BaseModel):
+class FnfRequestSchema(BaseModel):
     foo: str = ""
     bar: str = ""
     oof: str = ""
@@ -11,11 +14,11 @@ class FnfSchema(BaseModel):
     
 class FnfResponseSchema(BaseModel):
     taskProgress : int = 0
-    taskState : int = 0
+    taskState : str = State.INIT.name
     stale: bool = True
     started: bool = False
     
 class FnfWorkflowSchema(BaseModel):
     key: str = ""
-    request: dict 
-    response: dict
+    request: FnfRequestSchema 
+    response: FnfResponseSchema
