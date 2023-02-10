@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from routes.pfdcm import router as PfdcmRouter
 from routes.basic import router as BasicRouter
 from routes.workflow import router as WorkflowRouter
+from routes.fnf import router as FnfRouter
 
     
 app = FastAPI(
@@ -21,6 +22,7 @@ app.add_middleware(
 app.include_router(BasicRouter, tags=["Basic Information"], prefix="")
 app.include_router(PfdcmRouter, tags=["Pfdcm Service Info "], prefix="/pfdcm")
 app.include_router(WorkflowRouter, tags=["Workflow Services"], prefix="/workflow")
+app.include_router(FnfRouter, tags=["Fnf Services"], prefix="/fnf")
 
 
 
