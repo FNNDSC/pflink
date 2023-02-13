@@ -9,7 +9,7 @@ from controllers.fnf import (
 
 from models.fnf import (
     FnfRequestSchema,
-    FnfResponseSchema,
+    FnfStatusSchema,
 )
 
 router = APIRouter()
@@ -20,8 +20,8 @@ async def get_workflows():
     return workflows
     
 @router.post("/",response_description="POST new workflow request")
-async def create_workflow(background_tasks:BackgroundTasks, data:FnfRequestSchema) ->FnfResponseSchema:
+async def create_workflow(background_tasks:BackgroundTasks, data:FnfRequestSchema) ->FnfStatusSchema:
     response = await post_workflow(data)
     background_tasks.add_task(update_status,response["key"])
     background_tasks.add_task(manage_workflow,response["key"])
-    return response["response"]
+    return response["status"]

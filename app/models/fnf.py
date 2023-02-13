@@ -12,7 +12,7 @@ class FnfRequestSchema(BaseModel):
     oof: str = ""
     rab: str = ""
     
-class FnfResponseSchema(BaseModel):
+class FnfStatusSchema(BaseModel):
     taskProgress : int = 0
     taskState : str = State.INIT.name
     stale: bool = True
@@ -21,4 +21,4 @@ class FnfResponseSchema(BaseModel):
 class FnfWorkflowSchema(BaseModel):
     key: str = ""
     request: FnfRequestSchema 
-    response: FnfResponseSchema
+    status: FnfStatusSchema

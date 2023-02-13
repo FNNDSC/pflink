@@ -7,7 +7,7 @@ import time
 from models.fnf import (
     State,
     FnfRequestSchema,
-    FnfResponseSchema,
+    FnfStatusSchema,
     FnfWorkflowSchema,
 )
 
@@ -32,14 +32,14 @@ def workflow_retrieve_helper(workflow:dict) -> FnfWorkflowSchema:
     return FnfWorkflowSchema(
         key=workflow["_id"],
         request=workflow["request"],
-        response=workflow["response"],
+        response=workflow["status"],
     )
     
 def workflow_add_helper(workflow:FnfWorkflowSchema) -> dict:
     return {
         "_id": workflow.key,
         "request": workflow.request.__dict__,
-        "response": workflow.response.__dict__,
+        "response": workflow.status.__dict__,
     }
     
 def dict_to_hash(data:dict) -> str:
@@ -94,29 +94,29 @@ async def update_workflow(key:str, data:FnfRequestSchema):
 # POST a workflow
 async def post_workflow(data:FnfRequestSchema)->FnfResponseSchema:
     key = dict_to_hash(data)
-    response = FnfResponseSchema()    
-    new_workflow = FnfWorkflowSchema(key=key, request = data, response=response)
+    status = FnfStatusSchema()    
+    new_workflow = FnfWorkflowSchema(key=key, request = data, status=status)
     added_workflow = await add_workflow(new_workflow)
     return {
         "key"     : key,
-        "response": added_workflow.response,
+        "response": added_workflow.status,
         }
     
 # Update status of a workflow
 async def update_status(key:str):
     workflow = await retrieve_workflow(key)
-    if workflow.response.stale and not workflow.response.taskState==State.FINISHED.name:
+    if workflow.status.stale and not workflow.status.taskState==State.FINISHED.name:
         logging.info(f"WORKING on updating the status for {key}, locking--")
-        workflow.response.stale=False
+        workflow.status.stale=False
         await update_workflow(key,workflow)
         await blocking_method(key,workflow)
         
         
 # Blocking method 
 async def blocking_method(key,workflow):
-    time.sleep(60)
-    workflow.response.taskProgress += 10
-    workflow.response.stale=True
+    await asyncio.sleep(60)
+    workflow.status.taskProgress += 10
+    workflow.status.stale=True
     logging.info(f"UPDATED status for {key}, releasing lock")
     await update_workflow(key,workflow)
     
@@ -124,22 +124,22 @@ async def blocking_method(key,workflow):
 # manage a workflow
 async def manage_workflow(key:str):
     workflow = await retrieve_workflow(key)
-    if not workflow.response.started:
+    if not workflow.status.started:
         logging.info(f"STARTED working on workflow {key}")
         workflow.response.started = True
         await update_workflow(key,workflow)
-        progress = workflow.response.taskProgress
+        progress = workflow.status.taskProgress
         while progress<100:
             if progress <=30:
-                workflow.response.taskState = State.INIT.name
+                workflow.status.taskState = State.INIT.name
             elif progress >30 and progress <=90:
-                workflow.response.taskState = State.PROGRESS.name
+                workflow.status.taskState = State.PROGRESS.name
                 
             await update_workflow(key,workflow)
             await update_status(key)          
-            time.sleep(40)            
+            await asyncio.sleep(40)            
             workflow = await retrieve_workflow(key)
-            progress = workflow.response.taskProgress
+            progress = workflow.status.taskProgress
         workflow.response.taskState = State.FINISHED.name
         logging.info(f"FINISHED workflow: {key}")
         await update_workflow(key,workflow)
