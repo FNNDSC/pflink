@@ -4,12 +4,15 @@ import hashlib
 import logging
 import asyncio
 import time
+from concurrent.futures import ProcessPoolExecutor
+from controllers.job import jobber
 from models.fnf import (
     State,
     FnfRequestSchema,
     FnfStatusSchema,
     FnfWorkflowSchema,
 )
+
 
 MONGO_DETAILS = "mongodb://localhost:27017"
 
@@ -20,8 +23,11 @@ database = client.workflows
 workflow_collection = database.get_collection("workflows_collection")
 
 format = "%(asctime)s: %(message)s"
-logging.basicConfig(format=format, level=logging.INFO,
-                        datefmt="%H:%M:%S")
+logging.basicConfig(
+    format=format, 
+    level=logging.INFO,
+    datefmt="%H:%M:%S"
+)
 
 
 
@@ -30,16 +36,16 @@ logging.basicConfig(format=format, level=logging.INFO,
 
 def workflow_retrieve_helper(workflow:dict) -> FnfWorkflowSchema:
     return FnfWorkflowSchema(
-        key=workflow["_id"],
-        request=workflow["request"],
-        response=workflow["status"],
+        key      = workflow["_id"],
+        request  = workflow["request"],
+        status   = workflow["status"],
     )
     
 def workflow_add_helper(workflow:FnfWorkflowSchema) -> dict:
     return {
-        "_id": workflow.key,
-        "request": workflow.request.__dict__,
-        "response": workflow.status.__dict__,
+        "_id"     : workflow.key,
+        "request" : workflow.request.__dict__,
+        "status"  : workflow.status.__dict__,
     }
     
 def dict_to_hash(data:dict) -> str:
@@ -50,8 +56,6 @@ def dict_to_hash(data:dict) -> str:
     # create an unique key
     key = hash_request.hexdigest()
     return key
-
-
 
 
 # Retrieve all workflows present in the DB
@@ -81,10 +85,10 @@ async def retrieve_workflow(key:str) -> dict:
 
 
 # update workflow
-async def update_workflow(key:str, data:FnfRequestSchema):
-    workflow = await workflow_collection.find_one({"_id":key})
+def update_workflow(key:str, data:FnfRequestSchema):
+    workflow = workflow_collection.find_one({"_id":key})
     if workflow:
-        updated_workflow = await workflow_collection.update_one(
+        updated_workflow = workflow_collection.update_one(
             {"_id":key},{"$set":workflow_add_helper(data)}
         )
         if updated_workflow:
@@ -92,33 +96,47 @@ async def update_workflow(key:str, data:FnfRequestSchema):
         return False
         
 # POST a workflow
-async def post_workflow(data:FnfRequestSchema)->FnfResponseSchema:
+async def post_workflow(data:FnfRequestSchema)->FnfStatusSchema:    
     key = dict_to_hash(data)
     status = FnfStatusSchema()    
     new_workflow = FnfWorkflowSchema(key=key, request = data, status=status)
     added_workflow = await add_workflow(new_workflow)
+    
+    #shell = jobber({'verbosity' : 1, 'noJobLogging': True})
+    #shell.job_runbg('python -c "str_cmd"')
+    #shell.job_runbg("python -c 'from controllers.fnf import manage_workflow; manage_workflow(key)'")
+    
+    
     return {
         "key"     : key,
-        "response": added_workflow.status,
+        "status": added_workflow.status,
         }
+        
     
 # Update status of a workflow
 async def update_status(key:str):
-    workflow = await retrieve_workflow(key)
-    if workflow.status.stale and not workflow.status.taskState==State.FINISHED.name:
-        logging.info(f"WORKING on updating the status for {key}, locking--")
-        workflow.status.stale=False
-        await update_workflow(key,workflow)
-        await blocking_method(key,workflow)
+    workflow = await retrieve_workflow(key)    
+    loop = asyncio.get_running_loop()
+    exe = ProcessPoolExecutor(4)
+    awaitable = loop.run_in_executor(exe, blocking_method,key,workflow)
+     # await the task
+    await awaitable
+    # close the process pool
+    exe.shutdown()
         
         
 # Blocking method 
-async def blocking_method(key,workflow):
-    await asyncio.sleep(60)
-    workflow.status.taskProgress += 10
-    workflow.status.stale=True
-    logging.info(f"UPDATED status for {key}, releasing lock")
-    await update_workflow(key,workflow)
+def blocking_method(key,workflow):
+    if workflow.status.stale and not workflow.status.taskState==State.FINISHED.name: 
+        logging.info(f"WORKING on updating the status for {key}, locking--")       
+        workflow.status.stale=False
+        update_workflow(key,workflow)
+        time.sleep(20)
+        workflow.status.taskProgress += 10
+        workflow.status.stale=True    
+        update_workflow(key,workflow)
+        logging.info(f"UPDATED status for {key}, releasing lock")
+    
     
     
 # manage a workflow
@@ -126,23 +144,26 @@ async def manage_workflow(key:str):
     workflow = await retrieve_workflow(key)
     if not workflow.status.started:
         logging.info(f"STARTED working on workflow {key}")
-        workflow.response.started = True
-        await update_workflow(key,workflow)
+        workflow.status.started = True
+        update_workflow(key,workflow)
         progress = workflow.status.taskProgress
         while progress<100:
             if progress <=30:
                 workflow.status.taskState = State.INIT.name
             elif progress >30 and progress <=90:
                 workflow.status.taskState = State.PROGRESS.name
-                
-            await update_workflow(key,workflow)
+            update_workflow(key,workflow)
             await update_status(key)          
             await asyncio.sleep(40)            
             workflow = await retrieve_workflow(key)
             progress = workflow.status.taskProgress
-        workflow.response.taskState = State.FINISHED.name
+        workflow.status.taskState = State.FINISHED.name
         logging.info(f"FINISHED workflow: {key}")
-        await update_workflow(key,workflow)
+        update_workflow(key,workflow)
+
+
+                
+        
         
             
         
