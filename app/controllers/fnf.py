@@ -5,7 +5,6 @@ import logging
 import asyncio
 import time
 from concurrent.futures import ProcessPoolExecutor
-from controllers.job import jobber
 from models.fnf import (
     State,
     FnfRequestSchema,

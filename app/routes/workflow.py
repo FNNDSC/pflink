@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Body, BackgroundTasks
-import asyncio
-import time
+from fastapi import APIRouter, Body
+import  subprocess
+import json
 
 from models.workflow import (
     DicomStatusQuerySchema,
@@ -9,39 +9,32 @@ from models.workflow import (
     DicomStatusResponseSchema,
 )
 from controllers.workflow import (
-    workflow_status,
-    threaded_workflow_do,
+    post_workflow,
+    retrieve_workflows,
+    query_to_dict,
 )
 
 from controllers.pfdcm import (
     retrieve_pfdcm,
 )
-async def sleep_and_print():
-    print("Request recieved and sleeping")
-    await asyncio.sleep(10)
-    print("Woke up and do nothing")
 
 router = APIRouter()
     
-@router.post("/status/", response_description="Status of a dicom")
-async def post_dicom(dicom: DicomStatusQuerySchema = Body(...)):
-    pfdcm_name = dicom.PFDCMservice
-    pfdcm_server = await retrieve_pfdcm(pfdcm_name)    
-    pfdcm_url = pfdcm_server['server_ip'] + ":" +pfdcm_server['server_port']
-    response = workflow_status(pfdcm_url,dicom)
-    return PACSqueyReturnModel(response=response)
+@router.get("/",response_description="All workflows retrieved")
+async def get_workflows():
+    workflows = await retrieve_workflows()
+    return workflows
     
-@router.post("/do/", response_description="Retrieve/push/register dicom")   
-async def post_do_dicom( 
-    background_tasks: BackgroundTasks, 
-    dicom : DicomActionQuerySchema = Body(...)
-):
-    pfdcm_name = dicom.PFDCMservice
+@router.post("/",response_description="POST new workflow request")
+async def create_workflow(data:DicomStatusQuerySchema) ->DicomStatusResponseSchema:
+    d_data = query_to_dict(data)
+    str_data = json.dumps(d_data)
+    pfdcm_name = data.PFDCMservice
     pfdcm_server = await retrieve_pfdcm(pfdcm_name)    
     pfdcm_url = pfdcm_server['server_ip'] + ":" +pfdcm_server['server_port']
-    background_tasks.add_task(threaded_workflow_do,dicom,pfdcm_url)
-    return DicomStatusResponseSchema(FeedName = dicom.feedArgs.FeedName,
-                                     Message = "POST the same request replacing the API endpoint with /status/ to get the status") 
-
-
-
+    response = await post_workflow(data)   
+    process = subprocess.Popen(['python','app/processes/status.py',"--data",str_data,"--url",pfdcm_url,"--key",response["key"]], stdout=subprocess.PIPE, stderr=subprocess.PIPE,close_fds   = True)
+    process2 = subprocess.Popen(['python','app/processes/wf_manager.py',"--data",str_data,"--url",pfdcm_url,"--key",response["key"]], stdout=subprocess.PIPE, stderr=subprocess.PIPE,close_fds   = True)
+    #stdout,stderr=process2.communicate(b'\n')
+    #print(stdout,stderr)
+    return response["status"]

@@ -5,15 +5,6 @@ str_description = """
 from    pydantic            import BaseModel, Field
 from    typing              import Optional, List, Dict
 from    datetime            import datetime
-from    enum                import Enum
-
-class State(Enum):
-    NOT_STARTED      = 0
-    RETRIEVED        = 1
-    PUSHED           = 2
-    REGISTERED       = 3
-    FEED_CREATED     = 4
-    WORKFLOW_STARTED = 5
 
 class DicomThenSchema(BaseModel):
     """A model returned when an async PACS directive is indicated"""
@@ -65,8 +56,7 @@ class DicomStatusQuerySchema(BaseModel):
     PACSservice                         : str   = ""
     PACSdirective                       : PACSqueryCore
     dblogbasepath                       : str   = ""
-    FeedName                            : str  = "" 
-    User                                : str  = "" 
+    feedArgs                            : DicomFeedQuerySchema
 
 class DicomActionQuerySchema(BaseModel):
     """The Dicom status Query model"""
@@ -79,24 +69,20 @@ class DicomActionQuerySchema(BaseModel):
     
 class DicomStatusResponseSchema(BaseModel):
     StudyFound                          : bool = False
+    StudyRetrieved                      : bool = False
+    StudyPushed                         : bool = False
+    StudyRegistered                     : bool = False
     Retrieved                           : str  = "0%"
     Pushed                              : str  = "0%"
     Registered                          : str  = "0%"
+    FeedCreated                         : bool = False
     FeedId                              : str  = ""
     FeedName                            : str  = ""
+    WorkflowStarted                     : bool = False
     FeedProgress                        : str  = "0%"
     FeedStatus                          : str  = ""
     Message                             : str  = ""
     Error                               : str  = ""
-    WorkflowState                       : str  = State.NOT_STARTED.name
-    Stale                               : bool = True
-    Started                             : bool = False
-    
-    
-class WorkflowSchema(BaseModel):
-    key                                 : str  = ""
-    request                             : DicomStatusQuerySchema
-    status                              : DicomStatusResponseSchema
         
 class time(BaseModel):
     """A simple model that has a time string field"""
