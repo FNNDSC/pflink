@@ -64,6 +64,7 @@ class DicomStatusQuerySchema(BaseModel):
     PFDCMservice                        : str   = ""
     PACSservice                         : str   = ""
     PACSdirective                       : PACSqueryCore
+    thenArgs                            : DicomThenSchema
     dblogbasepath                       : str   = ""
     FeedName                            : str  = "" 
     User                                : str  = "" 

@@ -10,6 +10,7 @@ from enum import Enum
 from pydantic import BaseModel, Field
 import requests
 from client.PythonChrisClient import PythonChrisClient
+
 format = "%(asctime)s: %(message)s"
 logging.basicConfig(
     format=format, 
@@ -26,6 +27,7 @@ database = client.workflows
 workflow_collection = database.get_collection("workflows_collection")
 
 from models import (
+    State,
     DicomStatusQuerySchema,
     DicomStatusResponseSchema,
     WorkflowSchema,
@@ -34,7 +36,7 @@ from models import (
 parser = argparse.ArgumentParser(description='Process some integers.')
 parser.add_argument('--data', metavar='N', type=str)
 parser.add_argument('--url', metavar='N', type=str)
-parser.add_argument('--key', metavar='N', type=str)
+
 args = parser.parse_args()
 
 
@@ -47,6 +49,7 @@ def workflow_retrieve_helper(workflow:dict) -> WorkflowSchema:
                    PFDCMservice  = workflow["request"]["PFDCMservice"],
                    PACSservice   = workflow["request"]["PACSservice"],
                    PACSdirective = workflow["request"]["PACSdirective"],
+                   thenArgs      = workflow["request"]["thenArgs"],
                    dblogbasepath = workflow["request"]["dblogbasepath"],
                    FeedName      = workflow["request"]["FeedName"],
                    User          = workflow["request"]["User"],
@@ -62,6 +65,7 @@ def workflow_add_helper(workflow:WorkflowSchema) -> dict:
         "PFDCMservice"   : workflow.request.PFDCMservice,
         "PACSservice"    : workflow.request.PACSservice,
         "PACSdirective"  : workflow.request.PACSdirective.__dict__,
+        "thenArgs"       : workflow.request.thenArgs.__dict__,
         "dblogbasepath"  : workflow.request.dblogbasepath,
         "FeedName"       : workflow.request.FeedName,
         "User"           : workflow.request.User,
@@ -72,17 +76,25 @@ def workflow_add_helper(workflow:WorkflowSchema) -> dict:
         "request" : d_request,
         "status"  : workflow.status.__dict__,
     }
-
-def dict_to_query(query:dict)->DicomStatusQuerySchema:
+    
+def dict_to_query(request:dict)-> DicomStatusQuerySchema:
     return DicomStatusQuerySchema(
-                   PFDCMservice  = query["PFDCMservice"],
-                   PACSservice   = query["PACSservice"],
-                   PACSdirective = query["PACSdirective"],
-                   dblogbasepath = query["dblogbasepath"],
-                   FeedName      = query["FeedName"],
-                   User          = query["User"],
-               )
-               
+        PFDCMservice   = request["PFDCMservice"],
+        PACSservice    = request["PACSservice"],
+        PACSdirective  = request["PACSdirective"],
+        thenArgs       = request["thenArgs"],
+        dblogbasepath  = request["dblogbasepath"],
+        FeedName       = request["FeedName"],
+        User           = request["User"],
+    )
+def dict_to_hash(data:dict) -> str:
+    # convert to string and encode
+    str_data = json.dumps(data)
+    hash_request = hashlib.md5(str_data.encode())     
+    # create an unique key
+    key = hash_request.hexdigest()
+    return key
+                  
 def update_workflow(key:str, data:dict):
     """
     Update an existing workflow in the DB
@@ -105,24 +117,33 @@ def retrieve_workflow(key:str) -> dict:
     if workflow:
         return workflow_retrieve_helper(workflow)
     
-def update_workflow_status(key:str,status:DicomStatusResponseSchema):
+def workflow_status(
+    pfdcm_url : str,
+    key       : str,
+    query    : DicomStatusQuerySchema
+):
+    """
+    Update the status of a workflow object
+    in the DB
+    """
     workflow = retrieve_workflow(key)
     if workflow.status.Stale: 
         logging.info(f"WORKING on updating the status for {key}, locking--")       
         workflow.status.Stale=False
         update_workflow(key,workflow)
-        workflow.status = status
+        updated_status = update_workflow_status(pfdcm_url,key,query)
+        workflow.status = updated_status
         workflow.status.Stale=True    
         update_workflow(key,workflow)
         logging.info(f"UPDATED status for {key}, releasing lock")
 
 
     
-def workflow_status(
+def update_workflow_status(
     pfdcm_url : str,
     key       : str,
-    dicom     : dict,
-) -> dict:
+    dicom     : DicomStatusQuerySchema,
+) -> DicomStatusResponseSchema:
     """
     Return the status of a workflow in `pflink`
     by asking `pfdcm` & `cube`. The sequence is as
@@ -139,10 +160,10 @@ def workflow_status(
     cube_resp = get_feed_status(pfdcm_resp,dicom)
     
     # Parse both the respones
-    status = parse_response(pfdcm_resp, cube_resp)
+    status = parse_response(pfdcm_resp, cube_resp,key)
     
     # return the response
-    update_workflow_status(key,status)
+    return status
       
 def get_pfdcm_status(pfdcm_url,dicom):
     """
@@ -229,7 +250,7 @@ def get_feed_status(pfdcmResponse: dict, dicom: dict):
         errored = resp['data'][0]['errored_jobs']
         cancelled = resp['data'][0]['cancelled_jobs']
         
-        total = created + waiting + scheduled + started + registering + finished + errored + cancelled
+        total = created + waiting + scheduled +started + registering + finished +errored + cancelled
 
         if total>1:
             cubeResponse['WorkflowStarted'] = True
@@ -246,17 +267,20 @@ def get_feed_status(pfdcmResponse: dict, dicom: dict):
                     feedStatus = "In progress"
              
             cubeResponse['FeedStatus'] = feedStatus
+    else:
+        cubeResponse = {}
             
             
     return cubeResponse
 def parse_response(
     pfdcmResponse : dict, 
-    cubeResponse : dict 
+    cubeResponse : dict,
+    key          : str, 
 ) -> dict:
     """
     Parse JSON object for workflow status response
     """
-    status = DicomStatusResponseSchema()
+    status = retrieve_workflow(key).status
     data = pfdcmResponse['pypx']['data']
     study = pfdcmResponse['pypx']['then']['00-status']['study']
     if study:
@@ -279,15 +303,16 @@ def parse_response(
         
         
             if totalRetrievedPerc == 100:
-                status.StudyRetrieved = True
+                status.WorkflowState = State.RETRIEVED.name
             if totalPushedPerc == 100:
-                status.StudyPushed = True
+                status.WorkflowState = State.PUSHED.name
             if totalRegisteredPerc == 100:
-                status.StudyRegistered = True
+                status.WorkflowState = State.REGISTERED.name
     else:
         status.Error = "Study not found. Please enter valid study info"
         
     if cubeResponse:
+        print(cubeResponse)
         status.WorkflowState = cubeResponse['FeedCreated']
         status.FeedId = cubeResponse['FeedId']
         status.FeedName = cubeResponse['FeedName']
@@ -342,6 +367,7 @@ def parseFeedTemplate(
     return feedName    
     
 if __name__== "__main__":
-    d_data = json.loads(args.data)
-    data = dict_to_query(d_data)
-    resp = workflow_status(args.url,args.key,data) 
+    d_data  =   json.loads(args.data)
+    data    =   dict_to_query(d_data)
+    key     =   dict_to_hash(d_data)
+    resp = workflow_status(args.url,key,data) 

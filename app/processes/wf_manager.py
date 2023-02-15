@@ -10,6 +10,7 @@ from enum import Enum
 from pydantic import BaseModel, Field
 import requests
 from client.PythonChrisClient import PythonChrisClient
+import  subprocess
 format = "%(asctime)s: %(message)s"
 logging.basicConfig(
     format=format, 
@@ -26,6 +27,7 @@ database = client.workflows
 workflow_collection = database.get_collection("workflows_collection")
 
 from models import (
+    State,
     DicomStatusQuerySchema,
     DicomStatusResponseSchema,
     WorkflowSchema,
@@ -34,7 +36,7 @@ from models import (
 parser = argparse.ArgumentParser(description='Process some integers.')
 parser.add_argument('--data', metavar='N', type=str)
 parser.add_argument('--url', metavar='N', type=str)
-parser.add_argument('--key', metavar='N', type=str)
+
 args = parser.parse_args()
 
 class bcolors:
@@ -56,6 +58,7 @@ def workflow_retrieve_helper(workflow:dict) -> WorkflowSchema:
                    PFDCMservice  = workflow["request"]["PFDCMservice"],
                    PACSservice   = workflow["request"]["PACSservice"],
                    PACSdirective = workflow["request"]["PACSdirective"],
+                   thenArgs      = workflow["request"]["thenArgs"],
                    dblogbasepath = workflow["request"]["dblogbasepath"],
                    FeedName      = workflow["request"]["FeedName"],
                    User          = workflow["request"]["User"],
@@ -71,6 +74,7 @@ def workflow_add_helper(workflow:WorkflowSchema) -> dict:
         "PFDCMservice"   : workflow.request.PFDCMservice,
         "PACSservice"    : workflow.request.PACSservice,
         "PACSdirective"  : workflow.request.PACSdirective.__dict__,
+        "thenArgs"       : workflow.request.thenArgs.__dict__,
         "dblogbasepath"  : workflow.request.dblogbasepath,
         "FeedName"       : workflow.request.FeedName,
         "User"           : workflow.request.User,
@@ -81,17 +85,40 @@ def workflow_add_helper(workflow:WorkflowSchema) -> dict:
         "request" : d_request,
         "status"  : workflow.status.__dict__,
     }
-
-def dict_to_query(query:dict)->DicomStatusQuerySchema:
+    
+def dict_to_query(request:dict)-> DicomStatusQuerySchema:
     return DicomStatusQuerySchema(
-                   PFDCMservice  = query["PFDCMservice"],
-                   PACSservice   = query["PACSservice"],
-                   PACSdirective = query["PACSdirective"],
-                   dblogbasepath = query["dblogbasepath"],
-                   FeedName      = query["FeedName"],
-                   User          = query["User"],
-               )
-               
+        PFDCMservice   = request["PFDCMservice"],
+        PACSservice    = request["PACSservice"],
+        PACSdirective  = request["PACSdirective"],
+        thenArgs       = request["thenArgs"],
+        dblogbasepath  = request["dblogbasepath"],
+        FeedName       = request["FeedName"],
+        User           = request["User"],
+    )
+
+def query_to_dict(request:DicomStatusQuerySchema)-> dict:
+    return {
+        "PFDCMservice"   : request.PFDCMservice,
+        "PACSservice"    : request.PACSservice,
+        "PACSdirective"  : request.PACSdirective.__dict__,
+        "thenArgs"       : request.thenArgs.__dict__,
+        "dblogbasepath"  : request.dblogbasepath,
+        "FeedName"       : request.FeedName,
+        "User"           : request.User,
+    }
+    
+def dict_to_hash(data:dict) -> str:
+    # convert to string and encode
+    str_data = json.dumps(data)
+    hash_request = hashlib.md5(str_data.encode())     
+    # create an unique key
+    key = hash_request.hexdigest()
+    return key
+
+# DB queries
+
+                   
 def update_workflow(key:str, data:dict):
     """
     Update an existing workflow in the DB
@@ -103,103 +130,68 @@ def update_workflow(key:str, data:dict):
         )
         if updated_workflow:
             return True
-        return False    
-    
-def threaded_workflow_do_while(dicom:dict, pfdcm_url:str) -> dict:
-    """
-    Given a dictionary object containing key-value pairs for PFDCM query & CUBE
-    query, return a dictionary object as response after completing a series of
-    tasks. The sequence of tasks is as follows:
-        1) Use the `status` API to get the present status of the workflow
-        2) If study not found, return immediately
-        3) If Study is found, enter inside the while loop
-            a) If study not retrieved, retrieve study using `pfdcm`
-            b) If study not pushed, push study using `pfdcm`
-            c) If study not registrered, register study using `pfdcm`
-            d) If feed not created, create a new feed in `cube`
-              i)  if `pipeline` name is specified, add a new pipeline
-              ii) else add a new node
-              
-        4) End while loop if MAX_RETRIES == 0 or a workflow is already added in
-           the feed
-    """
-    MAX_RETRIES = 100
-    cubeResource = dicom.thenArgs.CUBE
-    pfdcm_smdb_cube_api = f'{pfdcm_url}/api/v1/SMDB/CUBE/{cubeResource}/' 
-    response = requests.get(pfdcm_smdb_cube_api)
-    d_results = json.loads(response.text) 
-    
-    
-    ## Create a Chris Client
-    #client = do_cube_create_user("http://havana.tch.harvard.edu:8000/api/v1/",dicom.feedArgs.User)
-    client = do_cube_create_user("http://localhost:8000/api/v1/",dicom.feedArgs.User)
-    
-    response = workflow_status(pfdcm_url, dicom)
-    if not response.StudyFound:
-        return response
-    pfdcmResponse = get_pfdcm_status(pfdcm_url,dicom)
-    feedName = dicom.feedArgs.FeedName
-    d_dicom = pfdcmResponse['pypx']['data']
-    feedName = parseFeedTemplate(feedName, d_dicom[0])
-
-    while not response.WorkflowStarted and MAX_RETRIES>0:
-        if response.StudyRetrieved:
-            if response.StudyPushed:
-                if response.StudyRegistered:
-                    if response.FeedCreated:
-                        
-                        # Get previous inst Id
-                        pluginInstSearchParams = {'plugin_name' : 'pl-dircopy', 'feed_id' : response.FeedId}
-                        pvInstId = client.getPluginInstances(pluginInstSearchParams)['data'][0]['id']
-                        workflowName = response.FeedName
-                            
-                        # Check if user runs a new pipeline or node
-                        if dicom.feedArgs.Pipeline:
-                            print(f"adding pipeline {feedName}")
-                            do_cube_create_workflow(client,dicom.feedArgs.Pipeline,pvInstId,workflowName)
-                        else:
-                            print(f"adding new node {feedName}")
-                            do_cube_create_node(client,dicom.feedArgs,pvInstId)
-                    else:        
-                        # wait and create a feed
-                        print(f"Creating a feed {feedName}")
-                        
-                        ## Get the Swift path
-                        dataPath = client.getSwiftPath(dicom.PACSdirective)
-                        if feedName=="":
-                           raise Exception("Please enter a valid feed name.") 
-                        feed_id = do_cube_create_feed(client,feedName,dataPath)
-                else:
-                    if response.Registered == "0%":     
-                        # wait and register study
-                        print(f"registering study {feedName} {response.Registered}")
-                        do_pfdcm_register(dicom,pfdcm_url)
-                    
-            else:
-                if response.Pushed == "0%":  
-                    print(f"pushing study {feedName} {response.Pushed}")   
-                    # wait and push study
-                    do_pfdcm_push(dicom,pfdcm_url)
-
-        else:
-            if response.Retrieved == "0%": 
-                print(f"retrieveing study {feedName} {response.Retrieved}")   
-                # wait and retrieve study
-                do_pfdcm_retrieve(dicom,pfdcm_url)          
+        return False  
         
-        MAX_RETRIES -= 1        
-        # wait here for n seconds b4 polling again
-        print(f"sleeping for 2 seconds")
-        time.sleep(2)
-        st = time.time()
-        response = workflow_status(pfdcm_url, dicom)
-        et = time.time()
-        elapsed_time = et - st
-        print(f'{bcolors.OKGREEN}Execution time to get status:{elapsed_time} seconds{bcolors.ENDC}')
-           
-    #end of while loop
-    return response
+def retrieve_workflow(key:str) -> dict:
+    """
+    Retrieve a single workflow from DB
+    Given: key
+    """
+    workflow = workflow_collection.find_one({"_id":key})
+    if workflow:
+        return workflow_retrieve_helper(workflow)  
+    
+def manage_workflow(dicom:dict, pfdcm_url:str,key:str) -> dict:
+    """
+    Manage workflow:
+    Schedule task based on status 
+    from the DB
+    """
+    workflow = retrieve_workflow(key)
+    if workflow.status.Started:
+        # Do nothing adnd return
+        return
+        
+    workflow.status.Started = True
+    update_workflow(key,workflow)
+    
+    while not workflow.status.WorkflowState == State.REGISTERED.name:
+        
+        if workflow.status.WorkflowState == State.NOT_STARTED.name:
+            if workflow.status.Retrieved == "0%":
+                do_pfdcm_retrieve(dicom,pfdcm_url)
+        elif workflow.status.WorkflowState == State.RETRIEVED.name:
+            if workflow.status.Pushed == "0%":
+                do_pfdcm_push(dicom,pfdcm_url)
+        elif workflow.status.WorkflowState == State.PUSHED.name:
+            if workflow.status.Registered == "0%":
+                do_pfdcm_register(dicom,pfdcm_url)        
+        
+        update_status(data,pfdcm_url,key)
+        time.sleep(4)
+        workflow = retrieve_workflow(key)
+        if workflow.status.Error:
+            return
 
+def update_status(data,pfdcm_url,key):
+    """
+    Trigger an update status in 
+    a separate python process
+    """
+    d_data   = query_to_dict(data)
+    str_data = json.dumps(d_data)
+    process  = subprocess.Popen(
+                   ['python',
+                   'app/processes/status.py',
+                   "--data",str_data,
+                   "--url",pfdcm_url,
+                   "--key",key
+                   ], stdout=subprocess.PIPE,
+                   stderr=subprocess.PIPE,
+                   close_fds   = True
+               )       
+ 
+    
 def pfdcm_do(
     verb : str,
     thenArgs:dict,
@@ -211,7 +203,7 @@ def pfdcm_do(
     by running the threaded API of `pfdcm`
     """
     thenArgs = json.dumps(thenArgs,separators=(',', ':'))    
-    pfdcm_dicom_api = f'{url}/api/v1/PACS/thread/pypx/'
+    pfdcm_dicom_api = f'{url}/api/v1/PACS/sync/pypx/'
     headers = {'Content-Type': 'application/json','accept': 'application/json'}
     myobj = {
         "PACSservice": {
@@ -383,8 +375,9 @@ def parseFeedTemplate(
     return feedName
     
 if __name__== "__main__":
-    d_data = json.loads(args.data)
-    data = dict_to_query(d_data)
-    threaded_workflow_do_while(args.url,data)
+    d_data  =   json.loads(args.data)
+    data    =   dict_to_query(d_data)
+    key     =   dict_to_hash(d_data)
+    manage_workflow(data,args.url,key)
 
     
