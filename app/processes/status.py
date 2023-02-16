@@ -53,6 +53,7 @@ def workflow_retrieve_helper(workflow:dict) -> WorkflowSchema:
                    dblogbasepath = workflow["request"]["dblogbasepath"],
                    FeedName      = workflow["request"]["FeedName"],
                    User          = workflow["request"]["User"],
+                   analysisArgs  = workflow["request"]["analysisArgs"],
                )
     return WorkflowSchema(
         key      = workflow["_id"],
@@ -69,6 +70,7 @@ def workflow_add_helper(workflow:WorkflowSchema) -> dict:
         "dblogbasepath"  : workflow.request.dblogbasepath,
         "FeedName"       : workflow.request.FeedName,
         "User"           : workflow.request.User,
+        "analysisArgs"   : workflow.request.analysisArgs.__dict__,
     }
     
     return {
@@ -86,6 +88,7 @@ def dict_to_query(request:dict)-> DicomStatusQuerySchema:
         dblogbasepath  = request["dblogbasepath"],
         FeedName       = request["FeedName"],
         User           = request["User"],
+        analysisArgs   = request["analysisArgs"],
     )
 def dict_to_hash(data:dict) -> str:
     # convert to string and encode
@@ -127,19 +130,23 @@ def workflow_status(
     in the DB
     """
     workflow = retrieve_workflow(key)
-    if workflow.status.Stale: 
-        logging.info(f"WORKING on updating the status for {key}, locking--")       
-        workflow.status.Stale=False
-        update_workflow(key,workflow)
-        updated_status = update_workflow_status(pfdcm_url,key,query)
-        workflow.status = updated_status
-        workflow.status.Stale=True    
-        update_workflow(key,workflow)
-        logging.info(f"UPDATED status for {key}, releasing lock")
+    if not workflow.status.Stale or  workflow.status.WorkflowState ==  State.COMPLETED.name:             
+        # Do nothing and exit
+        return 
+    logging.info(f"WORKING on updating the status for {key}, locking--")       
+    workflow.status.Stale=False
+    update_workflow(key,workflow)
+    
+    updated_status         = get_workflow_status(pfdcm_url,key,query)
+    workflow.status        = updated_status
+    workflow.status.Stale  = True  
+      
+    update_workflow(key,workflow)
+    logging.info(f"UPDATED status for {key}, releasing lock")
 
 
     
-def update_workflow_status(
+def get_workflow_status(
     pfdcm_url : str,
     key       : str,
     dicom     : DicomStatusQuerySchema,
@@ -170,60 +177,64 @@ def get_pfdcm_status(pfdcm_url,dicom):
     Get the status of PACS from `pfdcm`
     by running the syncronous API of `pfdcm`
     """
-    pfdcm_dicom_api = f'{pfdcm_url}/api/v1/PACS/sync/pypx/'
+    pfdcm_status_url = f'{pfdcm_url}/api/v1/PACS/sync/pypx/'
     headers = {'Content-Type': 'application/json','accept': 'application/json'}
     myobj = {
         "PACSservice": {
-          "value": dicom.PACSservice
+          "value"                         : dicom.PACSservice
         },
         "listenerService": {
-          "value": "default"
+          "value"                         : "default"
          },
         "PACSdirective": {
-          "AccessionNumber": dicom.PACSdirective.AccessionNumber,
-          "PatientID": dicom.PACSdirective.PatientID,
-          "PatientName": dicom.PACSdirective.PatientName,
-          "PatientBirthDate": dicom.PACSdirective.PatientBirthDate,
-          "PatientAge": dicom.PACSdirective.PatientAge,
-          "PatientSex": dicom.PACSdirective.PatientSex,
-          "StudyDate": dicom.PACSdirective.StudyDate,
-          "StudyDescription": dicom.PACSdirective.StudyDescription,
-          "StudyInstanceUID": dicom.PACSdirective.StudyInstanceUID,
-          "Modality": dicom.PACSdirective.Modality,
-          "ModalitiesInStudy": dicom.PACSdirective.ModalitiesInStudy,
-          "PerformedStationAETitle": dicom.PACSdirective.PerformedStationAETitle,
+          "AccessionNumber"               : dicom.PACSdirective.AccessionNumber,
+          "PatientID"                     : dicom.PACSdirective.PatientID,
+          "PatientName"                   : dicom.PACSdirective.PatientName,
+          "PatientBirthDate"              : dicom.PACSdirective.PatientBirthDate,
+          "PatientAge"                    : dicom.PACSdirective.PatientAge,
+          "PatientSex"                    : dicom.PACSdirective.PatientSex,
+          "StudyDate"                     : dicom.PACSdirective.StudyDate,
+          "StudyDescription"              : dicom.PACSdirective.StudyDescription,
+          "StudyInstanceUID"              : dicom.PACSdirective.StudyInstanceUID,
+          "Modality"                      : dicom.PACSdirective.Modality,
+          "ModalitiesInStudy"             : dicom.PACSdirective.ModalitiesInStudy,
+          "PerformedStationAETitle"       : dicom.PACSdirective.PerformedStationAETitle,
           "NumberOfSeriesRelatedInstances": dicom.PACSdirective.NumberOfSeriesRelatedInstances,
-          "InstanceNumber": dicom.PACSdirective.InstanceNumber,
-          "SeriesDate": dicom.PACSdirective.SeriesDate,
-          "SeriesDescription": dicom.PACSdirective.SeriesDescription,
-          "SeriesInstanceUID": dicom.PACSdirective.SeriesInstanceUID,
-          "ProtocolName": dicom.PACSdirective.ProtocolName,
+          "InstanceNumber"                : dicom.PACSdirective.InstanceNumber,
+          "SeriesDate"                    : dicom.PACSdirective.SeriesDate,
+          "SeriesDescription"             : dicom.PACSdirective.SeriesDescription,
+          "SeriesInstanceUID"             : dicom.PACSdirective.SeriesInstanceUID,
+          "ProtocolName"                  : dicom.PACSdirective.ProtocolName,
           "AcquisitionProtocolDescription": dicom.PACSdirective.AcquisitionProtocolDescription,
-          "AcquisitionProtocolName": dicom.PACSdirective.AcquisitionProtocolName,
-          "withFeedBack": True,
-          "then": 'status',
-          "thenArgs": "",
-          "dblogbasepath": dicom.dblogbasepath,
-          "json_response": True
+          "AcquisitionProtocolName"       : dicom.PACSdirective.AcquisitionProtocolName,
+          "withFeedBack"                  : True,
+          "then"                          : 'status',
+          "thenArgs"                      : "",
+          "dblogbasepath"                 : dicom.dblogbasepath,
+          "json_response"                 : True
         }
       }
 
-    response = requests.post(pfdcm_dicom_api, json = myobj, headers=headers)
+    response = requests.post(
+                   pfdcm_status_url, 
+                   json = myobj, 
+                   headers=headers
+               )
     return json.loads(response.text) 
 
 def get_feed_status(pfdcmResponse: dict, dicom: dict):
     """
     Get the status of a feed inside `CUBE`
     """
+    MAX_JOBS = 2
         
     cubeResponse = {
-        "FeedName" : "",
-        "FeedCreated" : False,
-        "FeedProgress" : "Not started",
-        "WorkflowStarted": False,
-        "FeedStatus" : "",
-        "FeedError" : "",
-        "FeedId" : ""}
+        "FeedName"       : "",
+        "FeedState"      : "",
+        "FeedProgress"   : "Not started",
+        "FeedStatus"     : "",
+        "FeedError"      : "",
+        "FeedId"         : ""}
         
     feedName = dicom.FeedName
     d_dicom = pfdcmResponse['pypx']['data']
@@ -236,25 +247,25 @@ def get_feed_status(pfdcmResponse: dict, dicom: dict):
     cl = do_cube_create_user("http://localhost:8000/api/v1/",dicom.User)  
     resp = cl.getFeed({"name_exact" : feedName})
     if resp['total']>0:
-        cubeResponse['FeedCreated'] = True
-        cubeResponse['FeedName'] = resp['data'][0]['name']
-        cubeResponse['FeedId'] = resp['data'][0]['id']
+        cubeResponse['FeedState']       = State.FEED_CREATED.name
+        cubeResponse['FeedName']        = resp['data'][0]['name']
+        cubeResponse['FeedId']          = resp['data'][0]['id']
         
         # total jobs in the feed
-        created = resp['data'][0]['created_jobs']
-        waiting = resp['data'][0]['waiting_jobs']
-        scheduled = resp['data'][0]['scheduled_jobs']
-        started = resp['data'][0]['started_jobs']
-        registering = resp['data'][0]['registering_jobs']
-        finished = resp['data'][0]['finished_jobs']
-        errored = resp['data'][0]['errored_jobs']
-        cancelled = resp['data'][0]['cancelled_jobs']
+        created            = resp['data'][0]['created_jobs']
+        waiting            = resp['data'][0]['waiting_jobs']
+        scheduled          = resp['data'][0]['scheduled_jobs']
+        started            = resp['data'][0]['started_jobs']
+        registering        = resp['data'][0]['registering_jobs']
+        finished           = resp['data'][0]['finished_jobs']
+        errored            = resp['data'][0]['errored_jobs']
+        cancelled          = resp['data'][0]['cancelled_jobs']
         
         total = created + waiting + scheduled +started + registering + finished +errored + cancelled
 
         if total>1:
-            cubeResponse['WorkflowStarted'] = True
-            feedProgress = round((finished/total) * 100)
+            cubeResponse['FeedState'] = State.ANALYSIS_STARTED.name
+            feedProgress = round((finished/MAX_JOBS) * 100)
             cubeResponse['FeedProgress'] = str(feedProgress) + "%"
             feedStatus = ""
             if errored>0 or cancelled>0:
@@ -263,6 +274,7 @@ def get_feed_status(pfdcmResponse: dict, dicom: dict):
             else:
                 if feedProgress==100:
                     feedStatus = "Complete"
+                    cubeResponse['FeedState']       = State.COMPLETED.name
                 else:
                     feedStatus = "In progress"
              
@@ -287,14 +299,14 @@ def parse_response(
         status.StudyFound = True
         images = study[0][data[0]['StudyInstanceUID']['value']][0]['images'] 
   
-        totalImages = images["requested"]["count"]
-        totalRetrieved = images["packed"]["count"]
-        totalPushed = images["pushed"]["count"]
-        totalRegistered = images["registered"]["count"]
+        totalImages        = images["requested"]["count"]
+        totalRetrieved     = images["packed"]["count"]
+        totalPushed        = images["pushed"]["count"]
+        totalRegistered    = images["registered"]["count"]
         
         if totalImages>0:       
-            totalRetrievedPerc = round((totalRetrieved/totalImages)*100)
-            totalPushedPerc = round((totalPushed/totalImages)*100)
+            totalRetrievedPerc  = round((totalRetrieved/totalImages)*100)
+            totalPushedPerc     = round((totalPushed/totalImages)*100)
             totalRegisteredPerc = round((totalRegistered/totalImages)*100)
         
             status.Retrieved  = str (totalRetrievedPerc) + "%"
@@ -312,13 +324,13 @@ def parse_response(
         status.Error = "Study not found. Please enter valid study info"
         
     if cubeResponse:
-        print(cubeResponse)
-        status.WorkflowState = cubeResponse['FeedCreated']
-        status.FeedId = cubeResponse['FeedId']
-        status.FeedName = cubeResponse['FeedName']
-        status.FeedProgress = cubeResponse['FeedProgress']
-        status.FeedStatus = cubeResponse['FeedStatus']
-        status.Error = cubeResponse['FeedError']
+       if cubeResponse['FeedState'] != "":
+            status.WorkflowState   = cubeResponse['FeedState']           
+            status.FeedId          = cubeResponse['FeedId']
+            status.FeedName        = cubeResponse['FeedName']
+            status.FeedProgress    = cubeResponse['FeedProgress']
+            status.FeedStatus      = cubeResponse['FeedStatus']
+            status.Error           = cubeResponse['FeedError']
         
         
     return status 
@@ -367,6 +379,9 @@ def parseFeedTemplate(
     return feedName    
     
 if __name__== "__main__":
+    """
+    Main entry point
+    """
     d_data  =   json.loads(args.data)
     data    =   dict_to_query(d_data)
     key     =   dict_to_hash(d_data)

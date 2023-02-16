@@ -42,6 +42,7 @@ def workflow_retrieve_helper(workflow:dict) -> WorkflowSchema:
                    dblogbasepath = workflow["request"]["dblogbasepath"],
                    FeedName      = workflow["request"]["FeedName"],
                    User          = workflow["request"]["User"],
+                   analysisArgs  = workflow["request"]["analysisArgs"],
                )
     return WorkflowSchema(
         key      = workflow["_id"],
@@ -58,6 +59,7 @@ def workflow_add_helper(workflow:WorkflowSchema) -> dict:
         "dblogbasepath"  : workflow.request.dblogbasepath,
         "FeedName"       : workflow.request.FeedName,
         "User"           : workflow.request.User,
+        "analysisArgs"   : workflow.request.analysisArgs.__dict__,
     }
     
     return {
@@ -75,9 +77,12 @@ def query_to_dict(request:DicomStatusQuerySchema)-> dict:
         "dblogbasepath"  : request.dblogbasepath,
         "FeedName"       : request.FeedName,
         "User"           : request.User,
+        "analysisArgs"   : request.analysisArgs.__dict__,
     }
     
 
+
+# DB methods
     
 def dict_to_hash(data:dict) -> str:
     # convert to string and encode
@@ -111,18 +116,14 @@ async def retrieve_workflow(key:str) -> dict:
     if workflow:
         return workflow_retrieve_helper(workflow)
 
-# Get PFDCM URL
-async def retrieve_pfdcm_url(
-    serviceName : str,
-) -> str:
-    """
-    Retrieve service address of a PFDCM
-    server from the DB
-    Given: serviceName
-    """
+
+# Retrieve an existing `pfdcm` service address
+async def retrieve_pfdcm_url(serviceName : str) -> str:
     pfdcm_server = await retrieve_pfdcm(serviceName)    
     pfdcm_url = pfdcm_server['server_ip'] + ":" + pfdcm_server['server_port']
     return pfdcm_url
+
+
      
 # POST a workflow
 async def post_workflow(
@@ -167,4 +168,6 @@ async def post_workflow(
                                 ], stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE,
                                  close_fds   = True)
+    stderr,stdout = status_update.communicate()
+    print(stderr,stdout)
     return workflow.status

@@ -25,6 +25,10 @@ class PythonChrisClient(ChrisClient):
         dirPath = filePath.replace(fileName,'')
         return dirPath
         
+    def getPACSdetails(self,searchParams:dict):
+        response = self.cl.get_pacs_files(searchParams)
+        return response['data'][0]
+        
 
     def createFeed(self, plugin_id: str,params: dict):
         response = self.cl.create_plugin_instance(plugin_id,params)
