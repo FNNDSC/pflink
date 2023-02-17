@@ -11,26 +11,26 @@ from pydantic import BaseModel, Field
 import requests
 from client.PythonChrisClient import PythonChrisClient
 import  subprocess
-format = "%(asctime)s: %(message)s"
-logging.basicConfig(
-    format=format, 
-    level=logging.INFO,
-    datefmt="%H:%M:%S"
+from utils import (
+    dict_to_query,
+    query_to_dict,
+    dict_to_hash,
+    update_workflow,
+    retrieve_workflow,
 )
-    
-MONGO_DETAILS = "mongodb://localhost:27017"
-
-client = MongoClient(MONGO_DETAILS)
-
-database = client.workflows
-
-workflow_collection = database.get_collection("workflows_collection")
 
 from models import (
     State,
     DicomStatusQuerySchema,
     DicomStatusResponseSchema,
     WorkflowSchema,
+)
+
+format = "%(asctime)s: %(message)s"
+logging.basicConfig(
+    format=format, 
+    level=logging.INFO,
+    datefmt="%H:%M:%S"
 )
 
 parser = argparse.ArgumentParser(description='Process some integers.')
@@ -50,102 +50,7 @@ class bcolors:
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
 
-# helpers
 
-
-def workflow_retrieve_helper(workflow:dict) -> WorkflowSchema:    
-    request =  DicomStatusQuerySchema(
-                   PFDCMservice  = workflow["request"]["PFDCMservice"],
-                   PACSservice   = workflow["request"]["PACSservice"],
-                   PACSdirective = workflow["request"]["PACSdirective"],
-                   thenArgs      = workflow["request"]["thenArgs"],
-                   dblogbasepath = workflow["request"]["dblogbasepath"],
-                   FeedName      = workflow["request"]["FeedName"],
-                   User          = workflow["request"]["User"],
-                   analysisArgs  = workflow["request"]["analysisArgs"],
-               )
-    return WorkflowSchema(
-        key      = workflow["_id"],
-        request  = request,
-        status   = workflow["status"],
-    )
-    
-def workflow_add_helper(workflow:WorkflowSchema) -> dict:
-    d_request = {
-        "PFDCMservice"   : workflow.request.PFDCMservice,
-        "PACSservice"    : workflow.request.PACSservice,
-        "PACSdirective"  : workflow.request.PACSdirective.__dict__,
-        "thenArgs"       : workflow.request.thenArgs.__dict__,
-        "dblogbasepath"  : workflow.request.dblogbasepath,
-        "FeedName"       : workflow.request.FeedName,
-        "User"           : workflow.request.User,
-        "analysisArgs"   : workflow.request.analysisArgs.__dict__,
-    }
-    
-    return {
-        "_id"     : workflow.key,
-        "request" : d_request,
-        "status"  : workflow.status.__dict__,
-    }
-    
-def dict_to_query(request:dict)-> DicomStatusQuerySchema:
-    return DicomStatusQuerySchema(
-        PFDCMservice   = request["PFDCMservice"],
-        PACSservice    = request["PACSservice"],
-        PACSdirective  = request["PACSdirective"],
-        thenArgs       = request["thenArgs"],
-        dblogbasepath  = request["dblogbasepath"],
-        FeedName       = request["FeedName"],
-        User           = request["User"],
-        analysisArgs   = request["analysisArgs"],
-    )
-
-def query_to_dict(request:DicomStatusQuerySchema)-> dict:
-    return {
-        "PFDCMservice"   : request.PFDCMservice,
-        "PACSservice"    : request.PACSservice,
-        "PACSdirective"  : request.PACSdirective.__dict__,
-        "thenArgs"       : request.thenArgs.__dict__,
-        "dblogbasepath"  : request.dblogbasepath,
-        "FeedName"       : request.FeedName,
-        "User"           : request.User,
-        "analysisArgs"   : request.analysisArgs.__dict__,
-    }
-    
-def dict_to_hash(data:dict) -> str:
-    # convert to string and encode
-    str_data = json.dumps(data)
-    hash_request = hashlib.md5(str_data.encode())     
-    # create an unique key
-    key = hash_request.hexdigest()
-    return key
-
-
-
-# DB queries
-
-                   
-def update_workflow(key:str, data:dict):
-    """
-    Update an existing workflow in the DB
-    """
-    workflow = workflow_collection.find_one({"_id":key})
-    if workflow:
-        updated_workflow = workflow_collection.update_one(
-            {"_id":key},{"$set":workflow_add_helper(data)}
-        )
-        if updated_workflow:
-            return True
-        return False  
-        
-def retrieve_workflow(key:str) -> dict:
-    """
-    Retrieve a single workflow from DB
-    Given: key
-    """
-    workflow = workflow_collection.find_one({"_id":key})
-    if workflow:
-        return workflow_retrieve_helper(workflow)  
     
 def manage_workflow(dicom:dict, pfdcm_url:str,key:str) -> dict:
     """
@@ -164,7 +69,7 @@ def manage_workflow(dicom:dict, pfdcm_url:str,key:str) -> dict:
     update_workflow(key,workflow)
     pl_inst_id = 0
     
-    while not workflow.status.WorkflowState == State.FEED_CREATED.name or MAX_RETRIES > 0:
+    while not workflow.status.WorkflowState == State.FEED_CREATED.name and MAX_RETRIES > 0:
         MAX_RETRIES -= 1
     
         match workflow.status.WorkflowState:
@@ -223,10 +128,10 @@ def update_status(data,pfdcm_url):
  
     
 def pfdcm_do(
-    verb : str,
-    thenArgs:dict,
-    dicom : dict, 
-    url : str
+    verb     : str,
+    thenArgs :dict,
+    dicom    : dict, 
+    url      : str
 ) -> dict:
     """
     A reusable method to either retrieve, push or register dicoms using pfdcm
@@ -328,10 +233,10 @@ def do_cube_create_feed(userName,feedName,pacsDirective):
     else:    
         ## Get plugin Id 
         pluginSearchParams = {"name": "pl-dircopy"}   
-        plugin_id = client.getPluginId(pluginSearchParams)
+        plugin_id          = client.getPluginId(pluginSearchParams)
     
         ## create a feed
-        feed_params = {'title' : feed_name,'dir' : data_path}
+        feed_params   = {'title' : feed_name,'dir' : data_path}
         feed_response = client.createFeed(plugin_id,feed_params)
         return feed_response['id']        
 
@@ -360,9 +265,9 @@ def do_cube_create_user(cubeUrl,userName):
     """
     Create a new user in `CUBE` if not already present
     """
-    createUserUrl = cubeUrl+"users/"
-    userPass = userName + "1234"
-    userEmail = userName + "@email.com"
+    createUserUrl         = cubeUrl+"users/"
+    userPass              = userName + "1234"
+    userEmail             = userName + "@email.com"
     
     # create a new user
     headers = {'Content-Type': 'application/json','accept': 'application/json'}

@@ -136,17 +136,17 @@ async def post_workflow(
     Start a new subprocess to create a workflow
     Start a new subprocess to update the database
     """
-    d_data = query_to_dict(data)
-    str_data = json.dumps(d_data)  
-    key = dict_to_hash(d_data)
+    d_data      = query_to_dict(data)
+    str_data    = json.dumps(d_data)  
+    key         = dict_to_hash(d_data)
     
     workflow = await retrieve_workflow(key)
     if not workflow:
         status = DicomStatusResponseSchema()    
         new_workflow = WorkflowSchema(
-                       key=key, 
-                       request = data, 
-                       status=status
+                           key     = key, 
+                           request = data, 
+                           status  = status
                       )
         workflow = await add_workflow(new_workflow)
         
@@ -168,6 +168,6 @@ async def post_workflow(
                                 ], stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE,
                                  close_fds   = True)
-    stderr,stdout = status_update.communicate()
-    print(stderr,stdout)
+    #stderr,stdout = status_update.communicate()
+    #print(stderr,stdout)
     return workflow.status

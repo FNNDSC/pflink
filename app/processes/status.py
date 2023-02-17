@@ -1,15 +1,22 @@
-from pymongo import MongoClient
 import json
-import hashlib
 import logging
-import asyncio
-import time
-import getopt
 import argparse
-from enum import Enum
-from pydantic import BaseModel, Field
 import requests
 from client.PythonChrisClient import PythonChrisClient
+from models import (
+    State,
+    DicomStatusQuerySchema,
+    DicomStatusResponseSchema,
+    WorkflowSchema,
+)
+from utils import (
+    dict_to_query,
+    query_to_dict,
+    dict_to_hash,
+    update_workflow,
+    retrieve_workflow,
+)
+
 
 format = "%(asctime)s: %(message)s"
 logging.basicConfig(
@@ -18,20 +25,6 @@ logging.basicConfig(
     datefmt="%H:%M:%S"
 )
     
-MONGO_DETAILS = "mongodb://localhost:27017"
-
-client = MongoClient(MONGO_DETAILS)
-
-database = client.workflows
-
-workflow_collection = database.get_collection("workflows_collection")
-
-from models import (
-    State,
-    DicomStatusQuerySchema,
-    DicomStatusResponseSchema,
-    WorkflowSchema,
-)
 
 parser = argparse.ArgumentParser(description='Process some integers.')
 parser.add_argument('--data', metavar='N', type=str)
@@ -39,86 +32,6 @@ parser.add_argument('--url', metavar='N', type=str)
 
 args = parser.parse_args()
 
-
-
-# helpers
-
-
-def workflow_retrieve_helper(workflow:dict) -> WorkflowSchema:    
-    request =  DicomStatusQuerySchema(
-                   PFDCMservice  = workflow["request"]["PFDCMservice"],
-                   PACSservice   = workflow["request"]["PACSservice"],
-                   PACSdirective = workflow["request"]["PACSdirective"],
-                   thenArgs      = workflow["request"]["thenArgs"],
-                   dblogbasepath = workflow["request"]["dblogbasepath"],
-                   FeedName      = workflow["request"]["FeedName"],
-                   User          = workflow["request"]["User"],
-                   analysisArgs  = workflow["request"]["analysisArgs"],
-               )
-    return WorkflowSchema(
-        key      = workflow["_id"],
-        request  = request,
-        status   = workflow["status"],
-    )
-    
-def workflow_add_helper(workflow:WorkflowSchema) -> dict:
-    d_request = {
-        "PFDCMservice"   : workflow.request.PFDCMservice,
-        "PACSservice"    : workflow.request.PACSservice,
-        "PACSdirective"  : workflow.request.PACSdirective.__dict__,
-        "thenArgs"       : workflow.request.thenArgs.__dict__,
-        "dblogbasepath"  : workflow.request.dblogbasepath,
-        "FeedName"       : workflow.request.FeedName,
-        "User"           : workflow.request.User,
-        "analysisArgs"   : workflow.request.analysisArgs.__dict__,
-    }
-    
-    return {
-        "_id"     : workflow.key,
-        "request" : d_request,
-        "status"  : workflow.status.__dict__,
-    }
-    
-def dict_to_query(request:dict)-> DicomStatusQuerySchema:
-    return DicomStatusQuerySchema(
-        PFDCMservice   = request["PFDCMservice"],
-        PACSservice    = request["PACSservice"],
-        PACSdirective  = request["PACSdirective"],
-        thenArgs       = request["thenArgs"],
-        dblogbasepath  = request["dblogbasepath"],
-        FeedName       = request["FeedName"],
-        User           = request["User"],
-        analysisArgs   = request["analysisArgs"],
-    )
-def dict_to_hash(data:dict) -> str:
-    # convert to string and encode
-    str_data = json.dumps(data)
-    hash_request = hashlib.md5(str_data.encode())     
-    # create an unique key
-    key = hash_request.hexdigest()
-    return key
-                  
-def update_workflow(key:str, data:dict):
-    """
-    Update an existing workflow in the DB
-    """
-    workflow = workflow_collection.find_one({"_id":key})
-    if workflow:
-        updated_workflow = workflow_collection.update_one(
-            {"_id":key},{"$set":workflow_add_helper(data)}
-        )
-        if updated_workflow:
-            return True
-        return False    
-    
-def retrieve_workflow(key:str) -> dict:
-    """
-    Retrieve a single workflow from DB
-    Given: key
-    """
-    workflow = workflow_collection.find_one({"_id":key})
-    if workflow:
-        return workflow_retrieve_helper(workflow)
     
 def workflow_status(
     pfdcm_url : str,
@@ -137,7 +50,7 @@ def workflow_status(
     workflow.status.Stale=False
     update_workflow(key,workflow)
     
-    updated_status         = get_workflow_status(pfdcm_url,key,query)
+    updated_status         = _get_workflow_status(pfdcm_url,key,query)
     workflow.status        = updated_status
     workflow.status.Stale  = True  
       
@@ -146,7 +59,7 @@ def workflow_status(
 
 
     
-def get_workflow_status(
+def _get_workflow_status(
     pfdcm_url : str,
     key       : str,
     dicom     : DicomStatusQuerySchema,
@@ -160,19 +73,12 @@ def get_workflow_status(
         3) Parse both the results to a response schema
         4) Return the response
     """
-    # Ask `pfdcm` for study
-    pfdcm_resp = get_pfdcm_status(pfdcm_url,dicom)
-    
-    # Ask `CUBE` for feed
-    cube_resp = get_feed_status(pfdcm_resp,dicom)
-    
-    # Parse both the respones
-    status = parse_response(pfdcm_resp, cube_resp,key)
-    
-    # return the response
+    pfdcm_resp    = _get_pfdcm_status(pfdcm_url,dicom)
+    cube_resp     = _get_feed_status(pfdcm_resp,dicom)
+    status        = _parse_response(pfdcm_resp, cube_resp,key)
     return status
       
-def get_pfdcm_status(pfdcm_url,dicom):
+def _get_pfdcm_status(pfdcm_url,dicom):
     """
     Get the status of PACS from `pfdcm`
     by running the syncronous API of `pfdcm`
@@ -222,7 +128,8 @@ def get_pfdcm_status(pfdcm_url,dicom):
                )
     return json.loads(response.text) 
 
-def get_feed_status(pfdcmResponse: dict, dicom: dict):
+
+def _get_feed_status(pfdcmResponse: dict, dicom: dict):
     """
     Get the status of a feed inside `CUBE`
     """
@@ -239,12 +146,12 @@ def get_feed_status(pfdcmResponse: dict, dicom: dict):
     feedName = dicom.FeedName
     d_dicom = pfdcmResponse['pypx']['data']
     if d_dicom:
-        feedName = parseFeedTemplate(feedName, d_dicom[0])        
+        feedName = _parse_feed_template(feedName, d_dicom[0])        
     if feedName == "":
         cubeResponse['FeedError'] = "Please enter a valid feed name"
         
     #cl = do_cube_create_user("http://havana.tch.harvard.edu:8000/api/v1/",dicom.feedArgs.User) 
-    cl = do_cube_create_user("http://localhost:8000/api/v1/",dicom.User)  
+    cl = _do_cube_create_user("http://localhost:8000/api/v1/",dicom.User)  
     resp = cl.getFeed({"name_exact" : feedName})
     if resp['total']>0:
         cubeResponse['FeedState']       = State.FEED_CREATED.name
@@ -284,20 +191,22 @@ def get_feed_status(pfdcmResponse: dict, dicom: dict):
             
             
     return cubeResponse
-def parse_response(
+    
+    
+def _parse_response(
     pfdcmResponse : dict, 
-    cubeResponse : dict,
-    key          : str, 
+    cubeResponse  : dict,
+    key           : str, 
 ) -> dict:
     """
     Parse JSON object for workflow status response
     """
-    status = retrieve_workflow(key).status
-    data = pfdcmResponse['pypx']['data']
-    study = pfdcmResponse['pypx']['then']['00-status']['study']
+    status   = retrieve_workflow(key).status
+    data     = pfdcmResponse['pypx']['data']
+    study    = pfdcmResponse['pypx']['then']['00-status']['study']
     if study:
-        status.StudyFound = True
-        images = study[0][data[0]['StudyInstanceUID']['value']][0]['images'] 
+        status.StudyFound  = True
+        images             = study[0][data[0]['StudyInstanceUID']['value']][0]['images'] 
   
         totalImages        = images["requested"]["count"]
         totalRetrieved     = images["packed"]["count"]
@@ -335,27 +244,41 @@ def parse_response(
         
     return status 
 
-def do_cube_create_user(cubeUrl,userName):
+
+def _do_cube_create_user(cubeUrl,userName):
     """
     Create a new user in `CUBE` if not already present
     """
-    createUserUrl = cubeUrl+"users/"
-    userPass = userName + "1234"
-    userEmail = userName + "@email.com"
+    createUserUrl    = cubeUrl+"users/"
+    userPass         = userName + "1234"
+    userEmail        = userName + "@email.com"
     
     # create a new user
-    headers = {'Content-Type': 'application/json','accept': 'application/json'}
+    headers = {
+                  'Content-Type': 'application/json',
+                  'accept': 'application/json'
+              }
     myobj = {
              "username" : userName,
              "password" : userPass,
              "email"    : userEmail,
              }
-    resp = requests.post(createUserUrl,json=myobj,headers=headers)
+    resp = requests.post(
+               createUserUrl,
+               json=myobj,
+               headers=headers
+           )
 
-    authClient = PythonChrisClient(cubeUrl,userName,userPass)
+    authClient = PythonChrisClient(
+                     cubeUrl,
+                     userName,
+                     userPass
+                 )
+                 
     return authClient
+
     
-def parseFeedTemplate(
+def _parse_feed_template(
     feedTemplate : str, 
     dcmData : dict
 ) -> str:
@@ -377,6 +300,7 @@ def parseFeedTemplate(
         item = item.replace(dicomTag,dicomValue)
         feedName = feedName + item
     return feedName    
+ 
     
 if __name__== "__main__":
     """
