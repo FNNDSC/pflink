@@ -43,6 +43,7 @@ def workflow_retrieve_helper(workflow:dict) -> WorkflowSchema:
                    FeedName      = workflow["request"]["FeedName"],
                    User          = workflow["request"]["User"],
                    analysisArgs  = workflow["request"]["analysisArgs"],
+                   testArgs      = workflow["request"]["testArgs"],
                )
     return WorkflowSchema(
         key      = workflow["_id"],
@@ -60,6 +61,7 @@ def workflow_add_helper(workflow:WorkflowSchema) -> dict:
         "FeedName"       : workflow.request.FeedName,
         "User"           : workflow.request.User,
         "analysisArgs"   : workflow.request.analysisArgs.__dict__,
+        "testArgs"       : workflow.request.testArgs.__dict__,
     }
     
     return {
@@ -78,12 +80,10 @@ def query_to_dict(request:DicomStatusQuerySchema)-> dict:
         "FeedName"       : request.FeedName,
         "User"           : request.User,
         "analysisArgs"   : request.analysisArgs.__dict__,
+        "testArgs"       : request.testArgs.__dict__,
     }
     
 
-
-# DB methods
-    
 def dict_to_hash(data:dict) -> str:
     # convert to string and encode
     str_data = json.dumps(data)
@@ -93,7 +93,8 @@ def dict_to_hash(data:dict) -> str:
     key = hash_request.hexdigest()
     return key
 
-
+# DB methods
+    
 # Retrieve all workflows present in the DB
 async def retrieve_workflows():
     workflows = []

@@ -58,6 +58,9 @@ def manage_workflow(dicom:dict, pfdcm_url:str,key:str) -> dict:
     Schedule task based on status 
     from the DB
     """
+    if dicom.testArgs.Testing:
+        return
+    
     MAX_RETRIES   = 50
     workflow      = retrieve_workflow(key)
     
@@ -74,7 +77,7 @@ def manage_workflow(dicom:dict, pfdcm_url:str,key:str) -> dict:
     
         match workflow.status.WorkflowState:
         
-            case State.NOT_STARTED.name:
+            case State.STARTED.name:
                 if workflow.status.Retrieved == "0%":
                     do_pfdcm_retrieve(dicom,pfdcm_url)
                 
