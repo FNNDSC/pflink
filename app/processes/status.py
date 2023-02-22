@@ -2,6 +2,7 @@ import json
 import logging
 import argparse
 import requests
+import random
 from client.PythonChrisClient import PythonChrisClient
 from models import (
     State,
@@ -50,7 +51,11 @@ def workflow_status(
     workflow.status.Stale=False
     update_workflow(key,workflow)
     
-    updated_status         = _get_workflow_status(pfdcm_url,key,query)
+    if query.testArgs.Testing:
+        updated_status         = _test_status_progress(workflow.status,query)
+    else:
+        updated_status         = _get_workflow_status(pfdcm_url,key,query)
+    
     workflow.status        = updated_status
     workflow.status.Stale  = True  
       
@@ -288,8 +293,8 @@ def _parse_feed_template(
     dcmData      : dict
 ) -> str:
     """
-    # Given a feed name template, substitute dicom values
-    # for specified dicom tags
+    Given a feed name template, substitute dicom values
+    for specified dicom tags
     """
     items    = feedTemplate.split('%')
     feedName = ""
@@ -307,9 +312,70 @@ def _parse_feed_template(
             
         item     = item.replace(dicomTag,dicomValue)
         feedName = feedName + item
+
+    return feedName 
+    
+
+def _test_status_progress(
+    status    : dict,
+    query     : DicomStatusQuerySchema,
+) -> DicomStatusResponseSchema:
+    """
+    Run a simulation of workflow progress
+    and update the database
+    """
+    MAX_N = 9999
+    match status.WorkflowState:
         
-    return feedName    
- 
+        case State.STARTED.name:        
+            progress            = __get_progress_from_text(status.Retrieved)
+            progress            += 25
+            status.Retrieved    = str(progress) + '%'
+            status.StudyFound   = True
+            if progress == 100:                
+                status.WorkflowState = State(1).name  
+                 
+        case State.RETRIEVED.name:
+            progress            = __get_progress_from_text(status.Pushed)
+            progress            += 25
+            status.Pushed       = str(progress) + '%'
+            if progress == 100:               
+                status.WorkflowState = State(2).name
+                
+        case State.PUSHED.name:
+            progress            = __get_progress_from_text(status.Registered)
+            progress            += 25
+            status.Registered   = str(progress) + '%'
+            if progress == 100:              
+                status.WorkflowState  = State(3).name
+                
+        case State.REGISTERED.name:
+            status.WorkflowState = State(4).name
+            status.FeedId        = random.randint(0,MAX_N)
+            d_directive          = query_to_dict(query)['PACSdirective']
+            status.FeedName      = dict_to_hash(d_directive)
+             
+        case State.FEED_CREATED.name:
+            status.WorkflowState = State(5).name
+            status.FeedStatus    = "In progress"
+                       
+        case State.ANALYSIS_STARTED.name:
+            progress            = __get_progress_from_text(status.FeedProgress)
+            progress            += 25
+            status.FeedProgress = str(progress) + '%'
+            if progress == 100:                
+                status.WorkflowState    = State(6).name
+                status.FeedStatus       = "Completed"
+               
+    return status   
+    
+def __get_progress_from_text(progress:str):
+    """
+    Convert progress percentage defined in text to integer
+    """
+    progress = progress.replace('%','')
+    return int(progress)
+
     
 if __name__== "__main__":
     """

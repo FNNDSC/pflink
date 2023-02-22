@@ -8,12 +8,13 @@ from    datetime            import datetime
 from    enum                import Enum
 
 class State(Enum):
-    NOT_STARTED                          = 0
+    STARTED                              = 0
     RETRIEVED                            = 1
     PUSHED                               = 2
     REGISTERED                           = 3
     FEED_CREATED                         = 4
     ANALYSIS_STARTED                     = 5
+    COMPLETED                            = 6
 
 class DicomThenSchema(BaseModel):
     """A model returned when an async PACS directive is indicated"""
@@ -35,7 +36,11 @@ class DicomFeedQuerySchema(BaseModel):
     User                                : str  = "" 
     Pipeline                            : str  = ""
     nodeArgs                            : WorkflowPluginInstanceSchema
-    
+
+class TestSchema(BaseModel):
+    Testing                             : bool = False
+    CurrentState                        : str  = ""
+        
 class PACSqueryCore(BaseModel):
     """The PACS Query model"""
     AccessionNumber                     : str  = ""
@@ -69,9 +74,11 @@ class DicomStatusQuerySchema(BaseModel):
     FeedName                            : str  = "" 
     User                                : str  = ""
     analysisArgs                        : WorkflowPluginInstanceSchema 
+    testArgs                            : TestSchema 
 
 class DicomStatusResponseSchema(BaseModel):
     """The Workflow status response Model"""
+    WorkflowState                       : str  = State.STARTED.name
     StudyFound                          : bool = False
     Retrieved                           : str  = "0%"
     Pushed                              : str  = "0%"
@@ -82,7 +89,6 @@ class DicomStatusResponseSchema(BaseModel):
     FeedStatus                          : str  = ""
     Message                             : str  = ""
     Error                               : str  = ""
-    WorkflowState                       : str  = State.NOT_STARTED.name
     Stale                               : bool = True
     Started                             : bool = False
     
