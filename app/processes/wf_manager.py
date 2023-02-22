@@ -62,11 +62,11 @@ def manage_workflow(dicom:dict, pfdcm_url:str,key:str) -> dict:
     workflow      = retrieve_workflow(key)
     pl_inst_id    = 0
     
-    if workflow.status.Started:
+    if workflow.Started:
         # Do nothing adnd return
         return
         
-    workflow.status.Started = True
+    workflow.Started = True
     update_workflow(key,workflow)
     
     if not pfdcm_url:

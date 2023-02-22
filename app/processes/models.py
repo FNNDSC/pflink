@@ -9,9 +9,9 @@ from    enum                import Enum
 
 class State(Enum):
     STARTED                              = 0
-    RETRIEVED                            = 1
-    PUSHED                               = 2
-    REGISTERED                           = 3
+    RETRIEVING                           = 1
+    PUSHING                              = 2
+    REGISTERING                          = 3
     FEED_CREATED                         = 4
     ANALYSIS_STARTED                     = 5
     COMPLETED                            = 6
@@ -75,23 +75,19 @@ class DicomStatusResponseSchema(BaseModel):
     """The Workflow status response Model"""
     WorkflowState                       : str  = State.STARTED.name
     StudyFound                          : bool = False
-    Retrieved                           : str  = "0%"
-    Pushed                              : str  = "0%"
-    Registered                          : str  = "0%"
+    StateProgress                       : str  = "0%"
     FeedId                              : str  = ""
     FeedName                            : str  = ""
-    FeedProgress                        : str  = "0%"
-    FeedStatus                          : str  = ""
+    CurrentNode                         : list = []
     Message                             : str  = ""
-    Error                               : str  = ""    
-    Stale                               : bool = True
-    Started                             : bool = False
+    Error                               : str  = ""
+
     
     
 class WorkflowSchema(BaseModel):
     key                                 : str  = ""
     request                             : DicomStatusQuerySchema
     status                              : DicomStatusResponseSchema
-        
-
-        
+    Stale                               : bool = True
+    Started                             : bool = False
+                

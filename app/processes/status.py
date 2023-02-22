@@ -45,12 +45,12 @@ def workflow_status(
     in the DB
     """
     workflow = retrieve_workflow(key)
-    if not workflow.status.Stale or  workflow.status.WorkflowState ==  State.COMPLETED.name:             
+    if not workflow.Stale or  workflow.status.WorkflowState ==  State.COMPLETED.name:             
         # Do nothing and exit
         return
          
     logging.info(f"WORKING on updating the status for {key}, locking--")       
-    workflow.status.Stale=False
+    workflow.Stale=False
     update_workflow(key,workflow)
     
     if not pfdcm_url:
@@ -60,7 +60,7 @@ def workflow_status(
         updated_status         = _get_workflow_status(pfdcm_url,key,query)
     
     workflow.status        = updated_status
-    workflow.status.Stale  = True  
+    workflow.Stale         = True  
       
     update_workflow(key,workflow)
     logging.info(f"UPDATED status for {key}, releasing lock")
@@ -340,46 +340,51 @@ def _test_status_progress(
             return status
         
     match status.WorkflowState:
+    
+        case State.STARTED.name:
+            status.WorkflowState   = State(1).name
+            status.StateProgress   = "0%"
          
-        case State.STARTED.name:        
-            progress            = __get_progress_from_text(status.Retrieved)
-            progress            += PROGRESS_JUMP
-            status.Retrieved    = str(progress) + '%'
+        case State.RETRIEVING.name:        
+            progress                = __get_progress_from_text(status.StateProgress)
+            progress               += PROGRESS_JUMP
+            status.StateProgress    = str(progress) + '%'
             
             if progress == 100:                
-                status.WorkflowState = State(1).name  
+                status.WorkflowState    = State(2).name
+                status.StateProgress    = '0%'  
                  
-        case State.RETRIEVED.name:
-            progress            = __get_progress_from_text(status.Pushed)
-            progress            += PROGRESS_JUMP
-            status.Pushed       = str(progress) + '%'
+        case State.PUSHING.name:
+            progress                   = __get_progress_from_text(status.StateProgress)
+            progress                  += PROGRESS_JUMP
+            status.StateProgress       = str(progress) + '%'
             if progress == 100:               
-                status.WorkflowState = State(2).name
+                status.WorkflowState    = State(3).name
+                status.StateProgress    = '0%'  
                 
-        case State.PUSHED.name:
-            progress            = __get_progress_from_text(status.Registered)
-            progress            += PROGRESS_JUMP
-            status.Registered   = str(progress) + '%'
+        case State.REGISTERING.name:
+            progress               = __get_progress_from_text(status.StateProgress)
+            progress              += PROGRESS_JUMP
+            status.StateProgress   = str(progress) + '%'
             if progress == 100:              
-                status.WorkflowState  = State(3).name
+                status.WorkflowState    = State(4).name
+                status.StateProgress    = '100%'
+                status.FeedId           = random.randint(0,MAX_N)
+                d_directive             = query_to_dict(query)['PACSdirective']
+                status.FeedName         = dict_to_hash(d_directive)  
                 
-        case State.REGISTERED.name:
-            status.WorkflowState = State(4).name
-            status.FeedId        = random.randint(0,MAX_N)
-            d_directive          = query_to_dict(query)['PACSdirective']
-            status.FeedName      = dict_to_hash(d_directive)
-             
         case State.FEED_CREATED.name:
-            status.WorkflowState = State(5).name
-            status.FeedStatus    = "In progress"
+            status.WorkflowState    = State(5).name
+            status.StateProgress    = '0%'                            
                        
         case State.ANALYSIS_STARTED.name:
-            progress            = __get_progress_from_text(status.FeedProgress)
+            status.CurrentNode  = [query.analysisArgs.PluginName]
+            progress            = __get_progress_from_text(status.StateProgress)
             progress            += PROGRESS_JUMP
-            status.FeedProgress = str(progress) + '%'
+            status.StateProgress = str(progress) + '%'
             if progress == 100:                
                 status.WorkflowState    = State(6).name
-                status.FeedStatus       = "Completed"
+                
                 
                
     return status   

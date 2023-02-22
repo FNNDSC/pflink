@@ -15,12 +15,9 @@ from controllers.pfdcm import (
     retrieve_pfdcm,
 )
 
-MONGO_DETAILS = "mongodb://localhost:27017"
-
-client = motor.motor_asyncio.AsyncIOMotorClient(MONGO_DETAILS)
-
-database = client.workflows
-
+MONGO_DETAILS       = "mongodb://localhost:27017"
+client              = motor.motor_asyncio.AsyncIOMotorClient(MONGO_DETAILS)
+database            = client.workflows
 workflow_collection = database.get_collection("workflows_collection")
 
 format = "%(asctime)s: %(message)s"
@@ -48,6 +45,8 @@ def workflow_retrieve_helper(workflow:dict) -> WorkflowSchema:
         key      = workflow["_id"],
         request  = request,
         status   = workflow["status"],
+        Stale    = workflow["Stale"],
+        Started  = workflow["Started"],
     )
     
 def workflow_add_helper(workflow:WorkflowSchema) -> dict:
@@ -66,6 +65,8 @@ def workflow_add_helper(workflow:WorkflowSchema) -> dict:
         "_id"     : workflow.key,
         "request" : d_request,
         "status"  : workflow.status.__dict__,
+        "Stale"   : workflow.Stale,
+        "Started" : workflow.Started,
     }
     
 def query_to_dict(request:DicomStatusQuerySchema)-> dict:
@@ -136,7 +137,7 @@ async def delete_workflows():
     async for workflow in workflow_collection.find():
         workflow_collection.delete_one({"_id":workflow["_id"]}) 
         delete_count += 1        
-    return {"Message":f"{delete_count} records deleted!"}
+    return {"Message":f"{delete_count} record(s) deleted!"}
     
 
      
@@ -192,8 +193,8 @@ async def post_workflow(
                                 ], stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE,
                                  close_fds   = True)
-        #stderr,stdout = status_update.communicate()
-        #print(stderr,stdout)
+        stderr,stdout = status_update.communicate()
+        print(stderr,stdout)
     except Exception as e:
         workflow.status.Error = str(e)
 

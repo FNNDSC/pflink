@@ -35,6 +35,8 @@ def _workflow_retrieve_helper(workflow:dict) -> WorkflowSchema:
         key      = workflow["_id"],
         request  = request,
         status   = workflow["status"],
+        Stale    = workflow["Stale"],
+        Started  = workflow["Started"],
     )
     
 def _workflow_add_helper(workflow:WorkflowSchema) -> dict:
@@ -53,6 +55,8 @@ def _workflow_add_helper(workflow:WorkflowSchema) -> dict:
         "_id"     : workflow.key,
         "request" : d_request,
         "status"  : workflow.status.__dict__,
+        "Stale"   : workflow.Stale,
+        "Started" : workflow.Started,
     }
     
 def dict_to_query(request:dict)-> DicomStatusQuerySchema:
