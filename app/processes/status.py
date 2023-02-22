@@ -30,6 +30,7 @@ logging.basicConfig(
 parser = argparse.ArgumentParser(description='Process arguments passed through CLI')
 parser.add_argument('--data', metavar='N', type=str)
 parser.add_argument('--url', metavar='N', type=str)
+parser.add_argument('--testArgs', metavar='N', type=str)
 
 args = parser.parse_args()
 
@@ -46,12 +47,14 @@ def workflow_status(
     workflow = retrieve_workflow(key)
     if not workflow.status.Stale or  workflow.status.WorkflowState ==  State.COMPLETED.name:             
         # Do nothing and exit
-        return 
+        return
+         
     logging.info(f"WORKING on updating the status for {key}, locking--")       
     workflow.status.Stale=False
     update_workflow(key,workflow)
     
-    if query.testArgs.Testing:
+    if not pfdcm_url:
+        # Application running in test mode
         updated_status         = _test_status_progress(workflow.status,query)
     else:
         updated_status         = _get_workflow_status(pfdcm_url,key,query)
@@ -197,8 +200,7 @@ def _get_feed_status(pfdcmResponse: dict, dicom: dict):
                 else:
                     feedStatus = "In progress"
              
-            cubeResponse['FeedStatus'] = feedStatus
-            
+            cubeResponse['FeedStatus'] = feedStatus            
             
     return cubeResponse
     
@@ -324,27 +326,39 @@ def _test_status_progress(
     Run a simulation of workflow progress
     and update the database
     """
-    MAX_N = 9999
-    match status.WorkflowState:
+    MAX_N               = 9999
+    status.StudyFound   = True
+    PROGRESS_JUMP       = 25
+    status.Error        = ""
+
+    if args.testArgs:
+        try:
+            if State[args.testArgs].value > State[status.WorkflowState].value:
+                status.WorkflowState = args.testArgs
+        except:
+            status.Error = f"{args.testArgs} is an invalid state."
+            return status
         
+    match status.WorkflowState:
+         
         case State.STARTED.name:        
             progress            = __get_progress_from_text(status.Retrieved)
-            progress            += 25
+            progress            += PROGRESS_JUMP
             status.Retrieved    = str(progress) + '%'
-            status.StudyFound   = True
+            
             if progress == 100:                
                 status.WorkflowState = State(1).name  
                  
         case State.RETRIEVED.name:
             progress            = __get_progress_from_text(status.Pushed)
-            progress            += 25
+            progress            += PROGRESS_JUMP
             status.Pushed       = str(progress) + '%'
             if progress == 100:               
                 status.WorkflowState = State(2).name
                 
         case State.PUSHED.name:
             progress            = __get_progress_from_text(status.Registered)
-            progress            += 25
+            progress            += PROGRESS_JUMP
             status.Registered   = str(progress) + '%'
             if progress == 100:              
                 status.WorkflowState  = State(3).name
@@ -361,11 +375,12 @@ def _test_status_progress(
                        
         case State.ANALYSIS_STARTED.name:
             progress            = __get_progress_from_text(status.FeedProgress)
-            progress            += 25
+            progress            += PROGRESS_JUMP
             status.FeedProgress = str(progress) + '%'
             if progress == 100:                
                 status.WorkflowState    = State(6).name
                 status.FeedStatus       = "Completed"
+                
                
     return status   
     

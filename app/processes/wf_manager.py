@@ -57,12 +57,10 @@ def manage_workflow(dicom:dict, pfdcm_url:str,key:str) -> dict:
     Manage workflow:
     Schedule task based on status 
     from the DB
-    """
-    if dicom.testArgs.Testing:
-        return
-    
+    """    
     MAX_RETRIES   = 50
     workflow      = retrieve_workflow(key)
+    pl_inst_id    = 0
     
     if workflow.status.Started:
         # Do nothing adnd return
@@ -70,8 +68,11 @@ def manage_workflow(dicom:dict, pfdcm_url:str,key:str) -> dict:
         
     workflow.status.Started = True
     update_workflow(key,workflow)
-    pl_inst_id = 0
     
+    if not pfdcm_url:
+        # Application running in test mode
+        return
+   
     while not workflow.status.WorkflowState == State.FEED_CREATED.name and MAX_RETRIES > 0:
         MAX_RETRIES -= 1
     
@@ -132,7 +133,7 @@ def update_status(data,pfdcm_url):
     
 def pfdcm_do(
     verb     : str,
-    thenArgs :dict,
+    thenArgs : dict,
     dicom    : dict, 
     url      : str
 ) -> dict:
@@ -279,8 +280,7 @@ def do_cube_create_user(cubeUrl,userName):
              "password" : userPass,
              "email"    : userEmail,
              }
-    resp = requests.post(createUserUrl,json=myobj,headers=headers)
-
+    resp       = requests.post(createUserUrl,json=myobj,headers=headers)
     authClient = PythonChrisClient(cubeUrl,userName,userPass)
     return authClient
 
@@ -317,19 +317,23 @@ def create_feed_name(
     # Given a feed name template, substitute dicom values
     # for specified dicom tags
     """
-    items = feedTemplate.split('%')
-    feedName = ""
+    items     = feedTemplate.split('%')
+    feedName  = ""
     for item in items:
         if item == "":
             continue;
-        tags = item.split('-')
-        dicomTag = tags[0]
+            
+        tags      = item.split('-')
+        dicomTag  = tags[0]
+        
         try:        
             dicomValue = dcmData[dicomTag]
         except:
             dicomValue = dicomTag
-        item = item.replace(dicomTag,dicomValue)
-        feedName = feedName + item
+            
+        item       = item.replace(dicomTag,dicomValue)
+        feedName   = feedName + item
+        
     return feedName
 
     

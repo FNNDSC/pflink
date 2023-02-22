@@ -7,19 +7,16 @@ from models.workflow import (
 
 from controllers.workflow import (
     post_workflow,
-    retrieve_workflows,
 )
 
 router = APIRouter()
-    
-@router.get("/",response_description="All workflows retrieved")
-async def get_workflows():
-    workflows = await retrieve_workflows()
-    return workflows
-    
+        
 @router.post("/",response_description="Workflow response retrieved")
 async def create_workflow(data : DicomStatusQuerySchema) -> DicomStatusResponseSchema: 
     """
+    Get the status of a workflow by POSTing a payload using this API endpoint.
+    If it's the first time a client is POSTing a payload, this API creates a new
+    entry in the DB and returns a default response.
     """  
     response = await post_workflow(data)   
     return response

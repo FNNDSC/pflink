@@ -43,7 +43,6 @@ def workflow_retrieve_helper(workflow:dict) -> WorkflowSchema:
                    FeedName      = workflow["request"]["FeedName"],
                    User          = workflow["request"]["User"],
                    analysisArgs  = workflow["request"]["analysisArgs"],
-                   testArgs      = workflow["request"]["testArgs"],
                )
     return WorkflowSchema(
         key      = workflow["_id"],
@@ -61,7 +60,6 @@ def workflow_add_helper(workflow:WorkflowSchema) -> dict:
         "FeedName"       : workflow.request.FeedName,
         "User"           : workflow.request.User,
         "analysisArgs"   : workflow.request.analysisArgs.__dict__,
-        "testArgs"       : workflow.request.testArgs.__dict__,
     }
     
     return {
@@ -80,7 +78,6 @@ def query_to_dict(request:DicomStatusQuerySchema)-> dict:
         "FeedName"       : request.FeedName,
         "User"           : request.User,
         "analysisArgs"   : request.analysisArgs.__dict__,
-        "testArgs"       : request.testArgs.__dict__,
     }
     
 
@@ -93,6 +90,12 @@ def dict_to_hash(data:dict) -> str:
     key = hash_request.hexdigest()
     return key
 
+def validate_request(request:DicomStatusQuerySchema):
+    """
+    A helper method validate all required fields in a request payload
+    """
+    pass
+    
 # DB methods
     
 # Retrieve all workflows present in the DB
@@ -127,11 +130,21 @@ async def retrieve_pfdcm_url(serviceName : str) -> str:
     pfdcm_url = pfdcm_server['server_ip'] + ":" + pfdcm_server['server_port']
     return pfdcm_url
     
+# Delete all workflow records from DB
+async def delete_workflows():
+    delete_count = 0
+    async for workflow in workflow_collection.find():
+        workflow_collection.delete_one({"_id":workflow["_id"]}) 
+        delete_count += 1        
+    return {"Message":f"{delete_count} records deleted!"}
+    
 
      
 # POST a workflow
 async def post_workflow(
-    data : DicomStatusQuerySchema
+    data         : DicomStatusQuerySchema,
+    currentState : str,
+    test         : bool = False,
 ) -> DicomStatusResponseSchema:
     """
     Create a new workflow object and
@@ -143,25 +156,30 @@ async def post_workflow(
     d_data      = query_to_dict(data)
     str_data    = json.dumps(d_data)  
     key         = dict_to_hash(d_data)
+    pfdcm_url   = ""
     
     workflow = await retrieve_workflow(key)
     
     if not workflow:
-        status = DicomStatusResponseSchema()    
+        status       = DicomStatusResponseSchema()    
         new_workflow = WorkflowSchema(
                            key     = key, 
                            request = data, 
                            status  = status
                       )
-        workflow = await add_workflow(new_workflow)
+        workflow     = await add_workflow(new_workflow)
         
-    try:    
-        pfdcm_url = await retrieve_pfdcm_url(data.PFDCMservice)
+    try:
+        if not currentState:
+            currentState = ""
+        if not test:    
+            pfdcm_url = await retrieve_pfdcm_url(data.PFDCMservice) 
         status_update = subprocess.Popen(
                                ['python',
                                'app/processes/status.py',
                                "--data",str_data,
                                "--url",pfdcm_url,
+                               "--testArgs",currentState,
                                ], stdout=subprocess.PIPE, 
                                stderr=subprocess.PIPE,
                                close_fds   = True)
@@ -174,8 +192,8 @@ async def post_workflow(
                                 ], stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE,
                                  close_fds   = True)
-        stderr,stdout = status_update.communicate()
-        print(stderr,stdout)
+        #stderr,stdout = status_update.communicate()
+        #print(stderr,stdout)
     except Exception as e:
         workflow.status.Error = str(e)
 

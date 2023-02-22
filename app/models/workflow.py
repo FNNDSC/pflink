@@ -36,10 +36,6 @@ class DicomFeedQuerySchema(BaseModel):
     User                                : str  = "" 
     Pipeline                            : str  = ""
     nodeArgs                            : WorkflowPluginInstanceSchema
-
-class TestSchema(BaseModel):
-    Testing                             : bool = False
-    CurrentState                        : str  = ""
         
 class PACSqueryCore(BaseModel):
     """The PACS Query model"""
@@ -74,7 +70,6 @@ class DicomStatusQuerySchema(BaseModel):
     FeedName                            : str  = "" 
     User                                : str  = ""
     analysisArgs                        : WorkflowPluginInstanceSchema 
-    testArgs                            : TestSchema 
 
 class DicomStatusResponseSchema(BaseModel):
     """The Workflow status response Model"""
