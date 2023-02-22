@@ -119,10 +119,13 @@ async def retrieve_workflow(key:str) -> dict:
 
 # Retrieve an existing `pfdcm` service address
 async def retrieve_pfdcm_url(serviceName : str) -> str:
-    pfdcm_server = await retrieve_pfdcm(serviceName)    
+    pfdcm_server = await retrieve_pfdcm(serviceName) 
+    if not pfdcm_server:
+        raise Exception (f"Service {serviceName} not found in the DB")  
+         
     pfdcm_url = pfdcm_server['server_ip'] + ":" + pfdcm_server['server_port']
     return pfdcm_url
-
+    
 
      
 # POST a workflow
@@ -141,6 +144,7 @@ async def post_workflow(
     key         = dict_to_hash(d_data)
     
     workflow = await retrieve_workflow(key)
+    
     if not workflow:
         status = DicomStatusResponseSchema()    
         new_workflow = WorkflowSchema(
@@ -150,8 +154,9 @@ async def post_workflow(
                       )
         workflow = await add_workflow(new_workflow)
         
-    pfdcm_url = await retrieve_pfdcm_url(data.PFDCMservice)
-    status_update = subprocess.Popen(
+    try:    
+        pfdcm_url = await retrieve_pfdcm_url(data.PFDCMservice)
+        status_update = subprocess.Popen(
                                ['python',
                                'app/processes/status.py',
                                "--data",str_data,
@@ -160,7 +165,7 @@ async def post_workflow(
                                stderr=subprocess.PIPE,
                                close_fds   = True)
                                
-    manage_workflow = subprocess.Popen(
+        manage_workflow = subprocess.Popen(
                                 ['python',
                                 'app/processes/wf_manager.py',
                                 "--data",str_data,
@@ -168,6 +173,9 @@ async def post_workflow(
                                 ], stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE,
                                  close_fds   = True)
-    #stderr,stdout = status_update.communicate()
-    #print(stderr,stdout)
+        stderr,stdout = status_update.communicate()
+        print(stderr,stdout)
+    except Exception as e:
+        workflow.status.Error = str(e)
+
     return workflow.status

@@ -18,6 +18,8 @@ async def get_workflows():
     return workflows
     
 @router.post("/",response_description="Workflow response retrieved")
-async def create_workflow(data : DicomStatusQuerySchema) -> DicomStatusResponseSchema:   
+async def create_workflow(data : DicomStatusQuerySchema) -> DicomStatusResponseSchema: 
+    """
+    """  
     response = await post_workflow(data)   
     return response

@@ -1,4 +1,4 @@
 #!/bin/bash
 
 docker-compose up -d --remove-orphans
-exec python app/main.py
+#exec python app/main.py

@@ -26,7 +26,7 @@ logging.basicConfig(
 )
     
 
-parser = argparse.ArgumentParser(description='Process some integers.')
+parser = argparse.ArgumentParser(description='Process arguments passed through CLI')
 parser.add_argument('--data', metavar='N', type=str)
 parser.add_argument('--url', metavar='N', type=str)
 
@@ -36,7 +36,7 @@ args = parser.parse_args()
 def workflow_status(
     pfdcm_url : str,
     key       : str,
-    query    : DicomStatusQuerySchema
+    query     : DicomStatusQuerySchema
 ):
     """
     Update the status of a workflow object
@@ -84,7 +84,8 @@ def _get_pfdcm_status(pfdcm_url,dicom):
     by running the syncronous API of `pfdcm`
     """
     pfdcm_status_url = f'{pfdcm_url}/api/v1/PACS/sync/pypx/'
-    headers = {'Content-Type': 'application/json','accept': 'application/json'}
+    headers          = {'Content-Type': 'application/json','accept': 'application/json'}
+    
     myobj = {
         "PACSservice": {
           "value"                         : dicom.PACSservice
@@ -126,6 +127,7 @@ def _get_pfdcm_status(pfdcm_url,dicom):
                    json = myobj, 
                    headers=headers
                )
+
     return json.loads(response.text) 
 
 
@@ -141,7 +143,8 @@ def _get_feed_status(pfdcmResponse: dict, dicom: dict):
         "FeedProgress"   : "Not started",
         "FeedStatus"     : "",
         "FeedError"      : "",
-        "FeedId"         : ""}
+        "FeedId"         : ""
+    }
         
     feedName = dicom.FeedName
     d_dicom = pfdcmResponse['pypx']['data']
@@ -150,8 +153,11 @@ def _get_feed_status(pfdcmResponse: dict, dicom: dict):
     if feedName == "":
         cubeResponse['FeedError'] = "Please enter a valid feed name"
         
-    #cl = do_cube_create_user("http://havana.tch.harvard.edu:8000/api/v1/",dicom.feedArgs.User) 
-    cl = _do_cube_create_user("http://localhost:8000/api/v1/",dicom.User)  
+    try:     
+        cl = _do_cube_create_user("http://localhost:8000/api/v1/",dicom.User) 
+    except:
+        raise Exception (f"Could not find or create user with username {dicom.User}")
+        
     resp = cl.getFeed({"name_exact" : feedName})
     if resp['total']>0:
         cubeResponse['FeedState']       = State.FEED_CREATED.name
@@ -171,23 +177,22 @@ def _get_feed_status(pfdcmResponse: dict, dicom: dict):
         total = created + waiting + scheduled +started + registering + finished +errored + cancelled
 
         if total>1:
-            cubeResponse['FeedState'] = State.ANALYSIS_STARTED.name
-            feedProgress = round((finished/MAX_JOBS) * 100)
-            cubeResponse['FeedProgress'] = str(feedProgress) + "%"
-            feedStatus = ""
+            cubeResponse['FeedState']     = State.ANALYSIS_STARTED.name
+            feedProgress                  = round((finished/MAX_JOBS) * 100)
+            cubeResponse['FeedProgress']  = str(feedProgress) + "%"
+            feedStatus                    = ""
+            
             if errored>0 or cancelled>0:
                 cubeResponse['FeedError'] = str(errored + cancelled) + " job(s) failed"
-                feedStatus = "Failed"
+                feedStatus                = "Failed"
             else:
                 if feedProgress==100:
-                    feedStatus = "Complete"
+                    feedStatus                      = "Complete"
                     cubeResponse['FeedState']       = State.COMPLETED.name
                 else:
                     feedStatus = "In progress"
              
             cubeResponse['FeedStatus'] = feedStatus
-    else:
-        cubeResponse = {}
             
             
     return cubeResponse
@@ -204,10 +209,10 @@ def _parse_response(
     status   = retrieve_workflow(key).status
     data     = pfdcmResponse['pypx']['data']
     study    = pfdcmResponse['pypx']['then']['00-status']['study']
+    
     if study:
         status.StudyFound  = True
         images             = study[0][data[0]['StudyInstanceUID']['value']][0]['images'] 
-  
         totalImages        = images["requested"]["count"]
         totalRetrieved     = images["packed"]["count"]
         totalPushed        = images["pushed"]["count"]
@@ -216,12 +221,10 @@ def _parse_response(
         if totalImages>0:       
             totalRetrievedPerc  = round((totalRetrieved/totalImages)*100)
             totalPushedPerc     = round((totalPushed/totalImages)*100)
-            totalRegisteredPerc = round((totalRegistered/totalImages)*100)
-        
-            status.Retrieved  = str (totalRetrievedPerc) + "%"
-            status.Pushed = str(totalPushedPerc) + "%"
-            status.Registered = str(totalRegisteredPerc) + "%"
-        
+            totalRegisteredPerc = round((totalRegistered/totalImages)*100)        
+            status.Retrieved    = str (totalRetrievedPerc) + "%"
+            status.Pushed       = str(totalPushedPerc) + "%"
+            status.Registered   = str(totalRegisteredPerc) + "%"       
         
             if totalRetrievedPerc == 100:
                 status.WorkflowState = State.RETRIEVED.name
@@ -232,16 +235,15 @@ def _parse_response(
     else:
         status.Error = "Study not found. Please enter valid study info"
         
-    if cubeResponse:
+    if cubeResponse:           
        if cubeResponse['FeedState'] != "":
             status.WorkflowState   = cubeResponse['FeedState']           
             status.FeedId          = cubeResponse['FeedId']
             status.FeedName        = cubeResponse['FeedName']
             status.FeedProgress    = cubeResponse['FeedProgress']
+            status.FeedStatus      = cubeResponse['FeedStatus']       
             status.FeedStatus      = cubeResponse['FeedStatus']
-            status.Error           = cubeResponse['FeedError']
-        
-        
+            
     return status 
 
 
@@ -254,51 +256,58 @@ def _do_cube_create_user(cubeUrl,userName):
     userEmail        = userName + "@email.com"
     
     # create a new user
-    headers = {
-                  'Content-Type': 'application/json',
-                  'accept': 'application/json'
-              }
-    myobj = {
-             "username" : userName,
-             "password" : userPass,
-             "email"    : userEmail,
-             }
-    resp = requests.post(
-               createUserUrl,
-               json=myobj,
-               headers=headers
-           )
-
+    headers     = {
+                      'Content-Type': 'application/json',
+                      'accept': 'application/json'
+                  }
+                  
+    myobj       = {
+                     "username" : userName,
+                     "password" : userPass,
+                     "email"    : userEmail,
+                  }
+                  
+    resp        = requests.post(
+                     createUserUrl,
+                     json=myobj,
+                     headers=headers
+                 )
+                             
     authClient = PythonChrisClient(
                      cubeUrl,
                      userName,
                      userPass
                  )
                  
+                 
     return authClient
 
     
 def _parse_feed_template(
     feedTemplate : str, 
-    dcmData : dict
+    dcmData      : dict
 ) -> str:
     """
     # Given a feed name template, substitute dicom values
     # for specified dicom tags
     """
-    items = feedTemplate.split('%')
+    items    = feedTemplate.split('%')
     feedName = ""
+    
     for item in items:
         if item == "":
-            continue;
-        tags = item.split('-')
+            continue;           
+        tags     = item.split('-')
         dicomTag = tags[0]
+        
         try:        
             dicomValue = dcmData[dicomTag]["value"]
         except:
             dicomValue = dicomTag
-        item = item.replace(dicomTag,dicomValue)
+            
+        item     = item.replace(dicomTag,dicomValue)
         feedName = feedName + item
+        
     return feedName    
  
     

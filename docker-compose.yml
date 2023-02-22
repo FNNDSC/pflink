@@ -10,6 +10,17 @@ services:
     ports:
       - 27017:27017    
     volumes:
-      - /home/sandip/pflink/database:/data/db
+      - mongod:/data/db
     restart: unless-stopped
+    
+  pflink:
+    image : local/pflink
+    container_name : pflink
+    network_mode: host
+    volumes:
+      - pflink:/home/pflink
+  
+volumes:
+    mongod:
+    pflink:
 
