@@ -16,11 +16,10 @@ services:
   pflink:
     image : local/pflink
     container_name : pflink
+    network_mode: host
     volumes:
       - pflink:/home/pflink
-    ports:
-      - 8050:8050
-  
+    
 volumes:
     mongod:
     pflink:

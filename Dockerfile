@@ -1,4 +1,4 @@
-FROM tiangolo/uvicorn-gunicorn-fastapi:python3.8-slim
+FROM python:3.9
 
 
 WORKDIR /app
@@ -16,9 +16,9 @@ RUN pip install --no-cache-dir --upgrade -r /app/requirements.txt
 # 
 
 
-COPY . /app/
+COPY app/ /app/
 
 # 
 
 
-CMD ["python", "app/main.py"]
+CMD ["python", "main.py"]
