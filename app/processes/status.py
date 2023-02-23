@@ -234,11 +234,11 @@ def _parse_response(
             status.Registered   = str(totalRegisteredPerc) + "%"       
         
             if totalRetrievedPerc == 100:
-                status.WorkflowState = State.RETRIEVED.name
+                status.WorkflowState = State.RETRIEVING.name
             if totalPushedPerc == 100:
-                status.WorkflowState = State.PUSHED.name
+                status.WorkflowState = State.PUSHING.name
             if totalRegisteredPerc == 100:
-                status.WorkflowState = State.REGISTERED.name
+                status.WorkflowState = State.REGISTERING.name
     else:
         status.Error = "Study not found. Please enter valid study info"
         

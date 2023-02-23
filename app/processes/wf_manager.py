@@ -82,14 +82,14 @@ def manage_workflow(dicom:dict, pfdcm_url:str,key:str) -> dict:
                 if workflow.status.Retrieved == "0%":
                     do_pfdcm_retrieve(dicom,pfdcm_url)
                 
-            case State.RETRIEVED.name:
+            case State.RETRIEVING.name:
                 do_pfdcm_push(dicom,pfdcm_url)
                 
-            case State.PUSHED.name:
+            case State.PUSHING.name:
                 if workflow.status.Registered == "0%":
                     do_pfdcm_register(dicom,pfdcm_url)
                     
-            case State.REGISTERED.name:
+            case State.REGISTERING.name:
                 pl_inst_id = do_cube_create_feed(
                     dicom.User, 
                     dicom.FeedName,
@@ -283,30 +283,6 @@ def do_cube_create_user(cubeUrl,userName):
     resp       = requests.post(createUserUrl,json=myobj,headers=headers)
     authClient = PythonChrisClient(cubeUrl,userName,userPass)
     return authClient
-
-
-def parseFeedTemplate(
-    feedTemplate : str, 
-    dcmData : dict
-) -> str:
-    """
-    # Given a feed name template, substitute dicom values
-    # for specified dicom tags
-    """
-    items = feedTemplate.split('%')
-    feedName = ""
-    for item in items:
-        if item == "":
-            continue;
-        tags = item.split('-')
-        dicomTag = tags[0]
-        try:        
-            dicomValue = dcmData[dicomTag]["value"]
-        except:
-            dicomValue = dicomTag
-        item = item.replace(dicomTag,dicomValue)
-        feedName = feedName + item
-    return feedName
 
 
 def create_feed_name(

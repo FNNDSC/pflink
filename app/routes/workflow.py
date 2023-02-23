@@ -11,7 +11,10 @@ from controllers.workflow import (
 
 router = APIRouter()
         
-@router.post("/",response_description="Workflow response retrieved")
+@router.post(
+    "/",
+    response_description="Workflow response retrieved",
+    summary             = "Create a workflow")
 async def create_workflow(data : DicomStatusQuerySchema) -> DicomStatusResponseSchema: 
     """
     Get the status of a workflow by POSTing a payload using this API endpoint.
