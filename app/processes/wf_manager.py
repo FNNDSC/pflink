@@ -79,24 +79,24 @@ def manage_workflow(dicom:dict, pfdcm_url:str,key:str) -> dict:
         match workflow.status.WorkflowState:
         
             case State.STARTED.name:
-                if workflow.status.Retrieved == "0%":
-                    do_pfdcm_retrieve(dicom,pfdcm_url)
+                do_pfdcm_retrieve(dicom,pfdcm_url)
                 
             case State.RETRIEVING.name:
-                do_pfdcm_push(dicom,pfdcm_url)
+                if workflow.status.StateProgress == "100%":
+                    do_pfdcm_push(dicom,pfdcm_url)
                 
             case State.PUSHING.name:
-                if workflow.status.Registered == "0%":
+                if workflow.status.StateProgress == "100%":
                     do_pfdcm_register(dicom,pfdcm_url)
                     
             case State.REGISTERING.name:
-                pl_inst_id = do_cube_create_feed(
+                if workflow.status.StateProgress == "100%":
+                    pl_inst_id = do_cube_create_feed(
                     dicom.User, 
                     dicom.FeedName,
                     dicom.PACSdirective,
-                )
-                       
-    
+                    )
+                         
         update_status(data,pfdcm_url)
         time.sleep(4)
         workflow = retrieve_workflow(key)

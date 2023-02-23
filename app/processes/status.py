@@ -147,14 +147,15 @@ def _get_feed_status(pfdcmResponse: dict, dicom: dict):
     cubeResponse = {
         "FeedName"       : "",
         "FeedState"      : "",
-        "FeedProgress"   : "Not started",
+        "FeedProgress"   : "0%",
         "FeedStatus"     : "",
         "FeedError"      : "",
         "FeedId"         : ""
     }
         
     feedName = dicom.FeedName
-    d_dicom = pfdcmResponse['pypx']['data']
+    d_dicom  = pfdcmResponse['pypx']['data']
+    
     if d_dicom:
         feedName = _parse_feed_template(feedName, d_dicom[0])        
     if feedName == "":
@@ -166,10 +167,13 @@ def _get_feed_status(pfdcmResponse: dict, dicom: dict):
         raise Exception (f"Could not find or create user with username {dicom.User}")
         
     resp = cl.getFeed({"name_exact" : feedName})
+
     if resp['total']>0:
+        print("here")
         cubeResponse['FeedState']       = State.FEED_CREATED.name
         cubeResponse['FeedName']        = resp['data'][0]['name']
         cubeResponse['FeedId']          = resp['data'][0]['id']
+        cubeResponse['FeedProgress']    = "100%"
         
         # total jobs in the feed
         created            = resp['data'][0]['created_jobs']
@@ -218,6 +222,7 @@ def _parse_response(
     
     if study:
         status.StudyFound  = True
+        status.WorkflowState = State.RETRIEVING.name
         images             = study[0][data[0]['StudyInstanceUID']['value']][0]['images'] 
         totalImages        = images["requested"]["count"]
         totalRetrieved     = images["packed"]["count"]
@@ -227,17 +232,17 @@ def _parse_response(
         if totalImages>0:       
             totalRetrievedPerc  = round((totalRetrieved/totalImages)*100)
             totalPushedPerc     = round((totalPushed/totalImages)*100)
-            totalRegisteredPerc = round((totalRegistered/totalImages)*100)        
-            status.Retrieved    = str (totalRetrievedPerc) + "%"
-            status.Pushed       = str(totalPushedPerc) + "%"
-            status.Registered   = str(totalRegisteredPerc) + "%"       
-        
+            totalRegisteredPerc = round((totalRegistered/totalImages)*100)       
+            status.StateProgress    = str (totalRetrievedPerc) + "%"
+                  
             if totalRetrievedPerc == 100:
-                status.WorkflowState = State.RETRIEVING.name
-            if totalPushedPerc == 100:
                 status.WorkflowState = State.PUSHING.name
-            if totalRegisteredPerc == 100:
+                status.StateProgress = str(totalPushedPerc) + "%"
+            if totalPushedPerc == 100:
                 status.WorkflowState = State.REGISTERING.name
+                status.StateProgress = str(totalRegisteredPerc) + "%"
+            #if totalRegisteredPerc == 100:
+                #status.WorkflowState = State.REGISTERING.name
     else:
         status.Error = "Study not found. Please enter valid study info"
         
@@ -246,9 +251,8 @@ def _parse_response(
             status.WorkflowState   = cubeResponse['FeedState']           
             status.FeedId          = cubeResponse['FeedId']
             status.FeedName        = cubeResponse['FeedName']
-            status.FeedProgress    = cubeResponse['FeedProgress']
-            status.FeedStatus      = cubeResponse['FeedStatus']       
-            status.FeedStatus      = cubeResponse['FeedStatus']
+            status.StateProgress   = cubeResponse['FeedProgress']
+            status.Message         = cubeResponse['FeedStatus']       
             
     return status 
 
