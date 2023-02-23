@@ -13,29 +13,32 @@ from controllers.workflow import (
 
 router = APIRouter()
         
-@router.post("/inputImage",response_description="Input image recieved")
+@router.post("/inputImages/{image_number}",response_description="Input image recieved")
 async def get_input_image(
-    data : DicomStatusQuerySchema,
-    name_file : str,
+    data         : DicomStatusQuerySchema,
+    image_number : str,
 ) -> FileResponse: 
     """
+    Get an input image
     """    
-    return FileResponse(path=getcwd()  + "/images/workflow_do.png")
+    return FileResponse(path=getcwd()  + f"/app/tests/inputImages/{image_number}.jpg")
     
-@router.post("/imageWithHeatmaps",response_description="Image with heatmap downloaded")
+@router.post("/imageWithHeatmaps/{image_number}",response_description="Image with heatmap downloaded")
 async def get_image_with_heatmaps(
-    data : DicomStatusQuerySchema,
-    name_file : str,
+    data         : DicomStatusQuerySchema,
+    image_number : str,
 ) -> FileResponse: 
     """
+    Get an image with heatmaps
     """   
-    return FileResponse(path=getcwd() + "/images/workflow_do.png", media_type='application/octet-stream', filename="test.png")
+    return FileResponse(path=getcwd()  + f"/app/tests/imageWithHeatmaps/{image_number}.jpg")
     
-@router.post("/imageWithMeasurements",response_description="Image with measurements downloaded")
+@router.post("/imageWithMeasurements/{image_number}",response_description="Image with measurements downloaded")
 async def get_image_with_measurements(
-    data : DicomStatusQuerySchema,
-    name_file : str,
+    data         : DicomStatusQuerySchema,
+    image_number : str,
 ) -> FileResponse: 
     """
+    Get an image with measurements
     """  
-    return FileResponse(path=getcwd() + "/images/workflow_do.png" , media_type='application/octet-stream', filename="test.png")
+    return FileResponse(path=getcwd()  + f"/app/tests/imageWithMeasurements/{image_number}.png")
