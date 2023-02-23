@@ -30,7 +30,6 @@ logging.basicConfig(
 parser = argparse.ArgumentParser(description='Process arguments passed through CLI')
 parser.add_argument('--data', metavar='N', type=str)
 parser.add_argument('--url', metavar='N', type=str)
-parser.add_argument('--testArgs', metavar='N', type=str)
 
 args = parser.parse_args()
 
@@ -330,14 +329,6 @@ def _test_status_progress(
     status.StudyFound   = True
     PROGRESS_JUMP       = 25
     status.Error        = ""
-
-    if args.testArgs:
-        try:
-            if State[args.testArgs].value > State[status.WorkflowState].value:
-                status.WorkflowState = args.testArgs
-        except:
-            status.Error = f"{args.testArgs} is an invalid state."
-            return status
         
     match status.WorkflowState:
     

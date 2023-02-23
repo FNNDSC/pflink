@@ -73,16 +73,14 @@ class DicomStatusQuerySchema(BaseModel):
 
 class DicomStatusResponseSchema(BaseModel):
     """The Workflow status response Model"""
-    WorkflowState                       : str  = State.STARTED.name
     StudyFound                          : bool = False
+    WorkflowState                       : str  = State.STARTED.name    
     StateProgress                       : str  = "0%"
     FeedId                              : str  = ""
     FeedName                            : str  = ""
     CurrentNode                         : list = []
     Message                             : str  = ""
     Error                               : str  = ""
-
-    
     
 class WorkflowSchema(BaseModel):
     key                                 : str  = ""

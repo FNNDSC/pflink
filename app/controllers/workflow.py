@@ -95,7 +95,29 @@ def validate_request(request:DicomStatusQuerySchema):
     """
     A helper method validate all required fields in a request payload
     """
-    pass
+    error       = ""
+    attr_count  = 0
+    
+    if not request.PFDCMservice:
+        error += "\nPlease enter a `PFDCM` service name"
+        
+    for k,v in request.PACSdirective:
+        if v:
+            attr_count += 1
+            
+    if attr_count == 0:
+        error += "\nPlease enter at least one value in PACSdirective"
+        
+    if not request.User:
+        error += "\nPlease enter a user name (min 4 characters)"
+        
+    if not request.FeedName:
+        error += "\nPlease enter a feed name"
+        
+    if not request.analysisArgs.PluginName:
+        error += "\nPlease enter a Plugin name"
+    
+    return error
     
 # DB methods
     
@@ -144,7 +166,6 @@ async def delete_workflows():
 # POST a workflow
 async def post_workflow(
     data         : DicomStatusQuerySchema,
-    currentState : str,
     test         : bool = False,
 ) -> DicomStatusResponseSchema:
     """
@@ -157,7 +178,11 @@ async def post_workflow(
     d_data      = query_to_dict(data)
     str_data    = json.dumps(d_data)  
     key         = dict_to_hash(d_data)
-    pfdcm_url   = ""
+    pfdcm_url   = ""    
+    error       = validate_request(data)
+    
+    if error:
+        return {"Errors": error}
     
     workflow = await retrieve_workflow(key)
     
@@ -171,16 +196,14 @@ async def post_workflow(
         workflow     = await add_workflow(new_workflow)
         
     try:
-        if not currentState:
-            currentState = ""
         if not test:    
             pfdcm_url = await retrieve_pfdcm_url(data.PFDCMservice) 
+            
         status_update = subprocess.Popen(
                                ['python',
                                'app/processes/status.py',
                                "--data",str_data,
                                "--url",pfdcm_url,
-                               "--testArgs",currentState,
                                ], stdout=subprocess.PIPE, 
                                stderr=subprocess.PIPE,
                                close_fds   = True)
@@ -193,8 +216,8 @@ async def post_workflow(
                                 ], stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE,
                                  close_fds   = True)
-        stderr,stdout = status_update.communicate()
-        print(stderr,stdout)
+        #stderr,stdout = status_update.communicate()
+        #print(stderr,stdout)
     except Exception as e:
         workflow.status.Error = str(e)
 

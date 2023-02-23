@@ -24,7 +24,6 @@ async def test_get_workflows():
 @router.post("/",response_description="Workflow response retrieved")
 async def test_create_workflow(
     data         : DicomStatusQuerySchema,
-    currentState : str,
 ) -> DicomStatusResponseSchema:
     """
     Use this API to test how `pflink` creates new workflows and updates
@@ -32,7 +31,7 @@ async def test_create_workflow(
     A client can get various states of a workflow life-cycle by POSTing the
     same request again and again
     """  
-    response = await post_workflow(data,currentState,test=True)   
+    response = await post_workflow(data,test=True)   
     return response
     
 @router.delete("/",response_description="All workflows deleted")
