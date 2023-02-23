@@ -1,7 +1,7 @@
 import  uvicorn
 from    pymongo             import MongoClient
 
-MONGO_DETAILS = "mongodb://192.168.0.128:27017"
+MONGO_DETAILS = "mongodb://localhost:27017"
 
 client = MongoClient(MONGO_DETAILS)
 
