@@ -95,7 +95,7 @@ class DicomStatusQuerySchema(BaseModel):
                 "analysisArgs": {
                   "PluginName": "pl-test_plugin",
                   "Version": "1.1.0",
-                  "Params": {"test":"args"},
+                  "Params": {},
                   "PassUserCreds": False
                 }
               }
