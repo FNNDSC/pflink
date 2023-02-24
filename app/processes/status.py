@@ -329,6 +329,14 @@ def _test_status_progress(
     Run a simulation of workflow progress
     and update the database
     """
+    NODES = {
+              25 : "pl-lld_inference",
+              50 : "pl-markimg",
+              75 : "pl-img2dcm",
+              100: "pl-orthanc_push",
+            }
+        
+    TOTAL_NODES         = 8
     MAX_N               = 9999
     status.StudyFound   = True
     PROGRESS_JUMP       = 25
@@ -375,13 +383,14 @@ def _test_status_progress(
         case State.FEED_CREATED.name:
             status.WorkflowState    = State(5).name
             status.StateProgress    = '25%'                            
+                 
                        
         case State.ANALYSIS_STARTED.name:
             progress                = __get_progress_from_text(status.StateProgress)
             if progress >= 100:                
                 status.WorkflowState    = State(6).name
             else:
-                status.CurrentNode  = [query.analysisArgs.PluginName]
+                status.CurrentNode   = [NODES[progress]]
                 progress            += PROGRESS_JUMP
                 status.StateProgress = str(progress) + '%'            
                

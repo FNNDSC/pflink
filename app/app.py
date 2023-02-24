@@ -28,6 +28,7 @@ You will be able to:
 * **Get Input Image** (_test only_).
 * **Get Image with Heatmaps** (_test only_).
 * **Get Image with Measurements** (_test only_).
+* **Get Output Image** (_test only_).
 """
 
 tags_metadata    = [

@@ -38,7 +38,7 @@ async def test_create_workflow(
 async def delete_all():
     """
     Delete all records: 
-    # USE ONLY FOR ON A TEST SETUP
+    # USE ONLY ON A TEST SETUP
     """
     response = await delete_workflows()
     return response
