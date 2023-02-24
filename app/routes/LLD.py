@@ -19,7 +19,7 @@ async def get_input_image(
     image_number : str,
 ) -> FileResponse: 
     """
-    Get an input image
+    Get an input image : Specify a number between 1-10
     """    
     return FileResponse(path=getcwd()  + f"/app/tests/inputImages/{image_number}.jpg")
     
@@ -29,7 +29,7 @@ async def get_image_with_heatmaps(
     image_number : str,
 ) -> FileResponse: 
     """
-    Get an image with heatmaps
+    Get an image with heatmaps : Specify a number between 1-10
     """   
     return FileResponse(path=getcwd()  + f"/app/tests/imageWithHeatmaps/{image_number}.jpg")
     
@@ -39,6 +39,6 @@ async def get_image_with_measurements(
     image_number : str,
 ) -> FileResponse: 
     """
-    Get an image with measurements
+    Get an image with measurements : Specify a number between 1-10
     """  
     return FileResponse(path=getcwd()  + f"/app/tests/imageWithMeasurements/{image_number}.png")

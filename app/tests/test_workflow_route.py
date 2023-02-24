@@ -21,7 +21,7 @@ async def test_get_workflows():
     workflows = await retrieve_workflows()
     return workflows
     
-@router.post("/",response_description="Workflow response retrieved")
+@router.post("/",response_description="Status response retrieved")
 async def test_create_workflow(
     data         : DicomStatusQuerySchema,
 ) -> DicomStatusResponseSchema:
@@ -37,7 +37,8 @@ async def test_create_workflow(
 @router.delete("/",response_description="All workflows deleted")
 async def delete_all():
     """
-    Delete all records
+    Delete all records: 
+    # USE ONLY FOR ON A TEST SETUP
     """
     response = await delete_workflows()
     return response

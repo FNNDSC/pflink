@@ -70,7 +70,37 @@ class DicomStatusQuerySchema(BaseModel):
     FeedName                            : str  = "" 
     User                                : str  = ""
     analysisArgs                        : WorkflowPluginInstanceSchema 
-
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "PFDCMservice": "PFDCMLOCAL",
+                "PACSservice": "orthanc",
+                "PACSdirective": {
+                  "PatientID": "12345",
+                  "StudyInstanceUID": "78441995125526",
+                  "SeriesInstanceUID": "1546579521526"
+                },
+                "thenArgs": {
+                  "db": "/home/dicom/log",
+                  "swift": "local",
+                  "swiftServicesPACS": "orthanc",
+                  "swiftPackEachDICOM": True,
+                  "CUBE": "local",
+                  "parseAllFilesWithSubStr": "dcm"
+                },
+                "dblogbasepath": "/home/dicom/log",
+                "FeedName": "test-%SeriesInstanceUID",
+                "User": "cl_user_2",
+                "analysisArgs": {
+                  "PluginName": "pl-test_plugin",
+                  "Version": "1.1.0",
+                  "Params": {"test":"args"},
+                  "PassUserCreds": False
+                }
+              }
+        }         
+        
 class DicomStatusResponseSchema(BaseModel):
     """The Workflow status response Model"""
     StudyFound                          : bool = False
@@ -88,6 +118,4 @@ class WorkflowSchema(BaseModel):
     status                              : DicomStatusResponseSchema
     Stale                               : bool = True
     Started                             : bool = False
-        
 
-        

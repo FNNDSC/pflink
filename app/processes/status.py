@@ -233,16 +233,16 @@ def _parse_response(
             totalRetrievedPerc  = round((totalRetrieved/totalImages)*100)
             totalPushedPerc     = round((totalPushed/totalImages)*100)
             totalRegisteredPerc = round((totalRegistered/totalImages)*100)       
-            status.StateProgress    = str (totalRetrievedPerc) + "%"
                   
-            if totalRetrievedPerc == 100:
+            if totalRetrievedPerc > 0:
+                status.WorkflowState = State.RETRIEVING.name
+                status.StateProgress = str(totalRetrievedPerc) + "%"
+            if totalPushedPerc > 0:
                 status.WorkflowState = State.PUSHING.name
                 status.StateProgress = str(totalPushedPerc) + "%"
-            if totalPushedPerc == 100:
+            if totalRegisteredPerc > 0:
                 status.WorkflowState = State.REGISTERING.name
                 status.StateProgress = str(totalRegisteredPerc) + "%"
-            #if totalRegisteredPerc == 100:
-                #status.WorkflowState = State.REGISTERING.name
     else:
         status.Error = "Study not found. Please enter valid study info"
         
@@ -338,49 +338,52 @@ def _test_status_progress(
     
         case State.STARTED.name:
             status.WorkflowState   = State(1).name
-            status.StateProgress   = "0%"
+            status.StateProgress   = "25%"
          
-        case State.RETRIEVING.name:        
+        case State.RETRIEVING.name: 
             progress                = __get_progress_from_text(status.StateProgress)
-            progress               += PROGRESS_JUMP
-            status.StateProgress    = str(progress) + '%'
-            
-            if progress == 100:                
+            if progress >= 100:                
                 status.WorkflowState    = State(2).name
-                status.StateProgress    = '0%'  
+                status.StateProgress    = '25%' 
+            else:                     
+                progress               += PROGRESS_JUMP
+                status.StateProgress    = str(progress) + '%' 
                  
         case State.PUSHING.name:
-            progress                   = __get_progress_from_text(status.StateProgress)
-            progress                  += PROGRESS_JUMP
-            status.StateProgress       = str(progress) + '%'
-            if progress == 100:               
+            progress                = __get_progress_from_text(status.StateProgress)
+            if progress >= 100:              
                 status.WorkflowState    = State(3).name
-                status.StateProgress    = '0%'  
+                status.StateProgress    = '25%'
+            else:
+                progress                  += PROGRESS_JUMP
+                status.StateProgress       = str(progress) + '%'
+              
                 
         case State.REGISTERING.name:
-            progress               = __get_progress_from_text(status.StateProgress)
-            progress              += PROGRESS_JUMP
-            status.StateProgress   = str(progress) + '%'
-            if progress == 100:              
+            progress                = __get_progress_from_text(status.StateProgress)
+            if progress >= 100:             
                 status.WorkflowState    = State(4).name
                 status.StateProgress    = '100%'
                 status.FeedId           = random.randint(0,MAX_N)
                 d_directive             = query_to_dict(query)['PACSdirective']
-                status.FeedName         = dict_to_hash(d_directive)  
+                status.FeedName         = dict_to_hash(d_directive)
+            else:
+                progress              += PROGRESS_JUMP
+                status.StateProgress   = str(progress) + '%'
+              
                 
         case State.FEED_CREATED.name:
             status.WorkflowState    = State(5).name
-            status.StateProgress    = '0%'                            
+            status.StateProgress    = '25%'                            
                        
         case State.ANALYSIS_STARTED.name:
-            status.CurrentNode  = [query.analysisArgs.PluginName]
-            progress            = __get_progress_from_text(status.StateProgress)
-            progress            += PROGRESS_JUMP
-            status.StateProgress = str(progress) + '%'
-            if progress == 100:                
+            progress                = __get_progress_from_text(status.StateProgress)
+            if progress >= 100:                
                 status.WorkflowState    = State(6).name
-                
-                
+            else:
+                status.CurrentNode  = [query.analysisArgs.PluginName]
+                progress            += PROGRESS_JUMP
+                status.StateProgress = str(progress) + '%'            
                
     return status   
     
