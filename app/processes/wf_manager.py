@@ -25,6 +25,10 @@ from models import (
     DicomStatusResponseSchema,
     WorkflowSchema,
 )
+import os
+
+CUBE_DETAILS = os.getenv('PFLINK_CUBE', 'http://localhost:8000/api/v1/')
+
 
 format = "%(asctime)s: %(message)s"
 logging.basicConfig(
@@ -225,7 +229,7 @@ def do_cube_create_feed(userName,feedName,pacsDirective):
     """
     Create a new feed in `CUBE` if not already present
     """
-    client             =  do_cube_create_user("http://localhost:8000/api/v1/",userName)
+    client             =  do_cube_create_user(CUBE_DETAILS, userName)
     pacs_details       =  client.getPACSdetails(pacsDirective)
     feed_name          =  create_feed_name(feedName,pacs_details)
     data_path          =  client.getSwiftPath(pacsDirective)
@@ -249,7 +253,7 @@ def do_cube_start_analysis(userName,previousId,analysisArgs):
     """
     Create a new node (plugin instance) on an existing feed in `CUBE`
     """
-    client                       =  do_cube_create_user("http://localhost:8000/api/v1/",userName)
+    client                       =  do_cube_create_user(CUBE_DETAILS, userName)
     plugin_search_params         =  {
                                         "name"    : analysisArgs.PluginName, 
                                         "version" : analysisArgs.Version

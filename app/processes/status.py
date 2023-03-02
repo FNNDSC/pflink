@@ -17,7 +17,9 @@ from utils import (
     update_workflow,
     retrieve_workflow,
 )
+import os
 
+CUBE_DETAILS = os.getenv('PFLINK_CUBE', 'http://localhost:8000/api/v1/')
 
 format = "%(asctime)s: %(message)s"
 logging.basicConfig(
@@ -162,7 +164,7 @@ def _get_feed_status(pfdcmResponse: dict, dicom: dict):
         cubeResponse['FeedError'] = "Please enter a valid feed name"
         
     try:     
-        cl = _do_cube_create_user("http://localhost:8000/api/v1/",dicom.User) 
+        cl = _do_cube_create_user(CUBE_DETAILS,dicom.User) 
     except:
         raise Exception (f"Could not find or create user with username {dicom.User}")
         
