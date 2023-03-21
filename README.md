@@ -18,10 +18,10 @@ docker build -t local/pflink .
 app           |  URL
 --------------|---------------------------
 mongoDB       | http://localhost:27017
-pflink        | http://localhost:8050
+pflink        | http://localhost:4010
 
 
-Go to http://localhost:8050/docs for API usage
+Go to http://localhost:4010/docs for API usage
 
 ## Unmake
 
