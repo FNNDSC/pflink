@@ -1,9 +1,8 @@
 import json
 import hashlib
 from pymongo import MongoClient
-import os
 
-MONGO_DETAILS = os.getenv("PFLINK_MONGODB", "mongodb://localhost:27017")
+MONGO_DETAILS = "mongodb://localhost:27017"
 
 client = MongoClient(MONGO_DETAILS)
 
