@@ -1,10 +1,7 @@
 import  uvicorn
 from    pymongo             import MongoClient
-import os
 
-MONGO_DETAILS = os.getenv("PFLINK_MONGODB", "mongodb://localhost:27017")
-PFDCM_DETAILS = os.getenv('PFLINK_PFDCM', 'http://localhost:4005')
-PORT = int(os.getenv('PFLINK_PORT', '8050'))
+MONGO_DETAILS = "mongodb://localhost:27017"
 
 client = MongoClient(MONGO_DETAILS)
 
@@ -35,10 +32,10 @@ if __name__ == "__main__":
     add_pfdcm(
         {
             "service_name": "PFDCMLOCAL",
-            "server_ip"   : PFDCM_DETAILS.split(':')[0],
-            "server_port" : PFDCM_DETAILS.split(':')[-1],
+            "server_ip"   : "http://localhost",
+            "server_port" : "4005",
         }
     )
     
-    uvicorn.run("app:app", host="0.0.0.0", port=PORT, reload=True)
+    uvicorn.run("app:app", host="localhost", port=8050, reload=True)
     

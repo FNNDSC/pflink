@@ -1,35 +1,26 @@
 version: '3.8'
 
 services:
-  pflink:
-    image: fnndsc/pflink:20230302-minichris
-    container_name: pflink
-    restart: unless-stopped
-    environment:
-      PFLINK_MONGODB: mongodb://pflink-db:27017
-      PFLINK_PFDCM: http://pfdcm:4005
-      PFLINK_PORT: 4010
-    ports:
-      - "4010:4010"
-    networks:
-      local:
-      pflink:
-
-
-  pflink-db:
+  mongodb:
     image : mongo
+    container_name: mongodb
     environment:
       - PUID=1000
       - PGID=1000
+    ports:
+      - 27017:27017    
     volumes:
-      - pflink-db-data:/data/db
+      - mongod:/data/db
     restart: unless-stopped
-    networks:
-      pflink:
+    
+  pflink:
+    image : local/pflink
+    container_name : pflink
+    network_mode: host
+    volumes:
+      - pflink:/home/pflink
     
 volumes:
-    pflink-db-data:
-
-networks:
-    local:
+    mongod:
     pflink:
+
