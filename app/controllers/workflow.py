@@ -217,8 +217,8 @@ async def post_workflow(
                                  stderr=subprocess.PIPE,
                                  close_fds   = True)
                                  
-        #stderr,stdout = status_update.communicate()
-        #print(stderr,stdout)
+        stderr,stdout = status_update.communicate()
+        print(stderr,stdout)
     except Exception as e:
         workflow.status.Error = str(e)
 

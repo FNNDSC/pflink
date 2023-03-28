@@ -1,11 +1,12 @@
 import  uvicorn
 from    pymongo             import MongoClient
+from    .config             import settings
 
 MONGO_DETAILS = "mongodb://localhost:27017"
 
-client = MongoClient(MONGO_DETAILS)
+client           = MongoClient(MONGO_DETAILS)
 
-database = client.pfdcms
+database         = client.pfdcms
 
 pfdcm_collection = database.get_collection("pfdcms_collection")
 
