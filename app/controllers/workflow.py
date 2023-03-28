@@ -197,7 +197,7 @@ async def post_workflow(
         
     try:
         if not test:    
-            pfdcm_url = await retrieve_pfdcm_url(data.PFDCMservice) 
+            pfdcm_url = await retrieve_pfdcm_url(data.PFDCMservice)
             
         status_update = subprocess.Popen(
                                ['python',
@@ -206,8 +206,8 @@ async def post_workflow(
                                "--url",pfdcm_url,
                                ], stdout=subprocess.PIPE, 
                                stderr=subprocess.PIPE,
-                               close_fds   = True)
-                               
+                               close_fds   = True) 
+                            
         manage_workflow = subprocess.Popen(
                                 ['python',
                                 'app/processes/wf_manager.py',
@@ -216,6 +216,7 @@ async def post_workflow(
                                 ], stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE,
                                  close_fds   = True)
+                                 
         #stderr,stdout = status_update.communicate()
         #print(stderr,stdout)
     except Exception as e:

@@ -57,7 +57,13 @@ def manage_workflow(dicom:dict, pfdcm_url:str,key:str) -> dict:
     Manage workflow:
     Schedule task based on status 
     from the DB
-    """    
+    """  
+    cubeResource = dicom.thenArgs.CUBE
+    pfdcm_smdb_cube_api = f'{pfdcm_url}/api/v1/SMDB/CUBE/{cubeResource}/' 
+    response = requests.get(pfdcm_smdb_cube_api)
+    d_results = json.loads(response.text) 
+    cube_url = d_results['cubeInfo']['url']
+      
     MAX_RETRIES   = 50
     workflow      = retrieve_workflow(key)
     pl_inst_id    = 0
@@ -95,10 +101,11 @@ def manage_workflow(dicom:dict, pfdcm_url:str,key:str) -> dict:
                     dicom.User, 
                     dicom.FeedName,
                     dicom.PACSdirective,
+                    cube_url,
                     )
                          
         update_status(data,pfdcm_url)
-        time.sleep(4)
+        time.sleep(10)
         workflow = retrieve_workflow(key)
         if workflow.status.Error:
             return
@@ -110,6 +117,7 @@ def manage_workflow(dicom:dict, pfdcm_url:str,key:str) -> dict:
                     dicom.User,
                     pl_inst_id,
                     dicom.analysisArgs,
+                    cube_url,
                 )
 
 
@@ -142,7 +150,7 @@ def pfdcm_do(
     by running the threaded API of `pfdcm`
     """
     thenArgs = json.dumps(thenArgs,separators=(',', ':'))    
-    pfdcm_dicom_api = f'{url}/api/v1/PACS/sync/pypx/'
+    pfdcm_dicom_api = f'{url}/api/v1/PACS/thread/pypx/'
     headers = {'Content-Type': 'application/json','accept': 'application/json'}
     myobj = {
         "PACSservice": {
@@ -221,11 +229,11 @@ def do_pfdcm_register(dicom:dict, pfdcm_url:str):
     pfdcm_do("register",thenArgs,dicom,pfdcm_url)
 
 
-def do_cube_create_feed(userName,feedName,pacsDirective):
+def do_cube_create_feed(userName,feedName,pacsDirective,cube_url):
     """
     Create a new feed in `CUBE` if not already present
     """
-    client             =  do_cube_create_user("http://localhost:8000/api/v1/",userName)
+    client             =  do_cube_create_user(cube_url,userName)
     pacs_details       =  client.getPACSdetails(pacsDirective)
     feed_name          =  create_feed_name(feedName,pacs_details)
     data_path          =  client.getSwiftPath(pacsDirective)
@@ -245,11 +253,11 @@ def do_cube_create_feed(userName,feedName,pacsDirective):
         return feed_response['id']        
 
     
-def do_cube_start_analysis(userName,previousId,analysisArgs):
+def do_cube_start_analysis(userName,previousId,analysisArgs,cube_url):
     """
     Create a new node (plugin instance) on an existing feed in `CUBE`
     """
-    client                       =  do_cube_create_user("http://localhost:8000/api/v1/",userName)
+    client                       =  do_cube_create_user(cube_url,userName)
     plugin_search_params         =  {
                                         "name"    : analysisArgs.PluginName, 
                                         "version" : analysisArgs.Version

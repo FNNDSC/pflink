@@ -80,8 +80,13 @@ def _get_workflow_status(
         3) Parse both the results to a response schema
         4) Return the response
     """
+    cubeResource = dicom.thenArgs.CUBE
+    pfdcm_smdb_cube_api = f'{pfdcm_url}/api/v1/SMDB/CUBE/{cubeResource}/' 
+    response = requests.get(pfdcm_smdb_cube_api)
+    d_results = json.loads(response.text) 
+    cube_url = d_results['cubeInfo']['url']
     pfdcm_resp    = _get_pfdcm_status(pfdcm_url,dicom)
-    cube_resp     = _get_feed_status(pfdcm_resp,dicom)
+    cube_resp     = _get_feed_status(pfdcm_resp,dicom,cube_url)
     status        = _parse_response(pfdcm_resp, cube_resp,key)
     return status
       
@@ -138,7 +143,7 @@ def _get_pfdcm_status(pfdcm_url,dicom):
     return json.loads(response.text) 
 
 
-def _get_feed_status(pfdcmResponse: dict, dicom: dict):
+def _get_feed_status(pfdcmResponse: dict, dicom: dict, cube_url: str):
     """
     Get the status of a feed inside `CUBE`
     """
@@ -162,14 +167,14 @@ def _get_feed_status(pfdcmResponse: dict, dicom: dict):
         cubeResponse['FeedError'] = "Please enter a valid feed name"
         
     try:     
-        cl = _do_cube_create_user("http://localhost:8000/api/v1/",dicom.User) 
+        cl = _do_cube_create_user(cube_url,dicom.User) 
     except:
         raise Exception (f"Could not find or create user with username {dicom.User}")
         
     resp = cl.getFeed({"name_exact" : feedName})
+    print(resp,feedName)
 
     if resp['total']>0:
-        print("here")
         cubeResponse['FeedState']       = State.FEED_CREATED.name
         cubeResponse['FeedName']        = resp['data'][0]['name']
         cubeResponse['FeedId']          = resp['data'][0]['id']
