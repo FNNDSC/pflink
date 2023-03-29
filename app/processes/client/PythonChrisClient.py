@@ -27,6 +27,7 @@ class PythonChrisClient(ChrisClient):
         
     def getPACSdetails(self,searchParams:dict):
         response = self.cl.get_pacs_files(searchParams)
+        print("RESPONSE",searchParams)
         return response['data'][0]
         
 

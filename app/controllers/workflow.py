@@ -207,7 +207,7 @@ async def post_workflow(
                                ], stdout=subprocess.PIPE, 
                                stderr=subprocess.PIPE,
                                close_fds   = True) 
-                            
+        """                   
         manage_workflow = subprocess.Popen(
                                 ['python',
                                 'app/processes/wf_manager.py',
@@ -217,8 +217,10 @@ async def post_workflow(
                                  stderr=subprocess.PIPE,
                                  close_fds   = True)
                                  
+        """                        
         stderr,stdout = status_update.communicate()
         print(stderr,stdout)
+
     except Exception as e:
         workflow.status.Error = str(e)
 

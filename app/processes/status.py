@@ -85,6 +85,8 @@ def _get_workflow_status(
     response = requests.get(pfdcm_smdb_cube_api)
     d_results = json.loads(response.text) 
     cube_url = d_results['cubeInfo']['url']
+    if dicom.PFDCMservice == "PFDCMLOCAL":
+        cube_url = "http://localhost:8000/api/v1/"
     pfdcm_resp    = _get_pfdcm_status(pfdcm_url,dicom)
     cube_resp     = _get_feed_status(pfdcm_resp,dicom,cube_url)
     status        = _parse_response(pfdcm_resp, cube_resp,key)

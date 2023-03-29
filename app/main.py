@@ -1,6 +1,6 @@
 import  uvicorn
 from    pymongo             import MongoClient
-from    .config             import settings
+#from    .config             import settings
 
 MONGO_DETAILS = "mongodb://localhost:27017"
 

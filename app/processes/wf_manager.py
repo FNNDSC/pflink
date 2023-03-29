@@ -62,11 +62,15 @@ def manage_workflow(dicom:dict, pfdcm_url:str,key:str) -> dict:
     pfdcm_smdb_cube_api = f'{pfdcm_url}/api/v1/SMDB/CUBE/{cubeResource}/' 
     response = requests.get(pfdcm_smdb_cube_api)
     d_results = json.loads(response.text) 
+
     cube_url = d_results['cubeInfo']['url']
+    if dicom.PFDCMservice == "PFDCMLOCAL":
+        cube_url = "http://localhost:8000/api/v1/"
       
     MAX_RETRIES   = 50
     workflow      = retrieve_workflow(key)
     pl_inst_id    = 0
+
     
     if workflow.Started:
         # Do nothing adnd return
@@ -78,6 +82,10 @@ def manage_workflow(dicom:dict, pfdcm_url:str,key:str) -> dict:
     if not pfdcm_url:
         # Application running in test mode
         return
+        
+    ret_cnt = 0
+    pus_cnt = 0
+    reg_cnt = 0
    
     while not workflow.status.WorkflowState == State.FEED_CREATED.name and MAX_RETRIES > 0:
         MAX_RETRIES -= 1
@@ -85,15 +93,19 @@ def manage_workflow(dicom:dict, pfdcm_url:str,key:str) -> dict:
         match workflow.status.WorkflowState:
         
             case State.STARTED.name:
-                do_pfdcm_retrieve(dicom,pfdcm_url)
+                if ret_cnt == 0:
+                    do_pfdcm_retrieve(dicom,pfdcm_url)
+                    ret_cnt = 1
                 
             case State.RETRIEVING.name:
-                if workflow.status.StateProgress == "100%":
+                if workflow.status.StateProgress == "100%" and pus_cnt == 0:
                     do_pfdcm_push(dicom,pfdcm_url)
+                    pus_cnt = 1
                 
             case State.PUSHING.name:
-                if workflow.status.StateProgress == "100%":
+                if workflow.status.StateProgress == "100%" and reg_cnt == 0:
                     do_pfdcm_register(dicom,pfdcm_url)
+                    reg_cnt = 1
                     
             case State.REGISTERING.name:
                 if workflow.status.StateProgress == "100%":
@@ -104,8 +116,9 @@ def manage_workflow(dicom:dict, pfdcm_url:str,key:str) -> dict:
                     cube_url,
                     )
                          
-        update_status(data,pfdcm_url)
+        update_status(data,pfdcm_url) 
         time.sleep(10)
+        
         workflow = retrieve_workflow(key)
         if workflow.status.Error:
             return
