@@ -80,6 +80,7 @@ def _get_workflow_status(
         3) Parse both the results to a response schema
         4) Return the response
     """
+    
     cubeResource = dicom.thenArgs.CUBE
     pfdcm_smdb_cube_api = f'{pfdcm_url}/api/v1/SMDB/CUBE/{cubeResource}/' 
     response = requests.get(pfdcm_smdb_cube_api)
@@ -149,7 +150,7 @@ def _get_feed_status(pfdcmResponse: dict, dicom: dict, cube_url: str):
     """
     Get the status of a feed inside `CUBE`
     """
-    MAX_JOBS = 2
+    MAX_JOBS = 10
         
     cubeResponse = {
         "FeedName"       : "",
@@ -161,17 +162,25 @@ def _get_feed_status(pfdcmResponse: dict, dicom: dict, cube_url: str):
     }
         
     feedName = dicom.FeedName
-    d_dicom  = pfdcmResponse['pypx']['data']
     
-    if d_dicom:
-        feedName = _parse_feed_template(feedName, d_dicom[0])        
-    if feedName == "":
-        cubeResponse['FeedError'] = "Please enter a valid feed name"
+    try:
+        d_dicom  = pfdcmResponse['pypx']['data']
+    
+        if d_dicom:
+            feedName = _parse_feed_template(feedName, d_dicom[0])        
+        if feedName == "":
+            cubeResponse['FeedError'] = "Please enter a valid feed name"
+    except Exception as ex:
+        cubeResponse["FeedError"] = str(ex)
+    
         
     try:     
         cl = _do_cube_create_user(cube_url,dicom.User) 
     except:
         raise Exception (f"Could not find or create user with username {dicom.User}")
+        
+    #pacs_details       =  cl.getPACSdetails(dicom.PACSdirective)
+    #feed_name          =  _parse_feed_template(feedName,d_dicom)
         
     resp = cl.getFeed({"name_exact" : feedName})
     print(resp,feedName)
@@ -223,7 +232,11 @@ def _parse_response(
     """
     Parse JSON object for workflow status response
     """
+    
     status   = retrieve_workflow(key).status
+    valid    = pfdcmResponse.get('pypx')
+    if not valid:
+        return status
     data     = pfdcmResponse['pypx']['data']
     study    = pfdcmResponse['pypx']['then']['00-status']['study']
     
@@ -327,7 +340,33 @@ def _parse_feed_template(
 
     return feedName 
     
-
+def create_feed_name(
+    feedTemplate : str, 
+    dcmData : dict
+) -> str:
+    """
+    # Given a feed name template, substitute dicom values
+    # for specified dicom tags
+    """
+    items     = feedTemplate.split('%')
+    feedName  = ""
+    for item in items:
+        if item == "":
+            continue;
+            
+        tags      = item.split('-')
+        dicomTag  = tags[0]
+        
+        try:        
+            dicomValue = dcmData[dicomTag]
+        except:
+            dicomValue = dicomTag
+            
+        item       = item.replace(dicomTag,dicomValue)
+        feedName   = feedName + item
+        
+    return feedName
+    
 def _test_status_progress(
     status    : dict,
     query     : DicomStatusQuerySchema,

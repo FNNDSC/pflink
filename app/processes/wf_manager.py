@@ -57,7 +57,15 @@ def manage_workflow(dicom:dict, pfdcm_url:str,key:str) -> dict:
     Manage workflow:
     Schedule task based on status 
     from the DB
-    """  
+    """
+    workflow      = retrieve_workflow(key)
+    if workflow.Started:
+        # Do nothing adnd return
+        return
+        
+    workflow.Started = True
+    update_workflow(key,workflow)     
+          
     cubeResource = dicom.thenArgs.CUBE
     pfdcm_smdb_cube_api = f'{pfdcm_url}/api/v1/SMDB/CUBE/{cubeResource}/' 
     response = requests.get(pfdcm_smdb_cube_api)
@@ -68,17 +76,10 @@ def manage_workflow(dicom:dict, pfdcm_url:str,key:str) -> dict:
         cube_url = "http://localhost:8000/api/v1/"
       
     MAX_RETRIES   = 50
-    workflow      = retrieve_workflow(key)
+    
     pl_inst_id    = 0
 
-    
-    if workflow.Started:
-        # Do nothing adnd return
-        return
-        
-    workflow.Started = True
-    update_workflow(key,workflow)
-    
+      
     if not pfdcm_url:
         # Application running in test mode
         return
@@ -98,24 +99,29 @@ def manage_workflow(dicom:dict, pfdcm_url:str,key:str) -> dict:
                     ret_cnt = 1
                 
             case State.RETRIEVING.name:
-                if workflow.status.StateProgress == "100%" and pus_cnt == 0:
+                if workflow.status.StateProgress == "100%" and workflow.Stale:
                     do_pfdcm_push(dicom,pfdcm_url)
                     pus_cnt = 1
                 
             case State.PUSHING.name:
-                if workflow.status.StateProgress == "100%" and reg_cnt == 0:
+                if workflow.status.StateProgress == "100%" and workflow.Stale:
                     do_pfdcm_register(dicom,pfdcm_url)
                     reg_cnt = 1
                     
             case State.REGISTERING.name:
-                if workflow.status.StateProgress == "100%":
-                    pl_inst_id = do_cube_create_feed(
-                    dicom.User, 
-                    dicom.FeedName,
-                    dicom.PACSdirective,
-                    cube_url,
-                    )
-                         
+                if workflow.status.StateProgress == "100%" and workflow.Stale:
+                    try:
+                        pl_inst_id = do_cube_create_feed(
+                        dicom.User, 
+                        dicom.FeedName,
+                        dicom.PACSdirective,
+                        cube_url,
+                        )
+                    except Exception as ex:
+                        workflow.status.Error = str(ex)
+                        workflow.Started = False
+                        update_workflow(key,workflow)
+                
         update_status(data,pfdcm_url) 
         time.sleep(10)
         
