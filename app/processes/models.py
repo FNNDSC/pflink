@@ -28,7 +28,7 @@ class DicomThenSchema(BaseModel):
 class WorkflowPluginInstanceSchema(BaseModel):
     PluginName                          : str  = ""
     Version                             : str  = ""
-    Params                              : dict
+    Params                              : str  = ""
     PassUserCreds                       : bool = False
     
 class DicomFeedQuerySchema(BaseModel):

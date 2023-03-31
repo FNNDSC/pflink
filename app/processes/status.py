@@ -236,6 +236,7 @@ def _parse_response(
     status   = retrieve_workflow(key).status
     valid    = pfdcmResponse.get('pypx')
     if not valid:
+        status.Error = pfdcmResponse['message']
         return status
     data     = pfdcmResponse['pypx']['data']
     study    = pfdcmResponse['pypx']['then']['00-status']['study']

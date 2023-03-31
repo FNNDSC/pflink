@@ -94,7 +94,7 @@ def manage_workflow(dicom:dict, pfdcm_url:str,key:str) -> dict:
         match workflow.status.WorkflowState:
         
             case State.STARTED.name:
-                if ret_cnt == 0:
+                if workflow.Stale:
                     do_pfdcm_retrieve(dicom,pfdcm_url)
                     ret_cnt = 1
                 
@@ -118,7 +118,7 @@ def manage_workflow(dicom:dict, pfdcm_url:str,key:str) -> dict:
                         cube_url,
                         )
                     except Exception as ex:
-                        workflow.status.Error = str(ex)
+                        workflow.status.Error = "Error creating new feed: " +str(ex)
                         workflow.Started = False
                         update_workflow(key,workflow)
                 
@@ -131,13 +131,18 @@ def manage_workflow(dicom:dict, pfdcm_url:str,key:str) -> dict:
             
     if pl_inst_id == 0:
         return 
-               
-    do_cube_start_analysis(
+    
+    try:           
+        do_cube_start_analysis(
                     dicom.User,
                     pl_inst_id,
                     dicom.analysisArgs,
                     cube_url,
                 )
+    except Exception as ex:
+        workflow.status.Error = "Error creating new analysis: " + str(ex)
+        workflow.Started = False
+        update_workflow(key,workflow)
 
 
 def update_status(data,pfdcm_url):
@@ -282,12 +287,26 @@ def do_cube_start_analysis(userName,previousId,analysisArgs,cube_url):
                                         "version" : analysisArgs.Version
                                     } 
     plugin_id                    =  client.getPluginId(plugin_search_params) 
-    feed_params                  =  analysisArgs.Params    
+    
+    # split the param text
+    params_text  = analysisArgs.Params.strip()
+    params_dict  = params_text.split('--')
+    feed_params                  =  {} 
+    ##raise Exception(params_dict)
+    for param in params_dict:
+        if param == "":
+            continue
+        param = param.strip()      
+        args = param.split(' ')
+        feed_params[args[0]] = args[1]
+        
+       
     feed_params["previous_id"]   =  previousId
     
     if analysisArgs.PassUserCreds:
-        feed_params["username"]  =  userName
-        feed_params["password"]  =  userName + "1234"
+        feed_params["CUBEuser"]      =  userName
+        feed_params["CUBEpassword"]  =  userName + "1234"
+        feed_params["CUBEurl"]       =  cube_url
         
     feedResponse = client.createFeed(plugin_id,feed_params)
 

@@ -28,7 +28,7 @@ class DicomThenSchema(BaseModel):
 class WorkflowPluginInstanceSchema(BaseModel):
     PluginName                          : str  = ""
     Version                             : str  = ""
-    Params                              : dict
+    Params                              : str  = ""
     PassUserCreds                       : bool = False
     
 class DicomFeedQuerySchema(BaseModel):
@@ -95,7 +95,7 @@ class DicomStatusQuerySchema(BaseModel):
                 "analysisArgs": {
                   "PluginName": "pl-test_plugin",
                   "Version": "1.1.0",
-                  "Params": {},
+                  "Params": "",
                   "PassUserCreds": False
                 }
               }
