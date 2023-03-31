@@ -150,7 +150,7 @@ def _get_feed_status(pfdcmResponse: dict, dicom: dict, cube_url: str):
     """
     Get the status of a feed inside `CUBE`
     """
-    MAX_JOBS = 10
+    MAX_JOBS = 12
         
     cubeResponse = {
         "FeedName"       : "",
@@ -164,7 +164,7 @@ def _get_feed_status(pfdcmResponse: dict, dicom: dict, cube_url: str):
     feedName = dicom.FeedName
     
     try:
-        d_dicom  = pfdcmResponse['pypx']['data']
+        d_dicom  = pfdcmResponse['pypx']['data'][0]['series']
     
         if d_dicom:
             feedName = _parse_feed_template(feedName, d_dicom[0])        
