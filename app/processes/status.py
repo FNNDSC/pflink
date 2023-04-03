@@ -173,7 +173,7 @@ def _get_feed_status(pfdcmResponse: dict, dicom: dict, cube_url: str):
     except Exception as ex:
         cubeResponse["FeedError"] = str(ex)
     
-        
+    print(cube_url,dicom.User)    
     try:     
         cl = _do_cube_create_user(cube_url,dicom.User) 
     except:
@@ -181,9 +181,16 @@ def _get_feed_status(pfdcmResponse: dict, dicom: dict, cube_url: str):
         
     #pacs_details       =  cl.getPACSdetails(dicom.PACSdirective)
     #feed_name          =  _parse_feed_template(feedName,d_dicom)
-        
-    resp = cl.getFeed({"name_exact" : feedName})
+    resp = {}
+    try:    
+        resp = cl.getFeed({"name_exact" : feedName})
+    except Exception as ex:
+        cubeResponse["FeedError"] = str(ex)
+    
     print(resp,feedName)
+    valid = resp.get('total')
+    if not valid:
+        return cubeResponse
 
     if resp['total']>0:
         cubeResponse['FeedState']       = State.FEED_CREATED.name

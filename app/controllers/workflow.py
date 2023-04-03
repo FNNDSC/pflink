@@ -218,9 +218,10 @@ async def post_workflow(
                                  close_fds   = True)
                                  
         
-        """                      
+        """              
         stderr,stdout = manage_workflow.communicate()
         print(stderr,stdout)
+        
         stderr,stdout = status_update.communicate()
         print(stderr,stdout)
         """
