@@ -250,7 +250,7 @@ def _parse_response(
     
     if study:
         status.StudyFound  = True
-        status.WorkflowState = State.RETRIEVING.name
+        #status.WorkflowState = State.RETRIEVING.name
         images             = study[0][data[0]['StudyInstanceUID']['value']][0]['images'] 
         totalImages        = images["requested"]["count"]
         totalRetrieved     = images["packed"]["count"]
