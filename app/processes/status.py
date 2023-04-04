@@ -186,8 +186,7 @@ def _get_feed_status(pfdcmResponse: dict, dicom: dict, cube_url: str):
         resp = cl.getFeed({"name_exact" : feedName})
     except Exception as ex:
         cubeResponse["FeedError"] = str(ex)
-    
-    print(resp,feedName)
+
     valid = resp.get('total')
     if not valid:
         return cubeResponse
@@ -281,7 +280,7 @@ def _parse_response(
             status.FeedName        = cubeResponse['FeedName']
             status.StateProgress   = cubeResponse['FeedProgress']
             status.Message         = cubeResponse['FeedStatus']       
-            
+            status.Error           = cubeResponse['FeedError']
     return status 
 
 

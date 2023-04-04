@@ -3,6 +3,7 @@ import json
 import hashlib
 import logging
 import subprocess
+import os
 
 from models.workflow import (
     State,
@@ -15,7 +16,7 @@ from controllers.pfdcm import (
     retrieve_pfdcm,
 )
 
-MONGO_DETAILS       = "mongodb://localhost:27017"
+MONGO_DETAILS = os.getenv("PFLINK_MONGODB", "mongodb://localhost:27017")
 client              = motor.motor_asyncio.AsyncIOMotorClient(MONGO_DETAILS)
 database            = client.workflows
 workflow_collection = database.get_collection("workflows_collection")
@@ -218,10 +219,9 @@ async def post_workflow(
                                  close_fds   = True)
                                  
         
-        """              
+        """             
         stderr,stdout = manage_workflow.communicate()
         print(stderr,stdout)
-        
         stderr,stdout = status_update.communicate()
         print(stderr,stdout)
         """

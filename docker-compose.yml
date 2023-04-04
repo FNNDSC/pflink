@@ -1,26 +1,37 @@
 version: '3.8'
 
 services:
-  mongodb:
-    image : mongo
-    container_name: mongodb
+  pflink:
+    image: local/pflink
+    container_name: pflink
+    restart: unless-stopped
+    environment:
+      PFLINK_MONGODB: mongodb://pflink-db:27017
+      PFLINK_PFDCM: http://localhost:4005
+      PFLINK_PORT: 8050
+    ports:
+      - "8050:8050"
+    networks:
+      local:
+      pflink:
+
+  pflink-db:
+    image: mongo
     environment:
       - PUID=1000
       - PGID=1000
-    ports:
-      - 27017:27017    
     volumes:
-      - mongod:/data/db
+      - pflink-db-data:/data/db
     restart: unless-stopped
+    networks:
+      pflink:
     
+networks:
+  local:
   pflink:
-    image : local/pflink
-    container_name : pflink
-    network_mode: host
-    volumes:
-      - pflink:/home/pflink
-    
+  
 volumes:
-    mongod:
-    pflink:
+  pflink-db-data:
+  
+  
 

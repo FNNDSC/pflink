@@ -59,12 +59,13 @@ def manage_workflow(dicom:dict, pfdcm_url:str,key:str) -> dict:
     from the DB
     """
     workflow      = retrieve_workflow(key)
+     
     if workflow.Started:
-        # Do nothing adnd return
+        # Do nothing and return
         return
         
-    workflow.Started = True
-    update_workflow(key,workflow)     
+    
+       
           
     cubeResource = dicom.thenArgs.CUBE
     pfdcm_smdb_cube_api = f'{pfdcm_url}/api/v1/SMDB/CUBE/{cubeResource}/' 
@@ -83,30 +84,25 @@ def manage_workflow(dicom:dict, pfdcm_url:str,key:str) -> dict:
     if not pfdcm_url:
         # Application running in test mode
         return
-        
-    ret_cnt = 0
-    pus_cnt = 0
-    reg_cnt = 0
    
     while not workflow.status.WorkflowState == State.FEED_CREATED.name and MAX_RETRIES > 0:
+        workflow.Started = True
+        updated = update_workflow(key,workflow) 
         MAX_RETRIES -= 1
     
         match workflow.status.WorkflowState:
         
             case State.STARTED.name:
                 if workflow.Stale:
-                    do_pfdcm_retrieve(dicom,pfdcm_url)
-                    ret_cnt = 1
+                    do_pfdcm_retrieve(dicom,pfdcm_url)                
                 
             case State.RETRIEVING.name:
                 if workflow.status.StateProgress == "100%" and workflow.Stale:
                     do_pfdcm_push(dicom,pfdcm_url)
-                    pus_cnt = 1
                 
             case State.PUSHING.name:
                 if workflow.status.StateProgress == "100%" and workflow.Stale:
                     do_pfdcm_register(dicom,pfdcm_url)
-                    reg_cnt = 1
                     
             case State.REGISTERING.name:
                 if workflow.status.StateProgress == "100%" and workflow.Stale:
@@ -118,14 +114,20 @@ def manage_workflow(dicom:dict, pfdcm_url:str,key:str) -> dict:
                         cube_url,
                         )
                     except Exception as ex:
+                        logging.info("Error creating new feed: ")  
                         workflow.status.Error = "Error creating new feed: " +str(ex)
                         workflow.Started = False
                         update_workflow(key,workflow)
-                
+        
+            case State.ANALYSIS_STARTED.name:
+                return
+            case State.COMPLETED.name:
+                return        
         update_status(data,pfdcm_url) 
         time.sleep(10)
         
         workflow = retrieve_workflow(key)
+        logging.info(workflow)
         if workflow.status.Error:
             return
             
@@ -140,6 +142,7 @@ def manage_workflow(dicom:dict, pfdcm_url:str,key:str) -> dict:
                     cube_url,
                 )
     except Exception as ex:
+        logging.info("Error creating new analysis: ")
         workflow.status.Error = "Error creating new analysis: " + str(ex)
         workflow.Started = False
         update_workflow(key,workflow)
@@ -215,7 +218,7 @@ def pfdcm_do(
     response = requests.post(pfdcm_dicom_api, json = myobj, headers=headers)
     et = time.time()
     elapsed_time = et - st
-    print(f'{bcolors.WARNING}Execution time to {verb}:{elapsed_time} seconds{bcolors.ENDC}')
+    logging.info(f'{bcolors.WARNING}Execution time to {verb}:{elapsed_time} seconds{bcolors.ENDC}')
 
          
 def do_pfdcm_retrieve(dicom:dict, pfdcm_url:str):

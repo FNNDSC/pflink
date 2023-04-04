@@ -1,6 +1,6 @@
 #!/bin/bash
 
-docker compose up mongodb -d --remove-orphans 
+docker-compose up
 
 
 exec python app/main.py
