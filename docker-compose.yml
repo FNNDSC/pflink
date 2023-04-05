@@ -20,6 +20,8 @@ services:
     environment:
       - PUID=1000
       - PGID=1000
+    ports:
+      - 27017:27017
     volumes:
       - pflink-db-data:/data/db
     restart: unless-stopped

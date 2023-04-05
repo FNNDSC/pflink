@@ -3,6 +3,7 @@ from bson.objectid import ObjectId
 import requests
 import json
 import os
+import hashlib
 
 MONGO_DETAILS = os.getenv("PFLINK_MONGODB", "mongodb://localhost:27017")
 client = motor.motor_asyncio.AsyncIOMotorClient(MONGO_DETAILS)
@@ -16,13 +17,20 @@ pfdcm_collection = database.get_collection("pfdcms_collection")
 
 
 def pfdcm_helper(pfdcm) -> dict:
+    key = str_to_hash(pfdcm["service_name"])
     return {
-        "id": str(pfdcm["_id"]),
+        "_id"         : key,
         "service_name": pfdcm["service_name"],
         "server_ip"   : pfdcm["server_ip"],
         "server_port" : pfdcm["server_port"],
     }
 
+def str_to_hash(str_data:str) -> str:
+    hash_request = hashlib.md5(str_data.encode())
+    key          = hash_request.hexdigest()
+    return key
+    
+    
 # Retrieve all pfdcm present in the database
 async def retrieve_pfdcms():
     pfdcms = []
@@ -33,9 +41,12 @@ async def retrieve_pfdcms():
 
 # Add a new pfdcm into to the database
 async def add_pfdcm(pfdcm_data: dict) -> dict:
-    pfdcm = await pfdcm_collection.insert_one(pfdcm_data)
-    new_pfdcm = await pfdcm_collection.find_one({"_id": pfdcm.inserted_id})
-    return pfdcm_helper(new_pfdcm)
+    try:
+        pfdcm = await pfdcm_collection.insert_one(pfdcm_helper(pfdcm_data))
+        new_pfdcm = await pfdcm_collection.find_one({"_id": pfdcm.inserted_id})
+        return pfdcm_helper(new_pfdcm)
+    except:
+        return {"Error" : "Service Name already exists in the DB"}
 
 
 # Retrieve a pfdcm with a matching service name

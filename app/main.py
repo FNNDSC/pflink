@@ -2,6 +2,7 @@ import  uvicorn
 from    pymongo             import MongoClient
 #from    .config             import settings
 import os
+import hashlib
 
 MONGO_DETAILS = os.getenv("PFLINK_MONGODB", "mongodb://localhost:27017")
 PFDCM_DETAILS = os.getenv('PFLINK_PFDCM', 'http://localhost:4005')
@@ -17,16 +18,22 @@ pfdcm_collection = database.get_collection("pfdcms_collection")
 
 
 def pfdcm_helper(pfdcm):
+    key = str_to_hash(pfdcm["service_name"])
     return {
-        "id"          : str(pfdcm["_id"]),
+        "_id"         : key,
         "service_name": pfdcm["service_name"],
         "server_ip"   : pfdcm["server_ip"],
         "server_port" : pfdcm["server_port"],
     }
     
+def str_to_hash(str_data:str) -> str:
+    hash_request = hashlib.md5(str_data.encode())
+    key          = hash_request.hexdigest()
+    return key
+    
 # Add a new pfdcm into to the database
 def add_pfdcm(pfdcm_data):
-    pfdcm = pfdcm_collection.insert_one(pfdcm_data)
+    pfdcm = pfdcm_collection.insert_one(pfdcm_helper(pfdcm_data))
     new_pfdcm = pfdcm_collection.find_one({"_id": pfdcm.inserted_id})
     return pfdcm_helper(new_pfdcm)
 

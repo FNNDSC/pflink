@@ -15,7 +15,7 @@ class PfdcmQueryReturnModel(BaseModel):
     response: dict
 
 def PfdcmPutModel(data):
-    info     :data
+    return data
     
 def PfdcmGetModel(data,message): 
     return {
