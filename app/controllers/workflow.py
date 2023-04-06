@@ -222,6 +222,7 @@ async def post_workflow(
         """             
         stderr,stdout = manage_workflow.communicate()
         print(stderr,stdout)
+        
         stderr,stdout = status_update.communicate()
         print(stderr,stdout)
         """

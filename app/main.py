@@ -1,12 +1,13 @@
 import  uvicorn
 from    pymongo             import MongoClient
-#from    .config             import settings
 import os
 import hashlib
 
+    
 MONGO_DETAILS = os.getenv("PFLINK_MONGODB", "mongodb://localhost:27017")
 PFDCM_DETAILS = os.getenv('PFLINK_PFDCM', 'http://localhost:4005')
-PORT = int(os.getenv('PFLINK_PORT', '8050'))
+PFDCM_NAME    = os.getenv('PFDCM_NAME' , 'PFDCMLOCAL')
+PORT          = int(os.getenv('PFLINK_PORT', '8050'))
 
 client           = MongoClient(MONGO_DETAILS)
 
@@ -45,13 +46,15 @@ def retrieve_pfdcm(service_name: str) -> dict:
     
         
 if __name__ == "__main__":
-    pfdcm = retrieve_pfdcm("PFDCMLOCAL")
+    pfdcm = retrieve_pfdcm(PFDCM_NAME)
     if not pfdcm:
+        pfdcm_port = PFDCM_DETAILS.split(':')[-1]
+        pfdcm_ip   = PFDCM_DETAILS.split(':')[0] + ':' + PFDCM_DETAILS.split(':')[1]
         add_pfdcm(
         {
-            "service_name": "PFDCMLOCAL",
-            "server_ip"   : "http://localhost",
-            "server_port" : "4005",
+            "service_name":  PFDCM_NAME,
+            "server_ip"   :  pfdcm_ip,
+            "server_port" :  pfdcm_port,
         }
         )
     

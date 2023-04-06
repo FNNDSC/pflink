@@ -172,8 +172,7 @@ def _get_feed_status(pfdcmResponse: dict, dicom: dict, cube_url: str):
             cubeResponse['FeedError'] = "Please enter a valid feed name"
     except Exception as ex:
         cubeResponse["FeedError"] = str(ex)
-    
-    print(cube_url,dicom.User)    
+        
     try:     
         cl = _do_cube_create_user(cube_url,dicom.User) 
     except:
@@ -210,7 +209,7 @@ def _get_feed_status(pfdcmResponse: dict, dicom: dict, cube_url: str):
         total = created + waiting + scheduled +started + registering + finished +errored + cancelled
 
         if total>1:
-            cubeResponse['FeedState']     = State.ANALYSIS_STARTED.name
+            cubeResponse['FeedState']     = State.ANALYZING.name
             feedProgress                  = round((finished/MAX_JOBS) * 100)
             cubeResponse['FeedProgress']  = str(feedProgress) + "%"
             feedStatus                    = ""
@@ -248,7 +247,6 @@ def _parse_response(
     study    = pfdcmResponse['pypx']['then']['00-status']['study']
     
     if study:
-        status.StudyFound  = True
         #status.WorkflowState = State.RETRIEVING.name
         images             = study[0][data[0]['StudyInstanceUID']['value']][0]['images'] 
         totalImages        = images["requested"]["count"]
@@ -271,7 +269,8 @@ def _parse_response(
                 status.WorkflowState = State.REGISTERING.name
                 status.StateProgress = str(totalRegisteredPerc) + "%"
     else:
-        status.Error = "Study not found. Please enter valid study info"
+        status.Error  = "Study not found. Please enter valid study info"
+        status.Status = False
         
     if cubeResponse:           
        if cubeResponse['FeedState'] != "":
@@ -391,13 +390,12 @@ def _test_status_progress(
         
     TOTAL_NODES         = 8
     MAX_N               = 9999
-    status.StudyFound   = True
     PROGRESS_JUMP       = 25
     status.Error        = ""
         
     match status.WorkflowState:
     
-        case State.STARTED.name:
+        case State.INITIALIZING.name:
             status.WorkflowState   = State(1).name
             status.StateProgress   = "25%"
          
@@ -438,7 +436,7 @@ def _test_status_progress(
             status.StateProgress    = '25%'                            
                  
                        
-        case State.ANALYSIS_STARTED.name:
+        case State.ANALYZING.name:
             progress                = __get_progress_from_text(status.StateProgress)
             if progress >= 100:                
                 status.WorkflowState    = State(6).name

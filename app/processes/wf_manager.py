@@ -60,13 +60,10 @@ def manage_workflow(dicom:dict, pfdcm_url:str,key:str) -> dict:
     """
     workflow      = retrieve_workflow(key)
      
-    if workflow.Started:
+    if workflow.Started or not workflow.status.Status:
         # Do nothing and return
         return
-        
-    
-       
-          
+                 
     cubeResource = dicom.thenArgs.CUBE
     pfdcm_smdb_cube_api = f'{pfdcm_url}/api/v1/SMDB/CUBE/{cubeResource}/' 
     response = requests.get(pfdcm_smdb_cube_api)
@@ -92,7 +89,7 @@ def manage_workflow(dicom:dict, pfdcm_url:str,key:str) -> dict:
     
         match workflow.status.WorkflowState:
         
-            case State.STARTED.name:
+            case State.INITIALIZING.name:
                 if workflow.Stale:
                     do_pfdcm_retrieve(dicom,pfdcm_url)                
                 
@@ -119,7 +116,7 @@ def manage_workflow(dicom:dict, pfdcm_url:str,key:str) -> dict:
                         workflow.Started = False
                         update_workflow(key,workflow)
         
-            case State.ANALYSIS_STARTED.name:
+            case State.ANALYZING.name:
                 return
             case State.COMPLETED.name:
                 return        

@@ -5,10 +5,9 @@ services:
     image: local/pflink
     container_name: pflink
     restart: unless-stopped
+    env_file: config.env
     environment:
       PFLINK_MONGODB: mongodb://pflink-db:27017
-      PFLINK_PFDCM: http://localhost:4005
-      PFLINK_PORT: 8050
     ports:
       - "8050:8050"
     networks:

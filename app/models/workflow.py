@@ -8,12 +8,12 @@ from    datetime            import datetime
 from    enum                import Enum
 
 class State(Enum):
-    STARTED                              = 0
+    INITIALIZING                         = 0
     RETRIEVING                           = 1
     PUSHING                              = 2
     REGISTERING                          = 3
     FEED_CREATED                         = 4
-    ANALYSIS_STARTED                     = 5
+    ANALYZING                            = 5
     COMPLETED                            = 6
 
 class DicomThenSchema(BaseModel):
@@ -103,8 +103,8 @@ class DicomStatusQuerySchema(BaseModel):
         
 class DicomStatusResponseSchema(BaseModel):
     """The Workflow status response Model"""
-    StudyFound                          : bool = False
-    WorkflowState                       : str  = State.STARTED.name
+    Status                              : bool = True
+    WorkflowState                       : str  = State.INITIALIZING.name
     StateProgress                       : str  = "0%"
     FeedId                              : str  = ""
     FeedName                            : str  = ""
