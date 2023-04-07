@@ -4,8 +4,9 @@ import requests
 import json
 import os
 import hashlib
+from config import settings
 
-MONGO_DETAILS = os.getenv("PFLINK_MONGODB", "mongodb://localhost:27017")
+MONGO_DETAILS = str(settings.pflink_mongodb)
 client = motor.motor_asyncio.AsyncIOMotorClient(MONGO_DETAILS)
 
 database = client.pfdcms

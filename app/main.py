@@ -2,12 +2,12 @@ import  uvicorn
 from    pymongo             import MongoClient
 import os
 import hashlib
+from config import settings
 
-    
-MONGO_DETAILS = os.getenv("PFLINK_MONGODB", "mongodb://localhost:27017")
-PFDCM_DETAILS = os.getenv('PFLINK_PFDCM', 'http://localhost:4005')
-PFDCM_NAME    = os.getenv('PFDCM_NAME' , 'PFDCMLOCAL')
-PORT          = int(os.getenv('PFLINK_PORT', '8050'))
+MONGO_DETAILS = str(settings.pflink_mongodb)
+PFDCM_DETAILS = str(settings.pflink_pfdcm)
+PFDCM_NAME    = settings.pfdcm_name
+PORT          = settings.pflink_port
 
 client           = MongoClient(MONGO_DETAILS)
 
@@ -48,8 +48,14 @@ def retrieve_pfdcm(service_name: str) -> dict:
 if __name__ == "__main__":
     pfdcm = retrieve_pfdcm(PFDCM_NAME)
     if not pfdcm:
-        pfdcm_port = PFDCM_DETAILS.split(':')[-1]
-        pfdcm_ip   = PFDCM_DETAILS.split(':')[0] + ':' + PFDCM_DETAILS.split(':')[1]
+        # FIXME yo-yo code
+        # pfdcm URL is unnecessarily split into port and IP,
+        # where referenced these two values are always just joined back together.
+        pfdcm_port = settings.pflink_pfdcm.port
+        # FIXME misleading variable name
+        # References of this value expect `pfdcm_ip` to have the scheme prefixed, i.e.
+        # it's always passed to `requests.get` which requires the value to start with "http://" (or similar)
+        pfdcm_ip   = f'{settings.pflink_pfdcm.scheme}://{settings.pflink_pfdcm.host}'
         add_pfdcm(
         {
             "service_name":  PFDCM_NAME,

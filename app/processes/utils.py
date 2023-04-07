@@ -2,8 +2,9 @@ import json
 import hashlib
 from pymongo import MongoClient
 import os
+from config import settings
 
-MONGO_DETAILS = os.getenv("PFLINK_MONGODB", "mongodb://localhost:27017")
+MONGO_DETAILS = str(settings.pflink_mongodb)
 
 client = MongoClient(MONGO_DETAILS)
 
