@@ -68,10 +68,8 @@ def manage_workflow(dicom:dict, pfdcm_url:str,key:str) -> dict:
     pfdcm_smdb_cube_api = f'{pfdcm_url}/api/v1/SMDB/CUBE/{cubeResource}/' 
     response = requests.get(pfdcm_smdb_cube_api)
     d_results = json.loads(response.text) 
-
     cube_url = d_results['cubeInfo']['url']
-    if dicom.PFDCMservice == "PFDCMLOCAL":
-        cube_url = "http://localhost:8000/api/v1/"
+
       
     MAX_RETRIES   = 50
     

@@ -86,8 +86,7 @@ def _get_workflow_status(
     response = requests.get(pfdcm_smdb_cube_api)
     d_results = json.loads(response.text) 
     cube_url = d_results['cubeInfo']['url']
-    if dicom.PFDCMservice == "PFDCMLOCAL":
-        cube_url = "http://localhost:8000/api/v1/"
+
     pfdcm_resp    = _get_pfdcm_status(pfdcm_url,dicom)
     cube_resp     = _get_feed_status(pfdcm_resp,dicom,cube_url)
     status        = _parse_response(pfdcm_resp, cube_resp,key)
@@ -172,14 +171,12 @@ def _get_feed_status(pfdcmResponse: dict, dicom: dict, cube_url: str):
             cubeResponse['FeedError'] = "Please enter a valid feed name"
     except Exception as ex:
         cubeResponse["FeedError"] = str(ex)
-        
+      
     try:     
         cl = _do_cube_create_user(cube_url,dicom.User) 
-    except:
-        raise Exception (f"Could not find or create user with username {dicom.User}")
-        
-    #pacs_details       =  cl.getPACSdetails(dicom.PACSdirective)
-    #feed_name          =  _parse_feed_template(feedName,d_dicom)
+    except Exception as ex:
+        cubeResponse['FeedError'] = str(ex)
+
     resp = {}
     try:    
         resp = cl.getFeed({"name_exact" : feedName})
