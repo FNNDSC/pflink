@@ -81,11 +81,11 @@ def _get_workflow_status(
         4) Return the response
     """
     
-    cubeResource = dicom.thenArgs.CUBE
+    cubeResource        = dicom.thenArgs.CUBE
     pfdcm_smdb_cube_api = f'{pfdcm_url}/api/v1/SMDB/CUBE/{cubeResource}/' 
-    response = requests.get(pfdcm_smdb_cube_api)
-    d_results = json.loads(response.text) 
-    cube_url = d_results['cubeInfo']['url']
+    response            = requests.get(pfdcm_smdb_cube_api)
+    d_results           = json.loads(response.text) 
+    cube_url            = d_results['cubeInfo']['url']
 
     pfdcm_resp    = _get_pfdcm_status(pfdcm_url,dicom)
     cube_resp     = _get_feed_status(pfdcm_resp,dicom,cube_url)
