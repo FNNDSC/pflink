@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     pfdcm_name: str = 'PFDCMLOCAL'
     pflink_mongodb: MongoDsn = 'mongodb://localhost:27017'
     pflink_pfdcm: AnyHttpUrl = 'http://localhost:4005'
-    pflink_port: int = 8055
+    pflink_port: int = 8050
 
 
 settings = Settings()

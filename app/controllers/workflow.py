@@ -43,7 +43,6 @@ def workflow_retrieve_helper(workflow:dict) -> WorkflowSchema:
                    FeedName      = workflow["request"]["FeedName"],
                    User          = workflow["request"]["User"],
                    analysisArgs  = workflow["request"]["analysisArgs"],
-                   testArgs      = workflow["request"]["testArgs"],
                )
     return WorkflowSchema(
         key      = workflow["_id"],
@@ -63,7 +62,6 @@ def workflow_add_helper(workflow:WorkflowSchema) -> dict:
         "FeedName"       : workflow.request.FeedName,
         "User"           : workflow.request.User,
         "analysisArgs"   : workflow.request.analysisArgs.__dict__,
-        "testArgs"       : workflow.request.testArgs.__dict__,
     }
     
     return {
@@ -84,7 +82,6 @@ def query_to_dict(request:DicomStatusQuerySchema)-> dict:
         "FeedName"       : request.FeedName,
         "User"           : request.User,
         "analysisArgs"   : request.analysisArgs.__dict__,
-        "testArgs"       : request.testArgs.__dict__,
     }
     
 
@@ -122,13 +119,7 @@ def validate_request(request:DicomStatusQuerySchema):
         
     if not request.analysisArgs.PluginName:
         error += "\nPlease enter a Plugin name"
-        
-    if request.testArgs.GetError:
-        try:
-            error += Error[request.testArgs.GetError].value
-        except:
-            error += "Undefined error"
-        
+             
     return error
     
 # DB methods
@@ -147,7 +138,18 @@ async def add_workflow(workflow_data:WorkflowSchema) -> dict:
     workflow = await workflow_collection.find_one({"_id":new_workflow.inserted_id})
     return workflow_retrieve_helper(workflow)
 
-
+def update_workflow(key:str, data:dict):
+    """
+    Update an existing workflow in the DB
+    """
+    workflow = workflow_collection.find_one({"_id":key})
+    if workflow:
+        updated_workflow = workflow_collection.update_one(
+            {"_id":key},{"$set":workflow_add_helper(data)}
+        )
+        if updated_workflow:
+            return True
+        return False 
     
 # Retrieve an existing workflow from DB
 async def retrieve_workflow(key:str) -> dict:
@@ -179,6 +181,7 @@ async def delete_workflows():
 async def post_workflow(
     data         : DicomStatusQuerySchema,
     test         : bool = False,
+    error_type   : str  = "",
 ) -> DicomStatusResponseSchema:
     """
     Create a new workflow object and
@@ -194,11 +197,6 @@ async def post_workflow(
     error       = validate_request(data)
     status      = DicomStatusResponseSchema() 
     
-    if error:
-        status.Status = False
-        status.Error = error
-        return status
-    
     workflow = await retrieve_workflow(key)
     
     if not workflow:         
@@ -208,6 +206,15 @@ async def post_workflow(
                            status  = status
                       )
         workflow     = await add_workflow(new_workflow)
+        
+    if error or error_type:
+        workflow.status.Status = False
+        try:
+            error += Error[error_type].value
+        except:
+            error += f"Undefined error_type {error_type}: Please pass values as pfdcm/study/feed/analyis/compute/cube as valid error_type"
+        workflow.status.Error = error
+        return workflow.status
         
     try:
         if not test:    
@@ -242,5 +249,5 @@ async def post_workflow(
     except Exception as e:
         workflow.status.Status = False
         workflow.status.Error = str(e)
-
+        
     return workflow.status

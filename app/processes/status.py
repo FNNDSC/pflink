@@ -390,7 +390,6 @@ def _test_status_progress(
     TOTAL_NODES         = 8
     MAX_N               = 9999
     PROGRESS_JUMP       = 25
-    status.Error        = ""
         
     match status.WorkflowState:
     

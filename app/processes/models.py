@@ -34,9 +34,6 @@ class DicomThenSchema(BaseModel):
     CUBE                                : str  = ""
     parseAllFilesWithSubStr             : str  = ""
     
-class TestArgs(BaseModel):
-    GetError                            : str = ""
-    
 class WorkflowPluginInstanceSchema(BaseModel):
     PluginName                          : str  = ""
     Version                             : str  = ""
@@ -82,7 +79,6 @@ class DicomStatusQuerySchema(BaseModel):
     FeedName                            : str  = "" 
     User                                : str  = ""
     analysisArgs                        : WorkflowPluginInstanceSchema 
-    testArgs                            : TestArgs
     
     class Config:
         schema_extra = {
@@ -110,9 +106,6 @@ class DicomStatusQuerySchema(BaseModel):
                   "Version": "1.1.0",
                   "Params": "",
                   "PassUserCreds": False
-                },
-                "testArgs": {
-                  "GetError": ""
                 }
               }
         }         
