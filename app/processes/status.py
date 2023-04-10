@@ -9,6 +9,7 @@ from models import (
     DicomStatusQuerySchema,
     DicomStatusResponseSchema,
     WorkflowSchema,
+    Error,
 )
 from utils import (
     dict_to_query,
@@ -44,7 +45,7 @@ def workflow_status(
     in the DB
     """
     workflow = retrieve_workflow(key)
-    if not workflow.Stale or  workflow.status.WorkflowState ==  State.COMPLETED.name:             
+    if not workflow.Stale or workflow.status.WorkflowState ==  State.COMPLETED.name:             
         # Do nothing and exit
         return
          
@@ -238,6 +239,7 @@ def _parse_response(
     status   = retrieve_workflow(key).status
     valid    = pfdcmResponse.get('pypx')
     if not valid:
+        status.Status = False
         status.Error = pfdcmResponse['message']
         return status
     data     = pfdcmResponse['pypx']['data']
@@ -266,7 +268,7 @@ def _parse_response(
                 status.WorkflowState = State.REGISTERING.name
                 status.StateProgress = str(totalRegisteredPerc) + "%"
     else:
-        status.Error  = "Study not found. Please enter valid study info"
+        status.Error  = "Study not found in the PACS server. Please enter valid study info."
         status.Status = False
         
     if cubeResponse:           

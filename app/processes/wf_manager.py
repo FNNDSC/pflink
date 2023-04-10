@@ -24,6 +24,7 @@ from models import (
     DicomStatusQuerySchema,
     DicomStatusResponseSchema,
     WorkflowSchema,
+    Error,
 )
 
 format = "%(asctime)s: %(message)s"
@@ -33,7 +34,7 @@ logging.basicConfig(
     datefmt="%H:%M:%S"
 )
 
-parser = argparse.ArgumentParser(description='Process some integers.')
+parser = argparse.ArgumentParser(description='Process arguments')
 parser.add_argument('--data', metavar='N', type=str)
 parser.add_argument('--url', metavar='N', type=str)
 
@@ -109,7 +110,7 @@ def manage_workflow(dicom:dict, pfdcm_url:str,key:str) -> dict:
                         cube_url,
                         )
                     except Exception as ex:
-                        logging.info("Error creating new feed: ")  
+                        logging.info("Error creating new feed.")  
                         workflow.status.Error = "Error creating new feed: " +str(ex)
                         workflow.Started = False
                         update_workflow(key,workflow)
@@ -137,8 +138,8 @@ def manage_workflow(dicom:dict, pfdcm_url:str,key:str) -> dict:
                     cube_url,
                 )
     except Exception as ex:
-        logging.info("Error creating new analysis: ")
-        workflow.status.Error = "Error creating new analysis: " + str(ex)
+        logging.info("Error creating new analysis")
+        workflow.status.Error = "Error creating new analysis :" + str(ex)
         workflow.Started = False
         update_workflow(key,workflow)
 

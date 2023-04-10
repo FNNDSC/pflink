@@ -6,14 +6,6 @@ from    pydantic            import BaseModel, Field
 from    typing              import Optional, List, Dict
 from    datetime            import datetime
 from    enum                import Enum
-str_description = """
-    The data models/schemas for workflow operations.
-"""
-
-from    pydantic            import BaseModel, Field
-from    typing              import Optional, List, Dict
-from    datetime            import datetime
-from    enum                import Enum
 
 class State(Enum):
     INITIALIZING                         = 0
@@ -23,15 +15,27 @@ class State(Enum):
     FEED_CREATED                         = 4
     ANALYZING                            = 5
     COMPLETED                            = 6
+    
+class Error(Enum):
+    pfdcm                                = "PFDCM server is unavailable."                                                                              
+    study                                = "Study not found in the PACS server. Please enter valid study info."                                          
+    feed                                 = "Error creating new feed."
+    analysis                             = "Error creating new analysis."                                
+    compute                              = "Analysis failed."
+    cube                                 = "CUBE server is unavailable."
+    
 
 class DicomThenSchema(BaseModel):
-    """A model returned when an async PACS directive is indicated"""
+    """PFDCM specific params"""
     db                                  : str  = ""
     swift                               : str  = ""
     swiftServicesPACS                   : str  = ""                          
     swiftPackEachDICOM                  : bool = True  
     CUBE                                : str  = ""
     parseAllFilesWithSubStr             : str  = ""
+    
+class TestArgs(BaseModel):
+    GetError                            : str = ""
     
 class WorkflowPluginInstanceSchema(BaseModel):
     PluginName                          : str  = ""
@@ -78,6 +82,7 @@ class DicomStatusQuerySchema(BaseModel):
     FeedName                            : str  = "" 
     User                                : str  = ""
     analysisArgs                        : WorkflowPluginInstanceSchema 
+    testArgs                            : TestArgs
     
     class Config:
         schema_extra = {
@@ -105,6 +110,9 @@ class DicomStatusQuerySchema(BaseModel):
                   "Version": "1.1.0",
                   "Params": "",
                   "PassUserCreds": False
+                },
+                "testArgs": {
+                  "GetError": ""
                 }
               }
         }         
@@ -126,4 +134,5 @@ class WorkflowSchema(BaseModel):
     status                              : DicomStatusResponseSchema
     Stale                               : bool = True
     Started                             : bool = False
+
 

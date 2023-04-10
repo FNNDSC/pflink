@@ -10,6 +10,7 @@ from models.workflow import (
     DicomStatusResponseSchema,
     DicomStatusQuerySchema,
     WorkflowSchema,
+    Error,
 )
 
 from controllers.pfdcm import (
@@ -42,6 +43,7 @@ def workflow_retrieve_helper(workflow:dict) -> WorkflowSchema:
                    FeedName      = workflow["request"]["FeedName"],
                    User          = workflow["request"]["User"],
                    analysisArgs  = workflow["request"]["analysisArgs"],
+                   testArgs      = workflow["request"]["testArgs"],
                )
     return WorkflowSchema(
         key      = workflow["_id"],
@@ -61,6 +63,7 @@ def workflow_add_helper(workflow:WorkflowSchema) -> dict:
         "FeedName"       : workflow.request.FeedName,
         "User"           : workflow.request.User,
         "analysisArgs"   : workflow.request.analysisArgs.__dict__,
+        "testArgs"       : workflow.request.testArgs.__dict__,
     }
     
     return {
@@ -81,6 +84,7 @@ def query_to_dict(request:DicomStatusQuerySchema)-> dict:
         "FeedName"       : request.FeedName,
         "User"           : request.User,
         "analysisArgs"   : request.analysisArgs.__dict__,
+        "testArgs"       : request.testArgs.__dict__,
     }
     
 
@@ -118,7 +122,13 @@ def validate_request(request:DicomStatusQuerySchema):
         
     if not request.analysisArgs.PluginName:
         error += "\nPlease enter a Plugin name"
-    
+        
+    if request.testArgs.GetError:
+        try:
+            error += Error[request.testArgs.GetError].value
+        except:
+            error += "Undefined error"
+        
     return error
     
 # DB methods
@@ -182,14 +192,16 @@ async def post_workflow(
     key         = dict_to_hash(d_data)
     pfdcm_url   = ""    
     error       = validate_request(data)
+    status      = DicomStatusResponseSchema() 
     
     if error:
-        return {"Errors": error}
+        status.Status = False
+        status.Error = error
+        return status
     
     workflow = await retrieve_workflow(key)
     
-    if not workflow:
-        status       = DicomStatusResponseSchema()    
+    if not workflow:         
         new_workflow = WorkflowSchema(
                            key     = key, 
                            request = data, 
@@ -228,6 +240,7 @@ async def post_workflow(
         print(stderr,stdout)
         """
     except Exception as e:
+        workflow.status.Status = False
         workflow.status.Error = str(e)
 
     return workflow.status
