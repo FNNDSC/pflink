@@ -1,8 +1,6 @@
 import motor.motor_asyncio
-from bson.objectid import ObjectId
 import requests
 import json
-import os
 import hashlib
 from config import settings
 
