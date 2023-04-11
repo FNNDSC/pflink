@@ -13,7 +13,7 @@ from controllers.workflow import (
 
 router = APIRouter()
     
-@router.get("",response_description="All workflows retrieved")
+@router.get("/",response_description="All workflows retrieved")
 async def test_get_workflows():
     """
     Fetch all workflows currently present in the database
@@ -21,7 +21,7 @@ async def test_get_workflows():
     workflows = await retrieve_workflows()
     return workflows
     
-@router.post("",response_description="Status response retrieved")
+@router.post("/",response_description="Status response retrieved")
 async def test_create_workflow(
     data         : DicomStatusQuerySchema,
     error_type   : str | None=None,

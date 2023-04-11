@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     pflink_mongodb: MongoDsn = 'mongodb://localhost:27017'
     pflink_pfdcm: AnyHttpUrl = 'http://localhost:4005'
     pflink_port: int = 8050
+    version: str = "2.0.2"
 
 
 settings = Settings()

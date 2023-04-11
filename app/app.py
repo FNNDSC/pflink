@@ -6,6 +6,7 @@ from routes.basic import router as BasicRouter
 from routes.workflow import router as WorkflowRouter
 from routes.LLD import router as LLDRouter
 from tests.test_workflow_route import router as WorkflowTestRouter
+from config import settings
 
 description = """
 `pflink` is an application to interact with `CUBE` and `pfdcm` 🚀
@@ -56,7 +57,7 @@ tags_metadata    = [
     
 app = FastAPI(
     title         = 'pflink',
-    version       = '2.0.1',
+    version       = settings.version,
     contact       = {
                         "name"  : "FNNDSC",
                         "email" : "dev@babymri.org"

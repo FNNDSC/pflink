@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Body
 from fastapi.encoders import jsonable_encoder
 from models.basic import helloRouter_create
+from config import settings
 
 router = APIRouter()
 
@@ -16,7 +17,7 @@ async def read_hello():
 
 @router.get("/about/")
 async def read_about():
-    return helloRouter_create("pflink","App to communicate with pfdcm and CUBE","1.0.0")
+    return helloRouter_create("pflink","App to communicate with pfdcm and CUBE",settings.version)
 
 
 
