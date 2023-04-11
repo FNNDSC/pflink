@@ -232,7 +232,7 @@ async def post_workflow(
 
         status_update = subprocess.Popen(
             ['python',
-             'app/processes/status.py',
+             'app/controllers/status.py',
              "--data", str_data,
              "--url", pfdcm_url,
              ], stdout=subprocess.PIPE,
@@ -241,7 +241,7 @@ async def post_workflow(
 
         manage_workflow = subprocess.Popen(
             ['python',
-             'app/processes/wf_manager.py',
+             'app/controllers/wf_manager.py',
              "--data", str_data,
              "--url", pfdcm_url,
              ], stdout=subprocess.PIPE,
@@ -251,10 +251,10 @@ async def post_workflow(
         """             
         stderr,stdout = manage_workflow.communicate()
         print(stderr,stdout)
-        
+        """
         stderr,stdout = status_update.communicate()
         print(stderr,stdout)
-        """
+
     except Exception as e:
         workflow.status.Status = False
         workflow.status.Error = str(e)

@@ -1,16 +1,15 @@
+import argparse
 import json
 import logging
-import argparse
-import requests
 import random
-from client.PythonChrisClient import PythonChrisClient
-from models import (
+import requests
+
+from models.workflow import (
     State,
     DicomStatusQuerySchema,
     DicomStatusResponseSchema,
-    WorkflowSchema,
-    Error,
 )
+from client.PythonChrisClient import PythonChrisClient
 from utils import (
     dict_to_query,
     query_to_dict,
@@ -18,7 +17,6 @@ from utils import (
     update_workflow,
     retrieve_workflow,
 )
-
 
 format = "%(asctime)s: %(message)s"
 logging.basicConfig(
@@ -460,4 +458,11 @@ if __name__== "__main__":
     d_data  =   json.loads(args.data)
     data    =   dict_to_query(d_data)
     key     =   dict_to_hash(d_data)
-    resp = workflow_status(args.url,key,data) 
+    resp = workflow_status(args.url,key,data)
+
+
+def run_in_bg(str_data, pfdcm_url):
+    dict_data = json.loads(str_data)
+    wf_data = dict_to_query(dict_data)
+    wf_key = dict_to_hash(wf_data)
+    workflow_status(pfdcm_url, wf_key, wf_data)

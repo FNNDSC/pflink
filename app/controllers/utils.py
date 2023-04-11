@@ -1,8 +1,9 @@
-import json
 import hashlib
+import json
+
 from pymongo import MongoClient
-import os
-from config import settings
+
+from app.config import settings
 
 MONGO_DETAILS = str(settings.pflink_mongodb)
 
@@ -12,10 +13,8 @@ database = client.workflows
 
 workflow_collection = database.get_collection("workflows_collection")
 
-from models import (
-    State,
+from app.models.workflow import (
     DicomStatusQuerySchema,
-    DicomStatusResponseSchema,
     WorkflowSchema,
 )
 

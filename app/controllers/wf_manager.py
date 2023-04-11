@@ -1,30 +1,22 @@
-from pymongo import MongoClient
 import json
-import hashlib
-import logging
-import asyncio
-import time
-import getopt
 import argparse
-from enum import Enum
-from pydantic import BaseModel, Field
+import json
+import logging
+import subprocess
+import time
+
 import requests
+
+from app.models.workflow import (
+    State,
+)
 from client.PythonChrisClient import PythonChrisClient
-import  subprocess
 from utils import (
     dict_to_query,
     query_to_dict,
     dict_to_hash,
     update_workflow,
     retrieve_workflow,
-)
-
-from models import (
-    State,
-    DicomStatusQuerySchema,
-    DicomStatusResponseSchema,
-    WorkflowSchema,
-    Error,
 )
 
 format = "%(asctime)s: %(message)s"
