@@ -62,7 +62,7 @@ async def get_pfdcm_data(service_name):
     pfdcm = await retrieve_pfdcm(service_name)
     if pfdcm:
         return PfdcmGetModel(pfdcm, "pfdcm data retrieved successfully")
-    return ErrorResponseModel("An error occurred.", 404, "Dicom doesn't exist.")
+    return ErrorResponseModel("An error occurred.", 404, f"Service {service_name} doesn't exist in the DB.")
     
     
 @router.post(

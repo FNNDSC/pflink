@@ -56,10 +56,13 @@ async def retrieve_pfdcm(service_name: str) -> dict:
     if pfdcm:
         return pfdcm_helper(pfdcm)
         
+        
 # Get a 'hello' response from pfdcm
 async def hello_pfdcm(pfdcm : dict) -> dict:
     pfdcm_name = pfdcm.PFDCMservice
-    pfdcm_server = await retrieve_pfdcm(pfdcm_name)    
+    pfdcm_server = await retrieve_pfdcm(pfdcm_name)  
+    if not pfdcm_server:
+        return {"Error" : f"Service {pfdcm_name} not found in the DB"}  
     pfdcm_url = pfdcm_server['server_ip'] + ":" +pfdcm_server['server_port']
     pfdcm_hello_api = f'{pfdcm_url}/api/v1/hello/'
     response = requests.get(pfdcm_hello_api)
@@ -69,7 +72,9 @@ async def hello_pfdcm(pfdcm : dict) -> dict:
 # Get details about pfdcm
 async def about_pfdcm(pfdcm : dict) -> dict:
     pfdcm_name = pfdcm.PFDCMservice
-    pfdcm_server = await retrieve_pfdcm(pfdcm_name)    
+    pfdcm_server = await retrieve_pfdcm(pfdcm_name)   
+    if not pfdcm_server:
+        return {"Error" : f"Service {pfdcm_name} not found in the DB"}  
     pfdcm_url = pfdcm_server['server_ip'] + ":" +pfdcm_server['server_port']
     pfdcm_about_api = f'{pfdcm_url}/api/v1/about/'    
     response = requests.get(pfdcm_about_api)
