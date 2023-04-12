@@ -5,10 +5,9 @@ import logging
 import subprocess
 
 from .processes.workflow import (
-    State,
-    DicomStatusResponseSchema,
-    DicomStatusQuerySchema,
-    WorkflowSchema,
+    WorkflowRequestSchema,
+    WorkflowStatusResponseSchema,
+    WorkflowDBSchema,
     Error,
 )
 
@@ -36,57 +35,42 @@ def test_bg_process():
     print("Running as BG process")
 
 
-def workflow_retrieve_helper(workflow: dict) -> WorkflowSchema:
-    request = DicomStatusQuerySchema(
-        PFDCMservice=workflow["request"]["PFDCMservice"],
-        PACSservice=workflow["request"]["PACSservice"],
-        PACSdirective=workflow["request"]["PACSdirective"],
-        thenArgs=workflow["request"]["thenArgs"],
-        dblogbasepath=workflow["request"]["dblogbasepath"],
-        FeedName=workflow["request"]["FeedName"],
-        User=workflow["request"]["User"],
-        analysisArgs=workflow["request"]["analysisArgs"],
+def workflow_retrieve_helper(workflow: dict) -> WorkflowDBSchema:
+    request = WorkflowRequestSchema(
+        pfdcm_info=workflow["request"]["pfdcm_info"],
+        pacs_directive=workflow["request"]["pacs_directive"],
+        workflow_info=workflow["request"]["workflow_info"],
     )
-    return WorkflowSchema(
+    return WorkflowDBSchema(
         key=workflow["_id"],
         request=request,
-        status=workflow["status"],
-        Stale=workflow["Stale"],
-        Started=workflow["Started"],
+        response=workflow["response"],
+        stale=workflow["stale"],
+        started=workflow["started"],
     )
 
 
-def workflow_add_helper(workflow: WorkflowSchema) -> dict:
+def workflow_add_helper(workflow: WorkflowDBSchema) -> dict:
     d_request = {
-        "PFDCMservice": workflow.request.PFDCMservice,
-        "PACSservice": workflow.request.PACSservice,
-        "PACSdirective": workflow.request.PACSdirective.__dict__,
-        "thenArgs": workflow.request.thenArgs.__dict__,
-        "dblogbasepath": workflow.request.dblogbasepath,
-        "FeedName": workflow.request.FeedName,
-        "User": workflow.request.User,
-        "analysisArgs": workflow.request.analysisArgs.__dict__,
+        "pfdcm_info": workflow.request.pfdcm_info.__dict__,
+        "pacs_directive": workflow.request.pacs_directive.__dict__,
+        "workflow_info": workflow.request.workflow_info.__dict__,
     }
 
     return {
         "_id": workflow.key,
         "request": d_request,
-        "status": workflow.status.__dict__,
-        "Stale": workflow.Stale,
-        "Started": workflow.Started,
+        "response": workflow.response.__dict__,
+        "stale": workflow.stale,
+        "started": workflow.started,
     }
 
 
-def query_to_dict(request: DicomStatusQuerySchema) -> dict:
+def query_to_dict(request: WorkflowRequestSchema) -> dict:
     return {
-        "PFDCMservice": request.PFDCMservice,
-        "PACSservice": request.PACSservice,
-        "PACSdirective": request.PACSdirective.__dict__,
-        "thenArgs": request.thenArgs.__dict__,
-        "dblogbasepath": request.dblogbasepath,
-        "FeedName": request.FeedName,
-        "User": request.User,
-        "analysisArgs": request.analysisArgs.__dict__,
+        "pfdcm_info": request.pfdcm_info.__dict__,
+        "pacs_directive": request.pacs_directive.__dict__,
+        "workflow_info": request.workflow_info.__dict__,
     }
 
 
@@ -100,30 +84,30 @@ def dict_to_hash(data: dict) -> str:
     return key
 
 
-def validate_request(request: DicomStatusQuerySchema):
+def validate_request(request: WorkflowRequestSchema):
     """
     A helper method validate all required fields in a request payload
     """
     error = ""
     attr_count = 0
 
-    if not request.PFDCMservice:
+    if not request.pfdcm_info.pfdcm_service:
         error += "\nPlease enter a `PFDCM` service name"
 
-    for k, v in request.PACSdirective:
+    for k, v in request.pacs_directive:
         if v:
             attr_count += 1
 
     if attr_count == 0:
         error += "\nPlease enter at least one value in PACSdirective"
 
-    if not request.User:
+    if not request.workflow_info.user_name:
         error += "\nPlease enter a user name (min 4 characters)"
 
-    if not request.FeedName:
+    if not request.workflow_info.feed_name:
         error += "\nPlease enter a feed name"
 
-    if not request.analysisArgs.PluginName:
+    if not request.workflow_info.plugin_name:
         error += "\nPlease enter a Plugin name"
 
     return error
@@ -141,7 +125,7 @@ async def retrieve_workflows():
 
 
 # Add new workflow in the DB
-async def add_workflow(workflow_data: WorkflowSchema) -> dict:
+async def add_workflow(workflow_data: WorkflowDBSchema) -> dict:
     new_workflow = await workflow_collection.insert_one(workflow_add_helper(workflow_data))
     workflow = await workflow_collection.find_one({"_id": new_workflow.inserted_id})
     return workflow_retrieve_helper(workflow)
@@ -190,10 +174,10 @@ async def delete_workflows():
 
 # POST a workflow
 async def post_workflow(
-        data: DicomStatusQuerySchema,
+        data: WorkflowRequestSchema,
         test: bool = False,
         error_type: str = "",
-) -> DicomStatusResponseSchema:
+) -> WorkflowStatusResponseSchema:
     """
     Create a new workflow object and
     store it in DB or retrieve if already
@@ -206,32 +190,31 @@ async def post_workflow(
     key = dict_to_hash(d_data)
     pfdcm_url = ""
     error = validate_request(data)
-    status = DicomStatusResponseSchema()
+    response = WorkflowStatusResponseSchema()
     workflow = await retrieve_workflow(key)
 
     if not workflow:
-        new_workflow = WorkflowSchema(
+        new_workflow = WorkflowDBSchema(
             key=key,
             request=data,
-            status=status
+            response=response
         )
         workflow = await add_workflow(new_workflow)
 
     if error or error_type:
-        workflow.status.Status = False
+        workflow.response.status = False
         try:
             error += Error[error_type].value
         except Exception as err:
             error += f"Undefined error_type {error_type}: " \
                      f"Please pass values as pfdcm/study/feed/analysis/compute/cube " \
                      f"as valid error_type"
-        workflow.status.Error = error
-        return workflow.status
+        workflow.response.error = error
+        return workflow.response
 
     try:
         if not test:
-            pfdcm_url = await retrieve_pfdcm_url(data.PFDCMservice)
-
+            pfdcm_url = await retrieve_pfdcm_url(data.pfdcm_info.pfdcm_service)
 
         status_update = subprocess.Popen(
             ['python',
@@ -262,7 +245,7 @@ async def post_workflow(
 
 
     except Exception as e:
-        workflow.status.Status = False
-        workflow.status.Error = str(e)
+        workflow.response.status = False
+        workflow.response.error = str(e)
 
-    return workflow.status
+    return workflow.response

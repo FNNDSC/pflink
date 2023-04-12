@@ -3,8 +3,8 @@ from fastapi.responses import FileResponse
 from os import getcwd
 
 from controllers.processes.workflow import (
-    DicomStatusQuerySchema,
-    DicomStatusResponseSchema,
+    WorkflowRequestSchema,
+    WorkflowStatusResponseSchema,
 )
 
 from controllers.workflow import (
@@ -15,7 +15,7 @@ router = APIRouter()
         
 @router.post("/inputImage/{image_number}",response_description="Input image recieved")
 async def get_input_image(
-    data         : DicomStatusQuerySchema,
+    data         : WorkflowRequestSchema,
     image_number : str,
 ) -> FileResponse: 
     """
@@ -25,7 +25,7 @@ async def get_input_image(
     
 @router.post("/imageWithHeatmaps/{image_number}",response_description="Image with heatmap downloaded")
 async def get_image_with_heatmaps(
-    data         : DicomStatusQuerySchema,
+    data         : WorkflowRequestSchema,
     image_number : str,
 ) -> FileResponse: 
     """
@@ -35,7 +35,7 @@ async def get_image_with_heatmaps(
     
 @router.post("/imageWithMeasurements/{image_number}",response_description="Image with measurements downloaded")
 async def get_image_with_measurements(
-    data         : DicomStatusQuerySchema,
+    data         : WorkflowRequestSchema,
     image_number : str,
 ) -> FileResponse: 
     """
@@ -45,7 +45,7 @@ async def get_image_with_measurements(
     
 @router.post("/outputImage/{image_number}",response_description="Output image recieved")
 async def get_output_image(
-    data         : DicomStatusQuerySchema,
+    data         : WorkflowRequestSchema,
     image_number : str,
 ) -> FileResponse: 
     """

@@ -28,7 +28,7 @@ def str_to_hash(str_data: str) -> str:
     return key
     
     
-# Retrieve all pfdcm present in the database
+# Retrieve all pfdcm records present in the database
 async def retrieve_pfdcms():
     pfdcms = []
     async for pfdcm in pfdcm_collection.find():
@@ -36,7 +36,7 @@ async def retrieve_pfdcms():
     return pfdcms
 
 
-# Add a new pfdcm into to the database
+# Add a new pfdcm record into to the database
 async def add_pfdcm(pfdcm_data: dict) -> dict:
     """
     DB constraint: Only unique names allowed
@@ -49,7 +49,7 @@ async def add_pfdcm(pfdcm_data: dict) -> dict:
         return {}
 
 
-# Retrieve a pfdcm with a matching service name
+# Retrieve a pfdcm record with a matching service name
 async def retrieve_pfdcm(service_name: str) -> dict:
     pfdcm = await pfdcm_collection.find_one({"service_name": service_name})
     if pfdcm:

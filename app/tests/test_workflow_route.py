@@ -1,10 +1,8 @@
 from fastapi import APIRouter
-
 from controllers.processes.workflow import (
-    DicomStatusQuerySchema,
-    DicomStatusResponseSchema,
+    WorkflowRequestSchema,
+    WorkflowStatusResponseSchema,
 )
-
 from controllers.workflow import (
     post_workflow,
     retrieve_workflows,
@@ -12,20 +10,22 @@ from controllers.workflow import (
 )
 
 router = APIRouter()
-    
-@router.get("",response_description="All workflows retrieved")
+
+
+@router.get("", response_description="All workflows retrieved")
 async def test_get_workflows():
     """
     Fetch all workflows currently present in the database
     """
     workflows = await retrieve_workflows()
     return workflows
-    
-@router.post("",response_description="Status response retrieved")
+
+
+@router.post("", response_description="Status response retrieved")
 async def test_create_workflow(
-    data         : DicomStatusQuerySchema,
-    error_type   : str | None=None,
-) -> DicomStatusResponseSchema:
+    data: WorkflowRequestSchema,
+    error_type: str | None = None,
+) -> WorkflowStatusResponseSchema:
     """
     Use this API to test how `pflink` creates new workflows and updates
     different states of a workflow in the DB.
@@ -36,17 +36,18 @@ async def test_create_workflow(
      * **pfdcm**
      * **study**
      * **feed**
-     * **analyis**
+     * **analysis**
      * **compute**
      * **cube**
      
      For an invalid error_type you get a error message as follows:
-      * "Undefined error_type : Please pass values as pfdcm/study/feed/analyis/compute/cube as valid error_type"
+      * "Undefined error_type : Please pass values as pfdcm/study/feed/analysis/compute/cube as valid error_type"
     """  
-    response = await post_workflow(data,test=True,error_type=error_type)   
+    response = await post_workflow(data, test=True, error_type=error_type)
     return response
-    
-@router.delete("/",response_description="All workflows deleted")
+
+
+@router.delete("", response_description="All workflows deleted")
 async def delete_all():
     """
     Delete all records: 
