@@ -1,28 +1,20 @@
-from typing import Optional
-
 from pydantic import BaseModel, Field
+from typing import List
 
 
-class PfdcmSchema(BaseModel):
-    service_name: str = Field(...)
-    server_ip   : str = Field(...)
-    server_port : str = Field(...)
-    
 class PfdcmQuerySchema(BaseModel):
-    PFDCMservice: str = ""
-    
-class PfdcmQueryReturnModel(BaseModel):
-    response: dict
+    """This class represents a `pfdcm` service"""
+    service_name: str = Field(..., title="A string representing the name of a `pfdcm` service", example="PFDCM")
+    service_address: str = Field(..., title="Service address of the `pfdcm` instance", example="http://localhost:4005")
 
-def PfdcmPutModel(data):
-    return data
-    
-def PfdcmGetModel(data,message): 
-    return {
-            "data"     :data,
-            "code"     :200,
-            "message"  :message,
-            }
-    
-def ErrorResponseModel(error, code, message):
-    return {"error": error, "code": code, "message": message}
+
+class PfdcmCollectionResponseModel(BaseModel):
+    """pfdcm collection response model"""
+    data: List[dict]
+    message: str = ""
+
+
+class PfdcmQueryResponseSchema(BaseModel):
+    """pfdcm data response model"""
+    data: dict
+    message: str = ""

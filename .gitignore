@@ -9,3 +9,7 @@ htmlcov
 .idea/
 .vscode/
 database
+venv
+app/processes
+app/controllers/processes/config
+

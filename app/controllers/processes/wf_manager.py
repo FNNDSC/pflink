@@ -7,7 +7,7 @@ import time
 
 import requests
 
-from app.models.workflow import (
+from workflow import (
     State,
 )
 from client.PythonChrisClient import PythonChrisClient

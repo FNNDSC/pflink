@@ -1,25 +1,30 @@
 from fastapi import APIRouter, Body
-from fastapi.encoders import jsonable_encoder
-from models.basic import helloRouter_create
+from models.basic import AboutModel
+from config import settings
 
 router = APIRouter()
 
 
-### Basic Info Routes ### 
+# Basic Info Routes
 @router.get("/")
 async def read_root():
     return {"message": "Welcome to pflink app!"}
-    
-@router.get("/hello/")
+
+
+@router.get("/hello")
 async def read_hello():
+    """
+    Get a hello response from `pflink`
+    """
     return {"message": "Hello! from pflink"}
 
-@router.get("/about/")
+
+@router.get("/about")
 async def read_about():
-    return helloRouter_create("pflink","App to communicate with pfdcm and CUBE","1.0.0")
-
-
-
-
-
-
+    """
+    Get details about `pflink`
+    """
+    return AboutModel(
+               name="pflink",
+               about="App to communicate with pfdcm and CUBE",
+               version=settings.version)

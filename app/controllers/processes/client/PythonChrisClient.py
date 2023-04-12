@@ -1,7 +1,7 @@
 ### Python Chris Client Implementation ###
 
 from chrisclient import client
-from client.ChrisClient import ChrisClient
+from .ChrisClient import ChrisClient
 
 class PythonChrisClient(ChrisClient):
 

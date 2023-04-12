@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from models.workflow import (
+from controllers.processes.workflow import (
     DicomStatusQuerySchema,
     DicomStatusResponseSchema,
 )

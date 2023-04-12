@@ -4,7 +4,7 @@ import logging
 import random
 import requests
 
-from models.workflow import (
+from workflow import (
     State,
     DicomStatusQuerySchema,
     DicomStatusResponseSchema,

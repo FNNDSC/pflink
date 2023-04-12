@@ -4,7 +4,7 @@ import hashlib
 import logging
 import subprocess
 
-from models.workflow import (
+from .processes.workflow import (
     State,
     DicomStatusResponseSchema,
     DicomStatusQuerySchema,
@@ -31,6 +31,9 @@ logging.basicConfig(
 
 
 # helpers
+
+def test_bg_process():
+    print("Running as BG process")
 
 
 def workflow_retrieve_helper(workflow: dict) -> WorkflowSchema:
@@ -204,7 +207,6 @@ async def post_workflow(
     pfdcm_url = ""
     error = validate_request(data)
     status = DicomStatusResponseSchema()
-
     workflow = await retrieve_workflow(key)
 
     if not workflow:
@@ -230,9 +232,10 @@ async def post_workflow(
         if not test:
             pfdcm_url = await retrieve_pfdcm_url(data.PFDCMservice)
 
+
         status_update = subprocess.Popen(
             ['python',
-             'app/controllers/status.py',
+             'app/controllers/processes/status.py',
              "--data", str_data,
              "--url", pfdcm_url,
              ], stdout=subprocess.PIPE,
@@ -241,19 +244,22 @@ async def post_workflow(
 
         manage_workflow = subprocess.Popen(
             ['python',
-             'app/controllers/wf_manager.py',
+             'app/controllers/processes/wf_manager.py',
              "--data", str_data,
              "--url", pfdcm_url,
              ], stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             close_fds=True)
 
-        """             
+        """
         stderr,stdout = manage_workflow.communicate()
         print(stderr,stdout)
-        """
         stderr,stdout = status_update.communicate()
         print(stderr,stdout)
+        """
+
+
+
 
     except Exception as e:
         workflow.status.Status = False

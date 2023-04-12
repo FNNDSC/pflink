@@ -2,7 +2,7 @@ from fastapi import APIRouter
 from fastapi.responses import FileResponse
 from os import getcwd
 
-from models.workflow import (
+from controllers.processes.workflow import (
     DicomStatusQuerySchema,
     DicomStatusResponseSchema,
 )
