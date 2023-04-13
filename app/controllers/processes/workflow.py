@@ -25,6 +25,7 @@ class Error(Enum):
     analysis = "Error creating new analysis."
     compute = "Analysis failed."
     cube = "CUBE server is unavailable."
+    status = "Error occurred while updating workflow status"
 
 
 class PFDCMInfoSchema(BaseModel):
@@ -36,11 +37,12 @@ class PFDCMInfoSchema(BaseModel):
 
 
 class WorkflowInfoSchema(BaseModel):
+    """This schema includes all the information to create a new workflow in CUBE"""
     feed_name: str = Field(...)
     user_name: str = Field(...)
     plugin_name: str = Field(...)
     plugin_version: str = Field(...)
-    plugin_params: str = Field(...)
+    plugin_params: str = ""
     cred_in_params: bool = False
     pipeline_name: str = ""
 
@@ -77,7 +79,7 @@ class WorkflowRequestSchema(BaseModel):
 
     class Config:
         schema_extra = {
-            "example":{
+            "example": {
                 "pfdcm_info": {
                     "pfdcm_service": "PFDCM",
                     "pacs_service": "orthanc",

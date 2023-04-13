@@ -220,7 +220,7 @@ async def post_workflow(
             ['python',
              'app/controllers/processes/status.py',
              "--data", str_data,
-             "--url", pfdcm_url,
+             "--pfdcm_url", pfdcm_url,
              ], stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             close_fds=True)
@@ -229,7 +229,7 @@ async def post_workflow(
             ['python',
              'app/controllers/processes/wf_manager.py',
              "--data", str_data,
-             "--url", pfdcm_url,
+             "--test", test,
              ], stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             close_fds=True)
@@ -237,15 +237,12 @@ async def post_workflow(
         """
         stderr,stdout = manage_workflow.communicate()
         print(stderr,stdout)
-        stderr,stdout = status_update.communicate()
-        print(stderr,stdout)
         """
+        stderr, stdout = status_update.communicate()
+        print(stderr, stdout)
 
-
-
-
-    except Exception as e:
+    except Exception as err:
         workflow.response.status = False
-        workflow.response.error = str(e)
+        workflow.response.error = Error.status.value + str(err)
 
     return workflow.response
