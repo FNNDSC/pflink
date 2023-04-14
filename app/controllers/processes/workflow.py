@@ -26,6 +26,7 @@ class Error(Enum):
     compute = "Analysis failed."
     cube = "CUBE server is unavailable."
     status = "Error occurred while updating workflow status"
+    user = "Error while creating a user."
 
 
 class PFDCMInfoSchema(BaseModel):
@@ -33,7 +34,7 @@ class PFDCMInfoSchema(BaseModel):
     pfdcm_service: str = Field(...)
     pacs_service: str = Field(...)
     cube_service: str = Field(...)
-    db_log_path: str = Field(...)
+    db_log_path: str = "/home/dicom/log"
 
 
 class WorkflowInfoSchema(BaseModel):
@@ -83,8 +84,7 @@ class WorkflowRequestSchema(BaseModel):
                 "pfdcm_info": {
                     "pfdcm_service": "PFDCM",
                     "pacs_service": "orthanc",
-                    "cube_service": "local",
-                    "db_log_path": "/home/dicom/log"
+                    "cube_service": "local"
                 },
                 "pacs_directive": {
                     "StudyInstanceUID": "12365548",

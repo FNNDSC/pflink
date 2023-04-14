@@ -31,9 +31,6 @@ logging.basicConfig(
 
 # helpers
 
-def test_bg_process():
-    print("Running as BG process")
-
 
 def workflow_retrieve_helper(workflow: dict) -> WorkflowDBSchema:
     request = WorkflowRequestSchema(
@@ -125,13 +122,13 @@ async def retrieve_workflows():
 
 
 # Add new workflow in the DB
-async def add_workflow(workflow_data: WorkflowDBSchema) -> dict:
+async def add_workflow(workflow_data: WorkflowDBSchema) -> WorkflowDBSchema:
     new_workflow = await workflow_collection.insert_one(workflow_add_helper(workflow_data))
     workflow = await workflow_collection.find_one({"_id": new_workflow.inserted_id})
     return workflow_retrieve_helper(workflow)
 
 
-def update_workflow(key: str, data: dict):
+def update_workflow(key: str, data: WorkflowDBSchema) -> bool:
     """
     Update an existing workflow in the DB
     """
@@ -147,7 +144,7 @@ def update_workflow(key: str, data: dict):
     # Retrieve an existing workflow from DB
 
 
-async def retrieve_workflow(key: str) -> dict:
+async def retrieve_workflow(key: str) -> WorkflowDBSchema:
     workflow = await workflow_collection.find_one({"_id": key})
     if workflow:
         return workflow_retrieve_helper(workflow)
@@ -159,7 +156,7 @@ async def retrieve_pfdcm_url(service_name: str) -> str:
     if not pfdcm_server:
         raise Exception(f"Service {service_name} not found in the DB")
 
-    pfdcm_url = pfdcm_server['server_ip'] + ":" + pfdcm_server['server_port']
+    pfdcm_url = pfdcm_server['service_address']
     return pfdcm_url
 
 
@@ -188,7 +185,7 @@ async def post_workflow(
     d_data = query_to_dict(data)
     str_data = json.dumps(d_data)
     key = dict_to_hash(d_data)
-    pfdcm_url = ""
+    pfdcm_url = await retrieve_pfdcm_url(data.pfdcm_info.pfdcm_service)
     error = validate_request(data)
     response = WorkflowStatusResponseSchema()
     workflow = await retrieve_workflow(key)
@@ -211,16 +208,17 @@ async def post_workflow(
                      f"as valid error_type"
         workflow.response.error = error
         return workflow.response
-
+    mode = ""
     try:
-        if not test:
-            pfdcm_url = await retrieve_pfdcm_url(data.pfdcm_info.pfdcm_service)
+        if test:
+            mode = "test"
 
         status_update = subprocess.Popen(
             ['python',
              'app/controllers/processes/status.py',
              "--data", str_data,
-             "--pfdcm_url", pfdcm_url,
+             "--test", mode,
+             "--url", pfdcm_url,
              ], stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             close_fds=True)
@@ -229,7 +227,7 @@ async def post_workflow(
             ['python',
              'app/controllers/processes/wf_manager.py',
              "--data", str_data,
-             "--test", test,
+             "--test", mode,
              ], stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             close_fds=True)
@@ -237,10 +235,10 @@ async def post_workflow(
         """
         stderr,stdout = manage_workflow.communicate()
         print(stderr,stdout)
-        """
+        
         stderr, stdout = status_update.communicate()
         print(stderr, stdout)
-
+        """
     except Exception as err:
         workflow.response.status = False
         workflow.response.error = Error.status.value + str(err)

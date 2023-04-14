@@ -4,6 +4,10 @@ import json
 from pymongo import MongoClient
 
 from config import settings
+from workflow import (
+    WorkflowRequestSchema,
+    WorkflowDBSchema,
+)
 
 MONGO_DETAILS = str(settings.pflink_mongodb)
 
@@ -13,10 +17,7 @@ database = client.workflows
 
 workflow_collection = database.get_collection("workflows_collection")
 
-from workflow import (
-    WorkflowRequestSchema,
-    WorkflowDBSchema,
-)
+
 
 # helpers
 
@@ -72,7 +73,7 @@ def dict_to_hash(data:dict) -> str:
     # convert to string and encode
     str_data = json.dumps(data)
     hash_request = hashlib.md5(str_data.encode())     
-    # create an unique key
+    # create a unique key
     key = hash_request.hexdigest()
     return key
 
@@ -91,6 +92,15 @@ def update_workflow(key: str, data: WorkflowDBSchema) -> bool:
         if updated_workflow:
             return True
         return False  
+
+
+async def retrieve_pfdcm_url(service_name: str) -> str:
+    pfdcm_server = await retrieve_pfdcm(service_name)
+    if not pfdcm_server:
+        raise Exception(f"Service {service_name} not found in the DB")
+
+    pfdcm_url = pfdcm_server['server_ip'] + ":" + pfdcm_server['server_port']
+    return pfdcm_url
 
 
 def retrieve_workflow(key: str) -> WorkflowDBSchema:

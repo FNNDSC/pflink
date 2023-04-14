@@ -19,18 +19,20 @@ from utils import (
     retrieve_workflow,
 )
 
-format = "%(asctime)s: %(message)s"
+log_format = "%(asctime)s: %(message)s"
 logging.basicConfig(
-    format=format, 
+    format=log_format,
     level=logging.INFO,
     datefmt="%H:%M:%S"
 )
 
 parser = argparse.ArgumentParser(description='Process arguments')
 parser.add_argument('--data', metavar='N', type=str)
+parser.add_argument('--test', metavar='N', type=str)
 parser.add_argument('--url', metavar='N', type=str)
 
 args = parser.parse_args()
+
 
 class bcolors:
     HEADER = '\033[95m'
@@ -43,15 +45,14 @@ class bcolors:
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
 
-
     
-def manage_workflow(dicom:dict, pfdcm_url:str,key:str) -> dict:
+def manage_workflow(dicom:dict, pfdcm_url: str, key: str, test: str):
     """
     Manage workflow:
     Schedule task based on status 
     from the DB
     """
-    workflow      = retrieve_workflow(key)
+    workflow = retrieve_workflow(key)
      
     if workflow.Started or not workflow.status.Status:
         # Do nothing and return
@@ -67,11 +68,6 @@ def manage_workflow(dicom:dict, pfdcm_url:str,key:str) -> dict:
     MAX_RETRIES   = 50
     
     pl_inst_id    = 0
-
-      
-    if not pfdcm_url:
-        # Application running in test mode
-        return
    
     while not workflow.status.WorkflowState == State.FEED_CREATED.name and MAX_RETRIES > 0:
         workflow.Started = True
@@ -357,6 +353,6 @@ if __name__== "__main__":
     d_data  =   json.loads(args.data)
     data    =   dict_to_query(d_data)
     key     =   dict_to_hash(d_data)
-    manage_workflow(data,args.url,key)
+    manage_workflow(args.url,key,args.test)
 
     
