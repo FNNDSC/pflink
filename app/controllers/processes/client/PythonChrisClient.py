@@ -27,8 +27,10 @@ class PythonChrisClient(ChrisClient):
         
     def getPACSdetails(self,searchParams:dict):
         response = self.cl.get_pacs_files(searchParams)
-        print("RESPONSE",searchParams)
-        return response['data'][0]
+        if response['data']:
+            return response['data'][0]
+        else:
+            return {}
         
 
     def createFeed(self, plugin_id: str,params: dict):

@@ -1,22 +1,24 @@
-import json
 import argparse
 import json
 import logging
 import subprocess
 import time
-
 import requests
-
 from workflow import (
+    Error,
     State,
+    WorkflowRequestSchema,
+    WorkflowInfoSchema,
 )
-from client.PythonChrisClient import PythonChrisClient
 from utils import (
     dict_to_query,
     query_to_dict,
     dict_to_hash,
     update_workflow,
     retrieve_workflow,
+    get_cube_url_from_pfdcm,
+    substitute_dicom_tags,
+    _do_cube_create_user,
 )
 
 log_format = "%(asctime)s: %(message)s"
@@ -30,329 +32,240 @@ parser = argparse.ArgumentParser(description='Process arguments')
 parser.add_argument('--data', metavar='N', type=str)
 parser.add_argument('--test', metavar='N', type=str)
 parser.add_argument('--url', metavar='N', type=str)
-
 args = parser.parse_args()
 
-
-class bcolors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKCYAN = '\033[96m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
-
     
-def manage_workflow(dicom:dict, pfdcm_url: str, key: str, test: str):
+def manage_workflow( pfdcm_url: str, db_key: str, test: str):
     """
     Manage workflow:
     Schedule task based on status 
     from the DB
     """
-    workflow = retrieve_workflow(key)
+    MAX_RETRIES = 50
+    pl_inst_id = 0
+    workflow = retrieve_workflow(db_key)
+    request = workflow.request
+    cube_url = get_cube_url_from_pfdcm(pfdcm_url, request.pfdcm_info.cube_service)
      
-    if workflow.Started or not workflow.status.Status:
+    if workflow.started or not workflow.response.status or test:
         # Do nothing and return
         return
-                 
-    cubeResource = dicom.thenArgs.CUBE
-    pfdcm_smdb_cube_api = f'{pfdcm_url}/api/v1/SMDB/CUBE/{cubeResource}/' 
-    response = requests.get(pfdcm_smdb_cube_api)
-    d_results = json.loads(response.text) 
-    cube_url = d_results['cubeInfo']['url']
 
-      
-    MAX_RETRIES   = 50
-    
-    pl_inst_id    = 0
-   
-    while not workflow.status.WorkflowState == State.FEED_CREATED.name and MAX_RETRIES > 0:
-        workflow.Started = True
-        updated = update_workflow(key,workflow) 
+    while not workflow.response.workflow_state == State.FEED_CREATED.value and MAX_RETRIES > 0:
+        workflow.started = True
+        update_workflow(key,workflow)
         MAX_RETRIES -= 1
     
-        match workflow.status.WorkflowState:
+        match workflow.response.workflow_state:
         
-            case State.INITIALIZING.name:
-                if workflow.Stale:
-                    do_pfdcm_retrieve(dicom,pfdcm_url)                
+            case State.INITIALIZING.value:
+                if workflow.stale:
+                    do_pfdcm_retrieve(request,pfdcm_url)
                 
-            case State.RETRIEVING.name:
-                if workflow.status.StateProgress == "100%" and workflow.Stale:
-                    do_pfdcm_push(dicom,pfdcm_url)
+            case State.RETRIEVING.value:
+                if workflow.response.state_progress == "100%" and workflow.stale:
+                    do_pfdcm_push(request,pfdcm_url)
                 
-            case State.PUSHING.name:
-                if workflow.status.StateProgress == "100%" and workflow.Stale:
-                    do_pfdcm_register(dicom,pfdcm_url)
+            case State.PUSHING.value:
+                if workflow.response.state_progress == "100%" and workflow.stale:
+                    do_pfdcm_register(request,pfdcm_url)
                     
-            case State.REGISTERING.name:
-                if workflow.status.StateProgress == "100%" and workflow.Stale:
+            case State.REGISTERING.value:
+                if workflow.response.state_progress == "100%" and workflow.stale:
                     try:
-                        pl_inst_id = do_cube_create_feed(
-                        dicom.User, 
-                        dicom.FeedName,
-                        dicom.PACSdirective,
-                        cube_url,
-                        )
+                        pl_inst_id = do_cube_create_feed(request, cube_url)
                     except Exception as ex:
-                        logging.info("Error creating new feed.")  
-                        workflow.status.Error = "Error creating new feed: " +str(ex)
-                        workflow.Started = False
+                        logging.info(Error.feed.value)
+                        workflow.response.error = Error.feed.value +str(ex)
+                        workflow.started = False
                         update_workflow(key,workflow)
         
-            case State.ANALYZING.name:
+            case State.ANALYZING.value:
                 return
-            case State.COMPLETED.name:
+            case State.COMPLETED.value:
                 return        
         update_status(data,pfdcm_url) 
         time.sleep(10)
         
         workflow = retrieve_workflow(key)
-        logging.info(workflow)
-        if workflow.status.Error:
+        if workflow.response.error:
             return
             
     if pl_inst_id == 0:
         return 
     
     try:           
-        do_cube_start_analysis(
-                    dicom.User,
-                    pl_inst_id,
-                    dicom.analysisArgs,
-                    cube_url,
-                )
+        do_cube_start_analysis(pl_inst_id, request.workflow_info, cube_url)
     except Exception as ex:
-        logging.info("Error creating new analysis")
-        workflow.status.Error = "Error creating new analysis :" + str(ex)
-        workflow.Started = False
+        logging.info(Error.analysis.value)
+        workflow.response.Error = Error.analysis.value + str(ex)
+        workflow.started = False
         update_workflow(key,workflow)
 
 
-def update_status(data,pfdcm_url):
+def update_status(query,pfdcm_url):
     """
     Trigger an update status in 
     a separate python process
     """
-    d_data   = query_to_dict(data)
+    d_data   = query_to_dict(query)
     str_data = json.dumps(d_data)
     process  = subprocess.Popen(
-                   ['python',
-                   'app/processes/status.py',
-                   "--data",str_data,
-                   "--url",pfdcm_url,
-                   ], stdout=subprocess.PIPE,
-                   stderr=subprocess.PIPE,
-                   close_fds   = True
-               )     
+        ['python',
+         'app/controllers/processes/status.py',
+         "--data", str_data,
+         "--test", "",
+         "--url", pfdcm_url,
+         ], stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        close_fds=True)
  
     
-def pfdcm_do(
-    verb     : str,
-    thenArgs : dict,
-    dicom    : dict, 
-    url      : str
-) -> dict:
+def pfdcm_do(verb: str, then_args: dict, request: WorkflowRequestSchema, url: str):
     """
     A reusable method to either retrieve, push or register dicoms using pfdcm
     by running the threaded API of `pfdcm`
     """
-    thenArgs = json.dumps(thenArgs,separators=(',', ':'))    
+    then_args = json.dumps(then_args,separators=(',', ':'))    
     pfdcm_dicom_api = f'{url}/api/v1/PACS/thread/pypx/'
     headers = {'Content-Type': 'application/json','accept': 'application/json'}
-    myobj = {
+    body = {
         "PACSservice": {
-            "value"                           : dicom.PACSservice
+            "value"                           : request.pfdcm_info.PACS_service
          },
          "listenerService": {
              "value"                          : "default"
          },
          "PACSdirective": {
-             "AccessionNumber"                : dicom.PACSdirective.AccessionNumber,
-             "PatientID"                      : dicom.PACSdirective.PatientID,
-             "PatientName"                    : dicom.PACSdirective.PatientName,
-             "PatientBirthDate"               : dicom.PACSdirective.PatientBirthDate,
-             "PatientAge"                     : dicom.PACSdirective.PatientAge,
-             "PatientSex"                     : dicom.PACSdirective.PatientSex,
-             "StudyDate"                      : dicom.PACSdirective.StudyDate,
-             "StudyDescription"               : dicom.PACSdirective.StudyDescription,
-             "StudyInstanceUID"               : dicom.PACSdirective.StudyInstanceUID,
-             "Modality"                       : dicom.PACSdirective.Modality,
-             "ModalitiesInStudy"              : dicom.PACSdirective.ModalitiesInStudy,
-             "PerformedStationAETitle"        : dicom.PACSdirective.PerformedStationAETitle,
-             "NumberOfSeriesRelatedInstances" : dicom.PACSdirective.NumberOfSeriesRelatedInstances,
-             "InstanceNumber"                 : dicom.PACSdirective.InstanceNumber,
-             "SeriesDate"                     : dicom.PACSdirective.SeriesDate,
-             "SeriesDescription"              : dicom.PACSdirective.SeriesDescription,
-             "SeriesInstanceUID"              : dicom.PACSdirective.SeriesInstanceUID,
-             "ProtocolName"                   : dicom.PACSdirective.ProtocolName,
-             "AcquisitionProtocolDescription" : dicom.PACSdirective.AcquisitionProtocolDescription,
-             "AcquisitionProtocolName"        : dicom.PACSdirective.AcquisitionProtocolName,
+             "AccessionNumber"                : request.PACS_directive.AccessionNumber,
+             "PatientID"                      : request.PACS_directive.PatientID,
+             "PatientName"                    : request.PACS_directive.PatientName,
+             "PatientBirthDate"               : request.PACS_directive.PatientBirthDate,
+             "PatientAge"                     : request.PACS_directive.PatientAge,
+             "PatientSex"                     : request.PACS_directive.PatientSex,
+             "StudyDate"                      : request.PACS_directive.StudyDate,
+             "StudyDescription"               : request.PACS_directive.StudyDescription,
+             "StudyInstanceUID"               : request.PACS_directive.StudyInstanceUID,
+             "Modality"                       : request.PACS_directive.Modality,
+             "ModalitiesInStudy"              : request.PACS_directive.ModalitiesInStudy,
+             "PerformedStationAETitle"        : request.PACS_directive.PerformedStationAETitle,
+             "NumberOfSeriesRelatedInstances" : request.PACS_directive.NumberOfSeriesRelatedInstances,
+             "InstanceNumber"                 : request.PACS_directive.InstanceNumber,
+             "SeriesDate"                     : request.PACS_directive.SeriesDate,
+             "SeriesDescription"              : request.PACS_directive.SeriesDescription,
+             "SeriesInstanceUID"              : request.PACS_directive.SeriesInstanceUID,
+             "ProtocolName"                   : request.PACS_directive.ProtocolName,
+             "AcquisitionProtocolDescription" : request.PACS_directive.AcquisitionProtocolDescription,
+             "AcquisitionProtocolName"        : request.PACS_directive.AcquisitionProtocolName,
              "withFeedBack"                   : True,
              "then"                           : verb,
-             "thenArgs"                       : thenArgs,
+             "thenArgs"                       : then_args,
              "dblogbasepath"                  : '/home/dicom/log',
              "json_response"                  : False
          }
     }
     st = time.time()
-    response = requests.post(pfdcm_dicom_api, json = myobj, headers=headers)
+    response = requests.post(pfdcm_dicom_api, json = body, headers=headers)
     et = time.time()
     elapsed_time = et - st
-    logging.info(f'{bcolors.WARNING}Execution time to {verb}:{elapsed_time} seconds{bcolors.ENDC}')
+    logging.info(f'Execution time to {verb}:{elapsed_time} seconds')
 
          
-def do_pfdcm_retrieve(dicom:dict, pfdcm_url:str):
+def do_pfdcm_retrieve(dicom:WorkflowRequestSchema, pfdcm_url:str):
     """
     Retrieve PACS using pfdcm
     """
-    thenArgs = ""   
-    pfdcm_do("retrieve",thenArgs,dicom,pfdcm_url)
+    retrieve_args = {}
+    pfdcm_do("retrieve",retrieve_args,dicom,pfdcm_url)
 
     
-def do_pfdcm_push(dicom:dict, pfdcm_url:str):
+def do_pfdcm_push(request: WorkflowRequestSchema, pfdcm_url: str):
     """
     Push PACS to a Swift store using `pfdcm`
     """
+    push_args = {
+                     'db'                : request.pfdcm_info.db_log_path,
+                     'swift'             : request.pfdcm_info.swift_service,
+                     'swiftServicesPACS' : request.pfdcm_info.swift_service_PACS,
+                     'swiftPackEachDICOM': True
+    }
+    pfdcm_do("push",push_args,request,pfdcm_url)
 
-    thenArgs = {
-                     'db'                : dicom.thenArgs.db,
-                     'swift'             : dicom.thenArgs.swift, 
-                     'swiftServicesPACS' : dicom.thenArgs.swiftServicesPACS,
-                     'swiftPackEachDICOM': dicom.thenArgs.swiftPackEachDICOM}
-                   
-    
-    pfdcm_do("push",thenArgs,dicom,pfdcm_url)
-    
-def do_pfdcm_register(dicom:dict, pfdcm_url:str):
+
+def do_pfdcm_register(request: WorkflowRequestSchema, pfdcm_url:str):
     """
     Register PACS files to a `CUBE`
     """
-    thenArgs = {
-                     "db"                      : dicom.thenArgs.db,
-                     "CUBE"                    : dicom.thenArgs.CUBE,
-                     "swiftServicesPACS"       : dicom.thenArgs.swiftServicesPACS,
-                     "parseAllFilesWithSubStr" : dicom.thenArgs.parseAllFilesWithSubStr
+    register_args = {
+                     "db"                      : request.pfdcm_info.db_log_path,
+                     "CUBE"                    : request.pfdcm_info.cube_service,
+                     "swiftServicesPACS"       : request.pfdcm_info.swift_service_PACS,
+                     "parseAllFilesWithSubStr" : request.pfdcm_info.dicom_file_extension
                    }
-    pfdcm_do("register",thenArgs,dicom,pfdcm_url)
+    pfdcm_do("register",register_args,request,pfdcm_url)
 
 
-def do_cube_create_feed(userName,feedName,pacsDirective,cube_url):
+def do_cube_create_feed(request: WorkflowRequestSchema, cube_url: str) -> str:
     """
     Create a new feed in `CUBE` if not already present
     """
-    client             =  do_cube_create_user(cube_url,userName)
-    pacs_details       =  client.getPACSdetails(pacsDirective)
-    feed_name          =  create_feed_name(feedName,pacs_details)
-    data_path          =  client.getSwiftPath(pacsDirective)
+    client =  _do_cube_create_user(cube_url,request.workflow_info.user_name)
+    pacs_details =  client.getPACSdetails(request.PACS_directive)
+    feed_name =  substitute_dicom_tags(request.workflow_info.feed_name,pacs_details)
+    data_path =  client.getSwiftPath(pacs_details)
     
     # check if feed already present
-    resp = client.getFeed({"name_exact" : feedName})
+    resp = client.getFeed({"name_exact" : feed_name})
     if resp['total']>0:
         return resp['data'][0]['id']
     else:    
         ## Get plugin Id 
-        pluginSearchParams = {"name": "pl-dircopy"}   
-        plugin_id          = client.getPluginId(pluginSearchParams)
+        plugin_search_params = {"name": "pl-dircopy"}   
+        plugin_id = client.getPluginId(plugin_search_params)
     
         ## create a feed
-        feed_params   = {'title' : feed_name,'dir' : data_path}
+        feed_params = {'title' : feed_name,'dir' : data_path}
         feed_response = client.createFeed(plugin_id,feed_params)
         return feed_response['id']        
 
     
-def do_cube_start_analysis(userName,previousId,analysisArgs,cube_url):
+def do_cube_start_analysis(previous_id: str, workflow_info: WorkflowInfoSchema ,cube_url: str):
     """
     Create a new node (plugin instance) on an existing feed in `CUBE`
     """
-    client                       =  do_cube_create_user(cube_url,userName)
-    plugin_search_params         =  {
-                                        "name"    : analysisArgs.PluginName, 
-                                        "version" : analysisArgs.Version
-                                    } 
-    plugin_id                    =  client.getPluginId(plugin_search_params) 
-    
-    # split the param text
-    params_text  = analysisArgs.Params.strip()
-    params_dict  = params_text.split('--')
-    feed_params                  =  {} 
-    ##raise Exception(params_dict)
+    client = _do_cube_create_user(cube_url,workflow_info.user_name)
+    plugin_search_params = {"name": workflow_info.plugin_name,"version": workflow_info.plugin_version}
+    plugin_id = client.getPluginId(plugin_search_params)
+    feed_params = str_to_param_dict(workflow_info.plugin_params)
+    feed_params["previous_id"]  =  previous_id
+    feed_resp = client.createFeed(plugin_id,feed_params)
+
+
+def str_to_param_dict(params: str)-> dict:
+    """
+    Convert CLI arguments passed as string to a dictionary of parameters
+    """
+    d_params = {}
+    params_text = params.strip()
+    params_dict = params_text.split('--')
+
     for param in params_dict:
         if param == "":
             continue
-        param = param.strip()      
-        args = param.split(' ')
-        feed_params[args[0]] = args[1]
-        
-       
-    feed_params["previous_id"]   =  previousId
-    
-    if analysisArgs.PassUserCreds:
-        feed_params["CUBEuser"]      =  userName
-        feed_params["CUBEpassword"]  =  userName + "1234"
-        feed_params["CUBEurl"]       =  cube_url
-        
-    feedResponse = client.createFeed(plugin_id,feed_params)
+        param = param.strip()
+        items = param.split(' ')
+        d_params[items[0]] = items[1]
 
-    
-def do_cube_create_user(cubeUrl,userName):
-    """
-    Create a new user in `CUBE` if not already present
-    """
-    createUserUrl         = cubeUrl+"users/"
-    userPass              = userName + "1234"
-    userEmail             = userName + "@email.com"
-    
-    # create a new user
-    headers = {'Content-Type': 'application/json','accept': 'application/json'}
-    myobj = {
-             "username" : userName,
-             "password" : userPass,
-             "email"    : userEmail,
-             }
-    resp       = requests.post(createUserUrl,json=myobj,headers=headers)
-    authClient = PythonChrisClient(cubeUrl,userName,userPass)
-    return authClient
+    return d_params
 
 
-def create_feed_name(
-    feedTemplate : str, 
-    dcmData : dict
-) -> str:
-    """
-    # Given a feed name template, substitute dicom values
-    # for specified dicom tags
-    """
-    items     = feedTemplate.split('%')
-    feedName  = ""
-    for item in items:
-        if item == "":
-            continue;
-            
-        tags      = item.split('-')
-        dicomTag  = tags[0]
-        
-        try:        
-            dicomValue = dcmData[dicomTag]
-        except:
-            dicomValue = dicomTag
-            
-        item       = item.replace(dicomTag,dicomValue)
-        feedName   = feedName + item
-        
-    return feedName
-
-    
 if __name__== "__main__":
     """
-    Main entry point to this script
+    Main entry point of this script
     """
-    d_data  =   json.loads(args.data)
-    data    =   dict_to_query(d_data)
-    key     =   dict_to_hash(d_data)
+    d_data = json.loads(args.data)
+    data = dict_to_query(d_data)
+    key = dict_to_hash(d_data)
     manage_workflow(args.url,key,args.test)
 
     

@@ -27,16 +27,17 @@ class Error(Enum):
     cube = "CUBE server is unavailable."
     status = "Error occurred while updating workflow status"
     user = "Error while creating a user."
+    PACS = "Error while connecting to PACS server."
 
 
 class PFDCMInfoSchema(BaseModel):
     """This model contains service details of a pfdcm instance"""
     pfdcm_service: str = Field(...)
-    pacs_service: str = Field(...)
+    PACS_service: str = Field(...)
     cube_service: str = Field(...)
     swift_service: str = "local"
-    swift_service_pacs: str = "orthanc"
-    pacs_file_extension: str = "dcm"
+    swift_service_PACS: str = "orthanc"
+    dicom_file_extension: str = "dcm"
     db_log_path: str = "/home/dicom/log"
 
 
@@ -47,7 +48,6 @@ class WorkflowInfoSchema(BaseModel):
     plugin_name: str = Field(...)
     plugin_version: str = Field(...)
     plugin_params: str = ""
-    cred_in_params: bool = False
     pipeline_name: str = ""
 
 
@@ -78,7 +78,7 @@ class PACSqueryCore(BaseModel):
 class WorkflowRequestSchema(BaseModel):
     """The Workflow Request model"""
     pfdcm_info: PFDCMInfoSchema
-    pacs_directive: PACSqueryCore
+    PACS_directive: PACSqueryCore
     workflow_info: WorkflowInfoSchema
 
     class Config:
@@ -86,10 +86,10 @@ class WorkflowRequestSchema(BaseModel):
             "example": {
                 "pfdcm_info": {
                     "pfdcm_service": "PFDCM",
-                    "pacs_service": "orthanc",
+                    "PACS_service": "orthanc",
                     "cube_service": "local"
                 },
-                "pacs_directive": {
+                "PACS_directive": {
                     "StudyInstanceUID": "12365548",
                     "SeriesInstanceUID": "66498598"
                 },

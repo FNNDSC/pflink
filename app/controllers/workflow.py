@@ -35,7 +35,7 @@ logging.basicConfig(
 def workflow_retrieve_helper(workflow: dict) -> WorkflowDBSchema:
     request = WorkflowRequestSchema(
         pfdcm_info=workflow["request"]["pfdcm_info"],
-        pacs_directive=workflow["request"]["pacs_directive"],
+        PACS_directive=workflow["request"]["PACS_directive"],
         workflow_info=workflow["request"]["workflow_info"],
     )
     return WorkflowDBSchema(
@@ -50,7 +50,7 @@ def workflow_retrieve_helper(workflow: dict) -> WorkflowDBSchema:
 def workflow_add_helper(workflow: WorkflowDBSchema) -> dict:
     d_request = {
         "pfdcm_info": workflow.request.pfdcm_info.__dict__,
-        "pacs_directive": workflow.request.pacs_directive.__dict__,
+        "PACS_directive": workflow.request.PACS_directive.__dict__,
         "workflow_info": workflow.request.workflow_info.__dict__,
     }
 
@@ -66,7 +66,7 @@ def workflow_add_helper(workflow: WorkflowDBSchema) -> dict:
 def query_to_dict(request: WorkflowRequestSchema) -> dict:
     return {
         "pfdcm_info": request.pfdcm_info.__dict__,
-        "pacs_directive": request.pacs_directive.__dict__,
+        "PACS_directive": request.PACS_directive.__dict__,
         "workflow_info": request.workflow_info.__dict__,
     }
 
@@ -91,7 +91,7 @@ def validate_request(request: WorkflowRequestSchema):
     if not request.pfdcm_info.pfdcm_service:
         error += "\nPlease enter a `PFDCM` service name"
 
-    for k, v in request.pacs_directive:
+    for k, v in request.PACS_directive:
         if v:
             attr_count += 1
 
@@ -228,14 +228,15 @@ async def post_workflow(
              'app/controllers/processes/wf_manager.py',
              "--data", str_data,
              "--test", mode,
+             "--url", pfdcm_url,
              ], stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             close_fds=True)
 
         """
-        stderr,stdout = manage_workflow.communicate()
-        print(stderr,stdout)
-        
+        stderr, stdout = manage_workflow.communicate()
+        print(stderr, stdout)
+
         stderr, stdout = status_update.communicate()
         print(stderr, stdout)
         """

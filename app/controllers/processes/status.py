@@ -3,12 +3,11 @@ import json
 import logging
 import random
 import requests
-from client.PythonChrisClient import PythonChrisClient
+
 from workflow import (
     State,
     WorkflowRequestSchema,
     WorkflowDBSchema,
-    WorkflowInfoSchema,
     WorkflowStatusResponseSchema,
     Error,
 )
@@ -18,6 +17,9 @@ from utils import (
     dict_to_hash,
     update_workflow,
     retrieve_workflow,
+    get_cube_url_from_pfdcm,
+    substitute_dicom_tags,
+    _do_cube_create_user,
 )
 
 log_format = "%(asctime)s: %(message)s"
@@ -35,14 +37,9 @@ parser.add_argument('--url', metavar='N', type=str)
 args = parser.parse_args()
 
     
-def update_workflow_status(
-    key: str,
-    test: str,
-    url: str,
-):
+def update_workflow_status(key: str, test: str, url: str):
     """
-    Update the status of a workflow object
-    in the DB
+    Update the status of a workflow object in the DB
     """
     workflow = retrieve_workflow(key)
     if not workflow.stale or workflow.response.workflow_state == State.COMPLETED.value:
@@ -69,29 +66,17 @@ def get_current_status(
     request: WorkflowRequestSchema,
 ) -> WorkflowStatusResponseSchema:
     """
-    Return the status of a workflow in `pflink`
-    by asking `pfdcm` & `cube`. The sequence is as
-    follows:
+    Return the status of a workflow in `pflink` by asking `pfdcm` & `cube`. The sequence is as follows:
         1) Ask `pfdcm` about the status of a study
         2) Ask `cube` about the status of the feed created using the study
         3) Parse both the results to a response schema
         4) Return the response
     """
-    cube_url = _get_cube_url_from_pfdcm(pfdcm_url, request.pfdcm_info.cube_service)
-
+    cube_url = get_cube_url_from_pfdcm(pfdcm_url, request.pfdcm_info.cube_service)
     pfdcm_resp = _get_pfdcm_status(pfdcm_url, request)
-    cube_resp = _get_feed_status(cube_url, request.workflow_info)
+    cube_resp = _get_feed_status(cube_url, request)
     status = _parse_response(pfdcm_resp, cube_resp)
     return status
-
-
-def _get_cube_url_from_pfdcm(pfdcm_url: str, cube_name: str) -> str:
-    pfdcm_smdb_cube_api = f'{pfdcm_url}/api/v1/SMDB/CUBE/{cube_name}/'
-    response = requests.get(pfdcm_smdb_cube_api)
-    d_results = json.loads(response.text)
-    cube_url = d_results['cubeInfo']['url']
-    #return cube_url
-    return "http://localhost:8000/api/v1/"
 
 
 def _get_pfdcm_status(pfdcm_url: str, request: WorkflowRequestSchema):
@@ -102,34 +87,34 @@ def _get_pfdcm_status(pfdcm_url: str, request: WorkflowRequestSchema):
     pfdcm_status_url = f'{pfdcm_url}/api/v1/PACS/sync/pypx/'
     headers = {'Content-Type': 'application/json', 'accept': 'application/json'}
     
-    pfdcm_request = {
+    pfdcm_body = {
         "PACSservice": {
-          "value": request.pfdcm_info.pacs_service
+          "value": request.pfdcm_info.PACS_service
         },
         "listenerService": {
           "value": "default"
          },
         "PACSdirective": {
-          "AccessionNumber": request.pacs_directive.AccessionNumber,
-          "PatientID": request.pacs_directive.PatientID,
-          "PatientName": request.pacs_directive.PatientName,
-          "PatientBirthDate": request.pacs_directive.PatientBirthDate,
-          "PatientAge": request.pacs_directive.PatientAge,
-          "PatientSex": request.pacs_directive.PatientSex,
-          "StudyDate": request.pacs_directive.StudyDate,
-          "StudyDescription": request.pacs_directive.StudyDescription,
-          "StudyInstanceUID": request.pacs_directive.StudyInstanceUID,
-          "Modality": request.pacs_directive.Modality,
-          "ModalitiesInStudy": request.pacs_directive.ModalitiesInStudy,
-          "PerformedStationAETitle": request.pacs_directive.PerformedStationAETitle,
-          "NumberOfSeriesRelatedInstances": request.pacs_directive.NumberOfSeriesRelatedInstances,
-          "InstanceNumber": request.pacs_directive.InstanceNumber,
-          "SeriesDate": request.pacs_directive.SeriesDate,
-          "SeriesDescription": request.pacs_directive.SeriesDescription,
-          "SeriesInstanceUID": request.pacs_directive.SeriesInstanceUID,
-          "ProtocolName": request.pacs_directive.ProtocolName,
-          "AcquisitionProtocolDescription": request.pacs_directive.AcquisitionProtocolDescription,
-          "AcquisitionProtocolName": request.pacs_directive.AcquisitionProtocolName,
+          "AccessionNumber": request.PACS_directive.AccessionNumber,
+          "PatientID": request.PACS_directive.PatientID,
+          "PatientName": request.PACS_directive.PatientName,
+          "PatientBirthDate": request.PACS_directive.PatientBirthDate,
+          "PatientAge": request.PACS_directive.PatientAge,
+          "PatientSex": request.PACS_directive.PatientSex,
+          "StudyDate": request.PACS_directive.StudyDate,
+          "StudyDescription": request.PACS_directive.StudyDescription,
+          "StudyInstanceUID": request.PACS_directive.StudyInstanceUID,
+          "Modality": request.PACS_directive.Modality,
+          "ModalitiesInStudy": request.PACS_directive.ModalitiesInStudy,
+          "PerformedStationAETitle": request.PACS_directive.PerformedStationAETitle,
+          "NumberOfSeriesRelatedInstances": request.PACS_directive.NumberOfSeriesRelatedInstances,
+          "InstanceNumber": request.PACS_directive.InstanceNumber,
+          "SeriesDate": request.PACS_directive.SeriesDate,
+          "SeriesDescription": request.PACS_directive.SeriesDescription,
+          "SeriesInstanceUID": request.PACS_directive.SeriesInstanceUID,
+          "ProtocolName": request.PACS_directive.ProtocolName,
+          "AcquisitionProtocolDescription": request.PACS_directive.AcquisitionProtocolDescription,
+          "AcquisitionProtocolName": request.PACS_directive.AcquisitionProtocolName,
           "withFeedBack": True,
           "then": 'status',
           "thenArgs": "",
@@ -138,16 +123,11 @@ def _get_pfdcm_status(pfdcm_url: str, request: WorkflowRequestSchema):
         }
       }
 
-    response = requests.post(
-                   pfdcm_status_url, 
-                   json=pfdcm_request,
-                   headers=headers
-               )
-
+    response = requests.post(pfdcm_status_url, json=pfdcm_body, headers=headers)
     return json.loads(response.text) 
 
 
-def _get_feed_status(cube_url: str, workflow_info: WorkflowInfoSchema):
+def _get_feed_status(cube_url: str, request: WorkflowRequestSchema):
     """
     Get the status of a feed inside `CUBE`
     1) Create/get a cube client using user_name
@@ -160,14 +140,16 @@ def _get_feed_status(cube_url: str, workflow_info: WorkflowInfoSchema):
     response = WorkflowStatusResponseSchema()
       
     try:     
-        cl = _do_cube_create_user(cube_url, workflow_info.user_name)
+        cl = _do_cube_create_user(cube_url, request.workflow_info.user_name)
     except Exception as ex:
         response.status = False
         response.error = Error.user.value + str(ex)
         return response
 
-    # feed_name = get_feed_name_do_something()
-    feed_name = workflow_info.feed_name
+    requested_feed_name = request.workflow_info.feed_name
+    pacs_details = cl.getPACSdetails(request.PACS_directive)
+    feed_name = substitute_dicom_tags(requested_feed_name, pacs_details)
+
 
     try:    
         resp = cl.getFeed({"name_exact": feed_name})
@@ -209,150 +191,57 @@ def _get_feed_status(cube_url: str, workflow_info: WorkflowInfoSchema):
     
     
 def _parse_response(
-    pfdcmResponse : dict, 
-    cubeResponse  : dict,
+    pfdcm_response : dict, 
+    cube_response  : WorkflowStatusResponseSchema,
 ) -> WorkflowStatusResponseSchema:
     """
     Parse JSON object for workflow status response
     """
     status = WorkflowStatusResponseSchema()
-    valid = pfdcmResponse.get('pypx')
+    valid = pfdcm_response.get('pypx')
     if not valid:
         status.status = False
-        status.error = pfdcmResponse['message']
+        status.error = Error.PACS.value +  pfdcm_response['message']
         return status
-    data = pfdcmResponse['pypx']['data']
-    study = pfdcmResponse['pypx']['then']['00-status']['study']
+    data = pfdcm_response['pypx']['data']
+    study = pfdcm_response['pypx']['then']['00-status']['study']
     
     if study:
         images = study[0][data[0]['StudyInstanceUID']['value']][0]['images']
-        totalImages        = images["requested"]["count"]
-        totalRetrieved     = images["packed"]["count"]
-        totalPushed        = images["pushed"]["count"]
-        totalRegistered    = images["registered"]["count"]
-
-        print(totalImages, totalRetrieved,totalPushed,totalRegistered)
+        total_images        = images["requested"]["count"]
+        total_retrieved     = images["packed"]["count"]
+        total_pushed        = images["pushed"]["count"]
+        total_registered    = images["registered"]["count"]
         
-        if totalImages>0:       
-            totalRetrievedPerc  = round((totalRetrieved/totalImages)*100)
-            totalPushedPerc     = round((totalPushed/totalImages)*100)
-            totalRegisteredPerc = round((totalRegistered/totalImages)*100)       
+        if total_images>0:       
+            total_ret_perc  = round((total_retrieved/total_images)*100)
+            total_push_perc     = round((total_pushed/total_images)*100)
+            total_reg_perc = round((total_registered/total_images)*100)       
                   
-            if totalRetrievedPerc > 0:
-                print("RETRIEVED")
+            if total_ret_perc > 0:
                 status.workflow_state = State.RETRIEVING.value
-                status.state_progress = str(totalRetrievedPerc) + "%"
-            if totalPushedPerc > 0:
+                status.state_progress = str(total_ret_perc) + "%"
+            if total_push_perc > 0:
                 status.workflow_state = State.PUSHING.value
-                status.state_progress = str(totalPushedPerc) + "%"
-            if totalRegisteredPerc > 0:
+                status.state_progress = str(total_push_perc) + "%"
+            if total_reg_perc > 0:
                 status.workflow_state = State.REGISTERING.value
-                status.state_progress = str(totalRegisteredPerc) + "%"
+                status.state_progress = str(total_reg_perc) + "%"
     else:
-        status.error = "Study not found in the PACS server. Please enter valid study info."
+        status.error = Error.study.value
         status.status = False
+    if cube_response.feed_id:
+        status.feed_name = cube_response.feed_name
+        status.feed_id = cube_response.feed_id
+        status.workflow_state = cube_response.workflow_state
+        status.state_progress = cube_response.state_progress
 
-    print(status)
-    return status 
+    return status
 
 
-def _do_cube_create_user(cubeUrl,userName):
+def get_simulated_status(workflow: WorkflowDBSchema) -> WorkflowStatusResponseSchema:
     """
-    Create a new user in `CUBE` if not already present
-    """
-    createUserUrl    = cubeUrl+"users/"
-    userPass         = userName + "1234"
-    userEmail        = userName + "@email.com"
-    
-    # create a new user
-    headers     = {
-                      'Content-Type': 'application/json',
-                      'accept': 'application/json'
-                  }
-                  
-    myobj       = {
-                     "username" : userName,
-                     "password" : userPass,
-                     "email"    : userEmail,
-                  }
-                  
-    resp        = requests.post(
-                     createUserUrl,
-                     json=myobj,
-                     headers=headers
-                 )
-                             
-    authClient = PythonChrisClient(
-                     cubeUrl,
-                     userName,
-                     userPass
-                 )
-                 
-                 
-    return authClient
-
-    
-def _parse_feed_template(
-    feedTemplate : str, 
-    dcmData      : dict
-) -> str:
-    """
-    Given a feed name template, substitute dicom values
-    for specified dicom tags
-    """
-    items    = feedTemplate.split('%')
-    feedName = ""
-    
-    for item in items:
-        if item == "":
-            continue;           
-        tags     = item.split('-')
-        dicomTag = tags[0]
-        
-        try:        
-            dicomValue = dcmData[dicomTag]["value"]
-        except:
-            dicomValue = dicomTag
-            
-        item     = item.replace(dicomTag,dicomValue)
-        feedName = feedName + item
-
-    return feedName 
-
-
-def substitute_dicom_tags(
-    text: str,
-    dicom_data: dict
-) -> str:
-    """
-    # Given a string containing dicom tags separated by `%`, substitute dicom values
-    # for those dicom tags from a given dictionary if present
-    """
-    text_w_values = ""
-    items = text.split('%')
-    for item in items:
-        if item == "":
-            continue
-            
-        tags = item.split('-')
-        dicom_tag = tags[0]
-        
-        try:        
-            dicom_value = dicom_data[dicom_tag]
-        except:
-            dicom_value = dicom_tag
-        item = item.replace(dicom_tag, dicom_value)
-        text_w_values = text_w_values + item
-        
-    return text_w_values
-
-
-def get_simulated_status(
-    workflow: WorkflowDBSchema,
-) -> WorkflowStatusResponseSchema:
-    """
-    Run a simulation of workflow progress
-    and return an updated status
+    Run a simulation of workflow progress and return an updated status
     """
     MAX_N = 9999
     PROGRESS_JUMP = 25
@@ -388,7 +277,7 @@ def get_simulated_status(
                 current_status.workflow_state = State.FEED_CREATED.value
                 current_status.state_progress = '100%'
                 current_status.feed_id = random.randint(0, MAX_N)
-                d_directive = query_to_dict(workflow.request)['pacs_directive']
+                d_directive = query_to_dict(workflow.request)['PACS_directive']
                 current_status.feed_name = substitute_dicom_tags(workflow.request.workflow_info.feed_name, d_directive)
             else:
                 progress += PROGRESS_JUMP
