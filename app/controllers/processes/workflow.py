@@ -34,6 +34,9 @@ class PFDCMInfoSchema(BaseModel):
     pfdcm_service: str = Field(...)
     pacs_service: str = Field(...)
     cube_service: str = Field(...)
+    swift_service: str = "local"
+    swift_service_pacs: str = "orthanc"
+    pacs_file_extension: str = "dcm"
     db_log_path: str = "/home/dicom/log"
 
 
