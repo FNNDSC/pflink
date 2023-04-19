@@ -8,12 +8,12 @@ str_description = """
 
 class State(Enum):
     """This Enum represents all the possible states of a workflow"""
-    INITIALIZING = "initializing"
-    RETRIEVING = "retrieving"
-    PUSHING = "pushing"
-    REGISTERING = "registering"
+    INITIALIZING = "initializing workflow"
+    RETRIEVING = "retrieving from PACS"
+    PUSHING = "pushing to swift"
+    REGISTERING = "registering to CUBE"
     FEED_CREATED = "feed created"
-    ANALYZING = "analyzing"
+    ANALYZING = "analyzing study"
     COMPLETED = "completed"
 
 
@@ -25,9 +25,17 @@ class Error(Enum):
     analysis = "Error creating new analysis."
     compute = "Analysis failed."
     cube = "CUBE server is unavailable."
-    status = "Error occurred while updating workflow status"
+    status = "Error occurred while updating workflow status."
     user = "Error while creating a user."
     PACS = "Error while connecting to PACS server."
+    required_pfdcm = "Please provide a pfdcm service name."
+    required_PACS = "Please provide a PACS service name."
+    required_cube = "Please provide a cube service name."
+    required_directive = "Please enter at least one value in PACS_directive"
+    required_feed = "Please provide a feed name."
+    required_user = "Please provide a user name."
+    required_plugin = "Please provide a plugin name."
+    undefined = "Please enter a valid error type."
 
 
 class PFDCMInfoSchema(BaseModel):
@@ -111,7 +119,6 @@ class WorkflowStatusResponseSchema(BaseModel):
     state_progress: str = "0%"
     feed_id: str = ""
     feed_name: str = ""
-    message: str = ""
     error: str = ""
 
 

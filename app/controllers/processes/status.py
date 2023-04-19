@@ -20,6 +20,7 @@ from utils import (
     get_cube_url_from_pfdcm,
     substitute_dicom_tags,
     _do_cube_create_user,
+    retrieve_pfdcm_url,
 )
 
 log_format = "%(asctime)s: %(message)s"
@@ -32,12 +33,11 @@ logging.basicConfig(
 parser = argparse.ArgumentParser(description='Process arguments passed through CLI')
 parser.add_argument('--data', metavar='N', type=str)
 parser.add_argument('--test', metavar='N', type=str)
-parser.add_argument('--url', metavar='N', type=str)
 
 args = parser.parse_args()
 
     
-def update_workflow_status(key: str, test: str, url: str):
+def update_workflow_status(key: str, test: str):
     """
     Update the status of a workflow object in the DB
     """
@@ -53,8 +53,13 @@ def update_workflow_status(key: str, test: str, url: str):
     if test:
         updated_status = get_simulated_status(workflow)
     else:
-        updated_status = get_current_status(url, workflow.request)
-    
+        pfdcm_url = retrieve_pfdcm_url(workflow.request.pfdcm_info.pfdcm_service)
+        updated_status = get_current_status(pfdcm_url, workflow.request)
+    # preserve errors
+    if not workflow.response.status:
+        updated_status.error = workflow.response.error
+        updated_status.status = workflow.response.status
+
     workflow.response = updated_status
     workflow.stale = True
     update_workflow(key, workflow)
@@ -135,64 +140,72 @@ def _get_feed_status(cube_url: str, request: WorkflowRequestSchema):
     3) Serialize for information
     4) Return a suitable response
     """
-    MAX_JOBS = 12
-
     response = WorkflowStatusResponseSchema()
       
-    try:     
+    try:
+        # create a client using the username
         cl = _do_cube_create_user(cube_url, request.workflow_info.user_name)
+
+        # substitute dicom values for dicom tags present in feed name
+        requested_feed_name = request.workflow_info.feed_name
+        pacs_details = cl.getPACSdetails(request.PACS_directive.__dict__)
+        feed_name = substitute_dicom_tags(requested_feed_name, pacs_details)
+
+        # search for feed
+        resp = cl.getFeed({"name_exact": feed_name})
+        if resp:
+            response.workflow_state = State.FEED_CREATED.value
+            response.feed_name = resp['name']
+            response.feed_id = resp['id']
+            response.state_progress = "100%"
+
+            # check if analysis is scheduled
+            analysis = get_analysis_status(resp)
+            if analysis:
+                response.workflow_state = analysis["state"]
+                response.state_progress = analysis["progress"]
+                response.error = analysis["error"]
     except Exception as ex:
         response.status = False
         response.error = Error.user.value + str(ex)
-        return response
-
-    requested_feed_name = request.workflow_info.feed_name
-    pacs_details = cl.getPACSdetails(request.PACS_directive)
-    feed_name = substitute_dicom_tags(requested_feed_name, pacs_details)
-
-
-    try:    
-        resp = cl.getFeed({"name_exact": feed_name})
-    except Exception as ex:
-        response.error = Error.feed.value + str(ex)
-        response.status = False
-        return response
-
-    if resp['total'] > 0:
-        response.workflow_state = State.FEED_CREATED.value
-        response.feed_name = resp['data'][0]['name']
-        response.feed_id = resp['data'][0]['id']
-        response.state_progress = "100%"
-        
-        # total jobs in the feed
-        created = resp['data'][0]['created_jobs']
-        waiting = resp['data'][0]['waiting_jobs']
-        scheduled = resp['data'][0]['scheduled_jobs']
-        started = resp['data'][0]['started_jobs']
-        registering = resp['data'][0]['registering_jobs']
-        finished = resp['data'][0]['finished_jobs']
-        errored = resp['data'][0]['errored_jobs']
-        cancelled = resp['data'][0]['cancelled_jobs']
-        
-        total = created + waiting + scheduled + started + registering + finished + errored + cancelled
-
-        if total > 1:
-            response.workflow_state = State.ANALYZING.value
-            feed_progress = round((finished/MAX_JOBS) * 100)
-            response.state_progress = str(feed_progress) + "%"
-            
-            if errored > 0 or cancelled > 0:
-                response.error = str(errored + cancelled) + " job(s) failed"
-            else:
-                if feed_progress == 100:
-                    response.workflow_state = State.COMPLETED.value
-
     return response
-    
-    
+
+
+def get_analysis_status(response: dict) -> dict:
+    """
+    Get details about an analysis running on the given feed
+    """
+    MAX_JOBS = 12
+    analysis_details = {}
+
+    created = response['created_jobs']
+    waiting = response['waiting_jobs']
+    scheduled = response['scheduled_jobs']
+    started = response['started_jobs']
+    registering = response['registering_jobs']
+    finished = response['finished_jobs']
+    errored = response['errored_jobs']
+    cancelled = response['cancelled_jobs']
+
+    total = created + waiting + scheduled + started + registering + finished + errored + cancelled
+
+    if total > 1:
+        feed_progress = round((finished / MAX_JOBS) * 100)
+        analysis_details['progress'] = str(feed_progress) + "%"
+
+        if errored > 0 or cancelled > 0:
+            analysis_details['error'] = str(errored + cancelled) + " job(s) failed"
+        if feed_progress == 100:
+            analysis_details["state"] = State.COMPLETED.value
+        else:
+            analysis_details["state"] = State.ANALYZING.value
+
+    return analysis_details
+
+
 def _parse_response(
-    pfdcm_response : dict, 
-    cube_response  : WorkflowStatusResponseSchema,
+    pfdcm_response: dict,
+    cube_response: WorkflowStatusResponseSchema,
 ) -> WorkflowStatusResponseSchema:
     """
     Parse JSON object for workflow status response
@@ -201,21 +214,21 @@ def _parse_response(
     valid = pfdcm_response.get('pypx')
     if not valid:
         status.status = False
-        status.error = Error.PACS.value +  pfdcm_response['message']
+        status.error = Error.PACS.value + pfdcm_response['message']
         return status
     data = pfdcm_response['pypx']['data']
     study = pfdcm_response['pypx']['then']['00-status']['study']
     
     if study:
         images = study[0][data[0]['StudyInstanceUID']['value']][0]['images']
-        total_images        = images["requested"]["count"]
-        total_retrieved     = images["packed"]["count"]
-        total_pushed        = images["pushed"]["count"]
-        total_registered    = images["registered"]["count"]
+        total_images = images["requested"]["count"]
+        total_retrieved = images["packed"]["count"]
+        total_pushed = images["pushed"]["count"]
+        total_registered = images["registered"]["count"]
         
-        if total_images>0:       
-            total_ret_perc  = round((total_retrieved/total_images)*100)
-            total_push_perc     = round((total_pushed/total_images)*100)
+        if total_images > 0:
+            total_ret_perc = round((total_retrieved/total_images)*100)
+            total_push_perc = round((total_pushed/total_images)*100)
             total_reg_perc = round((total_registered/total_images)*100)       
                   
             if total_ret_perc > 0:
@@ -230,11 +243,13 @@ def _parse_response(
     else:
         status.error = Error.study.value
         status.status = False
+
     if cube_response.feed_id:
         status.feed_name = cube_response.feed_name
         status.feed_id = cube_response.feed_id
         status.workflow_state = cube_response.workflow_state
         status.state_progress = cube_response.state_progress
+        status.error = cube_response.error
 
     return status
 
@@ -298,11 +313,11 @@ def get_simulated_status(workflow: WorkflowDBSchema) -> WorkflowStatusResponseSc
     return current_status
 
 
-def __get_progress_from_text(progress:str):
+def __get_progress_from_text(progress: str):
     """
     Convert progress percentage defined in text to integer
     """
-    progress = progress.replace('%','')
+    progress = progress.replace('%', '')
     return int(progress)
 
     
@@ -311,7 +326,5 @@ if __name__ == "__main__":
     Main entry point
     """
     dict_data = json.loads(args.data)
-    wf_data = dict_to_query(dict_data)
     wf_key = dict_to_hash(dict_data)
-    update_workflow_status(wf_key, args.test, args.url)
-
+    update_workflow_status(wf_key, args.test)

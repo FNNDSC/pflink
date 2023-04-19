@@ -10,10 +10,6 @@ from .processes.workflow import (
     WorkflowDBSchema,
     Error,
 )
-
-from controllers.pfdcm import (
-    retrieve_pfdcm,
-)
 from config import settings
 
 MONGO_DETAILS = str(settings.pflink_mongodb)
@@ -81,7 +77,7 @@ def dict_to_hash(data: dict) -> str:
     return key
 
 
-def validate_request(request: WorkflowRequestSchema):
+def validate_request(request: WorkflowRequestSchema, error_type: str):
     """
     A helper method validate all required fields in a request payload
     """
@@ -89,23 +85,35 @@ def validate_request(request: WorkflowRequestSchema):
     attr_count = 0
 
     if not request.pfdcm_info.pfdcm_service:
-        error += "\nPlease enter a `PFDCM` service name"
+        error += f"\n{Error.required_pfdcm.value}"
+
+    if not request.pfdcm_info.PACS_service:
+        error += f"\n{Error.required_PACS.value}"
+
+    if not request.pfdcm_info.cube_service:
+        error += f"\n{Error.required_cube.value}"
 
     for k, v in request.PACS_directive:
         if v:
             attr_count += 1
 
     if attr_count == 0:
-        error += "\nPlease enter at least one value in PACSdirective"
+        error += f"\n{Error.required_directive.value}"
 
     if not request.workflow_info.user_name:
-        error += "\nPlease enter a user name (min 4 characters)"
+        error += f"\n{Error.required_user.value}"
 
     if not request.workflow_info.feed_name:
-        error += "\nPlease enter a feed name"
+        error += f"\n{Error.required_feed.value}"
 
     if not request.workflow_info.plugin_name:
-        error += "\nPlease enter a Plugin name"
+        error += f"\n{Error.required_plugin.value}"
+
+    if error_type:
+        try:
+            error += f"\n{Error[error_type].value}"
+        except:
+            error += f"\n{Error.undefined.value}"
 
     return error
 
@@ -141,27 +149,20 @@ def update_workflow(key: str, data: WorkflowDBSchema) -> bool:
             return True
         return False
 
-    # Retrieve an existing workflow from DB
-
 
 async def retrieve_workflow(key: str) -> WorkflowDBSchema:
+    """
+    Retrieve an existing workflow from DB
+    """
     workflow = await workflow_collection.find_one({"_id": key})
     if workflow:
         return workflow_retrieve_helper(workflow)
 
 
-# Retrieve an existing `pfdcm` service address
-async def retrieve_pfdcm_url(service_name: str) -> str:
-    pfdcm_server = await retrieve_pfdcm(service_name)
-    if not pfdcm_server:
-        raise Exception(f"Service {service_name} not found in the DB")
-
-    pfdcm_url = pfdcm_server['service_address']
-    return pfdcm_url
-
-
-# Delete all workflow records from DB
 async def delete_workflows():
+    """
+    Delete all workflow records from DB
+    """
     delete_count = 0
     async for workflow in workflow_collection.find():
         workflow_collection.delete_one({"_id": workflow["_id"]})
@@ -169,79 +170,96 @@ async def delete_workflows():
     return {"Message": f"{delete_count} record(s) deleted!"}
 
 
-# POST a workflow
+def request_to_hash(request: WorkflowRequestSchema) -> str:
+    """
+    Create a hash key using md5 hash function on a workflow request object
+    """
+    d_data = query_to_dict(request)
+    key = dict_to_hash(d_data)
+    return key
+
+
 async def post_workflow(
-        data: WorkflowRequestSchema,
+        request: WorkflowRequestSchema,
         test: bool = False,
         error_type: str = "",
 ) -> WorkflowStatusResponseSchema:
     """
-    Create a new workflow object and
-    store it in DB or retrieve if already
-    present.
+    The purpose of this method is to create a new workflow object in the DB if not already present.
+    If an object already exists, return the current status of the workflow
     Start a new subprocess to create a workflow
     Start a new subprocess to update the database
     """
-    d_data = query_to_dict(data)
-    str_data = json.dumps(d_data)
-    key = dict_to_hash(d_data)
-    pfdcm_url = await retrieve_pfdcm_url(data.pfdcm_info.pfdcm_service)
-    error = validate_request(data)
-    response = WorkflowStatusResponseSchema()
-    workflow = await retrieve_workflow(key)
-
+    # create a hash key using the request
+    db_key = request_to_hash(request)
+    workflow = await retrieve_workflow(db_key)
     if not workflow:
-        new_workflow = WorkflowDBSchema(
-            key=key,
-            request=data,
-            response=response
-        )
+        # create a new workflow object
+        response = WorkflowStatusResponseSchema()
+        new_workflow = WorkflowDBSchema(key=db_key, request=request, response=response)
         workflow = await add_workflow(new_workflow)
 
-    if error or error_type:
+    # validate request for errors
+    # error_type is an optional test-only parameter that forces the workflow to error out
+    # at a given error state
+    error = validate_request(request, error_type)
+    if error:
         workflow.response.status = False
-        try:
-            error += Error[error_type].value
-        except Exception as err:
-            error += f"Undefined error_type {error_type}: " \
-                     f"Please pass values as pfdcm/study/feed/analysis/compute/cube " \
-                     f"as valid error_type"
         workflow.response.error = error
         return workflow.response
-    mode = ""
-    try:
-        if test:
-            mode = "test"
 
-        status_update = subprocess.Popen(
-            ['python',
-             'app/controllers/processes/status.py',
-             "--data", str_data,
-             "--test", mode,
-             "--url", pfdcm_url,
-             ], stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            close_fds=True)
+    mode, str_data = await get_suproc_params(test, request)
+    # run workflow manager subprocess on the workflow
+    sub_mng = manage_workflow(mode, str_data)
 
-        manage_workflow = subprocess.Popen(
-            ['python',
-             'app/controllers/processes/wf_manager.py',
-             "--data", str_data,
-             "--test", mode,
-             "--url", pfdcm_url,
-             ], stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            close_fds=True)
-
-        """
-        stderr, stdout = manage_workflow.communicate()
-        print(stderr, stdout)
-
-        stderr, stdout = status_update.communicate()
-        print(stderr, stdout)
-        """
-    except Exception as err:
-        workflow.response.status = False
-        workflow.response.error = Error.status.value + str(err)
-
+    # run status_update subprocess on the workflow
+    sub_updt = update_workflow_status(mode, str_data)
+    debug_process(sub_updt)
     return workflow.response
+
+
+def manage_workflow(mode: str, str_data: str):
+    """
+    Manage a workflow request in a separate subprocess
+    """
+    subproc = subprocess.Popen(
+        ['python',
+         'app/controllers/processes/wf_manager.py',
+         "--data", str_data,
+         "--test", mode,
+         ], stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        close_fds=True)
+    return subproc
+
+
+def update_workflow_status(mode: str, str_data: str):
+    """
+    Update the current status of a workflow request in a separate process
+    """
+    subproc = subprocess.Popen(
+        ['python',
+         'app/controllers/processes/status.py',
+         "--data", str_data,
+         "--test", mode,
+         ], stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        close_fds=True)
+    return subproc
+
+
+def debug_process(bgprocess):
+    stderr, stdout = bgprocess.communicate()
+    print(stderr, stdout)
+
+
+async def get_suproc_params(test: bool, request: WorkflowRequestSchema) -> (str, str):
+    """
+    Return mode, str_data
+    """
+    mode = ""
+    if test:
+        mode = "testing"
+    d_data = query_to_dict(request)
+    str_data = json.dumps(d_data)
+    return mode, str_data

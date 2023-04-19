@@ -14,13 +14,29 @@ MONGO_DETAILS = str(settings.pflink_mongodb)
 client = MongoClient(MONGO_DETAILS)
 
 database = client.workflows
+pfdcm_database = client.pfdcms
 
 workflow_collection = database.get_collection("workflows_collection")
+pfdcm_collection = pfdcm_database.get_collection("pfdcms_collection")
 
 
 # helpers
+def pfdcm_helper(pfdcm) -> dict:
+    key = str_to_hash(pfdcm["service_name"])
+    return {
+        "_id": key,
+        "service_name": pfdcm["service_name"],
+        "service_address": pfdcm["service_address"],
+    }
 
-def _workflow_retrieve_helper(workflow:dict) -> WorkflowDBSchema:
+
+def str_to_hash(str_data: str) -> str:
+    hash_request = hashlib.md5(str_data.encode())
+    key = hash_request.hexdigest()
+    return key
+
+
+def _workflow_retrieve_helper(workflow: dict) -> WorkflowDBSchema:
     request = WorkflowRequestSchema(
                    pfdcm_info=workflow["request"]["pfdcm_info"],
                    PACS_directive=workflow["request"]["PACS_directive"],
@@ -67,7 +83,7 @@ def query_to_dict(request: WorkflowRequestSchema) -> dict:
     }
 
 
-def dict_to_hash(data:dict) -> str:
+def dict_to_hash(data: dict) -> str:
     # convert to string and encode
     str_data = json.dumps(data)
     hash_request = hashlib.md5(str_data.encode())     
@@ -82,7 +98,7 @@ def update_workflow(key: str, data: WorkflowDBSchema) -> bool:
     """
     Update an existing workflow in the DB
     """
-    workflow = workflow_collection.find_one({"_id":key})
+    workflow = workflow_collection.find_one({"_id": key})
     if workflow:
         updated_workflow = workflow_collection.update_one(
             {"_id": key}, {"$set": _workflow_add_helper(data)}
@@ -102,13 +118,31 @@ def retrieve_workflow(key: str) -> WorkflowDBSchema:
         return _workflow_retrieve_helper(workflow)  
 
 
+def retrieve_pfdcm(service_name: str) -> dict:
+    pfdcm = pfdcm_collection.find_one({"service_name": service_name})
+    if pfdcm:
+        return pfdcm_helper(pfdcm)
+
+
+def retrieve_pfdcm_url(service_name: str) -> str:
+    """
+    # Retrieve an existing `pfdcm` service address
+    """
+    pfdcm_server = retrieve_pfdcm(service_name)
+    if not pfdcm_server:
+        raise Exception(f"Service {service_name} not found in the DB")
+
+    pfdcm_url = pfdcm_server['service_address']
+    return pfdcm_url
+
+
 def get_cube_url_from_pfdcm(pfdcm_url: str, cube_name: str) -> str:
     pfdcm_smdb_cube_api = f'{pfdcm_url}/api/v1/SMDB/CUBE/{cube_name}/'
     response = requests.get(pfdcm_smdb_cube_api)
     d_results = json.loads(response.text)
     cube_url = d_results['cubeInfo']['url']
-    #return cube_url
-    return "http://localhost:8000/api/v1/"
+    print(cube_url)
+    return cube_url
 
 
 def substitute_dicom_tags(
@@ -148,7 +182,7 @@ def _do_cube_create_user(cube_url: str, user_name: str) -> PythonChrisClient:
 
     # create a new user
     headers = {'Content-Type': 'application/json', 'accept': 'application/json'}
-    body = {"user_name": user_name, "password": user_pass, "email": user_email}
+    body = {"username": user_name, "password": user_pass, "email": user_email}
     resp = requests.post(create_user_url, json=body, headers=headers)
 
     # create a cube client

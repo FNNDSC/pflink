@@ -3,6 +3,7 @@
 from chrisclient import client
 from .ChrisClient import ChrisClient
 
+
 class PythonChrisClient(ChrisClient):
 
     def __init__(self,url: str, username: str, password: str):
@@ -50,11 +51,15 @@ class PythonChrisClient(ChrisClient):
         
     def getFeed(self, searchParams: dict):
         response = self.cl.get_feeds(searchParams)
-        return response
+        if response['total'] > 0:
+            return response['data'][0]
+        else:
+            return {}
         
     def getWorkflow(self, searchParams: dict):
         response = self.cl.get_workflows(searchParams)
         return response
+
         
     def getWorkflowDetails(self, workflow_id : str):
         response = self.cl.get_workflow_plugin_instances(workflow_id)
