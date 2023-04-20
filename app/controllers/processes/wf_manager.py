@@ -11,7 +11,6 @@ from workflow import (
     WorkflowInfoSchema,
 )
 from utils import (
-    dict_to_query,
     query_to_dict,
     dict_to_hash,
     update_workflow,
@@ -80,17 +79,11 @@ def manage_workflow(db_key: str, test: str):
                         workflow.response.error = Error.feed.value + str(ex)
                         workflow.response.status = False
                         update_workflow(key, workflow)
+                        break
 
-            case State.ANALYZING.value:
-                return
-            case State.COMPLETED.value:
-                return
         update_status(request, test)
         time.sleep(10)
-
         workflow = retrieve_workflow(key)
-        if workflow.response.error:
-            return
 
     if pl_inst_id == 0:
         return
@@ -234,8 +227,11 @@ def do_cube_start_analysis(previous_id: str, workflow_info: WorkflowInfoSchema, 
     Create a new node (plugin instance) on an existing feed in `CUBE`
     """
     client = _do_cube_create_user(cube_url, workflow_info.user_name)
+    # search for plugin
     plugin_search_params = {"name": workflow_info.plugin_name, "version": workflow_info.plugin_version}
     plugin_id = client.getPluginId(plugin_search_params)
+
+    # convert CLI params from string to a JSON dictionary
     feed_params = str_to_param_dict(workflow_info.plugin_params)
     feed_params["previous_id"] = previous_id
     feed_resp = client.createFeed(plugin_id, feed_params)

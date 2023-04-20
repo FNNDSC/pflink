@@ -196,17 +196,16 @@ async def post_workflow(
     if not workflow:
         # create a new workflow object
         response = WorkflowStatusResponseSchema()
+        # validate request for errors
+        # error_type is an optional test-only parameter that forces the workflow to error out
+        # at a given error state
+        error = validate_request(request, error_type)
+        if error:
+            response.status = False
+            response.error = error
+            return response
         new_workflow = WorkflowDBSchema(key=db_key, request=request, response=response)
         workflow = await add_workflow(new_workflow)
-
-    # validate request for errors
-    # error_type is an optional test-only parameter that forces the workflow to error out
-    # at a given error state
-    error = validate_request(request, error_type)
-    if error:
-        workflow.response.status = False
-        workflow.response.error = error
-        return workflow.response
 
     mode, str_data = await get_suproc_params(test, request)
     # run workflow manager subprocess on the workflow
@@ -214,7 +213,7 @@ async def post_workflow(
 
     # run status_update subprocess on the workflow
     sub_updt = update_workflow_status(mode, str_data)
-    debug_process(sub_updt)
+    # debug_process(sub_updt)
     return workflow.response
 
 

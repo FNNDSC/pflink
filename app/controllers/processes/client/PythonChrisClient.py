@@ -15,8 +15,10 @@ class PythonChrisClient(ChrisClient):
         
 
     def getPluginId(self, searchParams:dict):
-        plugin_id = self.cl.get_plugins(searchParams)['data'][0]['id']
-        return plugin_id
+        response = self.cl.get_plugins(searchParams)
+        if response['total'] > 0:
+            return response['data'][0]['id']
+        raise Exception(f"No plugin found with matching search criteria {searchParams}")
         
 
     def getSwiftPath(self, searchParams:dict):
@@ -30,8 +32,7 @@ class PythonChrisClient(ChrisClient):
         response = self.cl.get_pacs_files(searchParams)
         if response['data']:
             return response['data'][0]
-        else:
-            return {}
+        return {}
         
 
     def createFeed(self, plugin_id: str,params: dict):

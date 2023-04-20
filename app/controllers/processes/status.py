@@ -36,39 +36,44 @@ parser.add_argument('--test', metavar='N', type=str)
 
 args = parser.parse_args()
 
-    
+
 def update_workflow_status(key: str, test: str):
     """
     Update the status of a workflow object in the DB
     """
     workflow = retrieve_workflow(key)
-    if not workflow.stale or workflow.response.workflow_state == State.COMPLETED.value:
+    # If the status of the workflow is currently being updated by another process
+    # or the workflow is in `Completed` state
+    # or some error occurred and the workflow status is already marked as false, then do nothing
+    if not workflow.stale or workflow.response.workflow_state == State.COMPLETED.value or not workflow.response.status:
         # Do nothing and exit
         return
-         
-    logging.info(f"WORKING on updating the status for {key}, locking--")       
-    workflow.stale = False
-    update_workflow(key, workflow)
+
+    logging.info(f"WORKING on updating the status for {key}, locking--")
+    update_status_flag(key, workflow, False)
 
     if test:
         updated_status = get_simulated_status(workflow)
     else:
-        pfdcm_url = retrieve_pfdcm_url(workflow.request.pfdcm_info.pfdcm_service)
-        updated_status = get_current_status(pfdcm_url, workflow.request)
-    # preserve errors
-    if not workflow.response.status:
-        updated_status.error = workflow.response.error
-        updated_status.status = workflow.response.status
+        updated_status = get_current_status(workflow.request)
 
     workflow.response = updated_status
-    workflow.stale = True
-    update_workflow(key, workflow)
+    update_status_flag(key, workflow, True)
     logging.info(f"UPDATED status for {key}, releasing lock")
 
 
+def update_status_flag(key: str, workflow: WorkflowDBSchema, flag: bool):
+    """
+    Change the flag `stale` of a workflow response in the DB
+    `stale` essentially means the current status information of a workflow is outdated and a new
+    `status-update` process can update the information in the DB
+    """
+    workflow.stale = flag
+    update_workflow(key, workflow)
+
+
 def get_current_status(
-    pfdcm_url: str,
-    request: WorkflowRequestSchema,
+        request: WorkflowRequestSchema,
 ) -> WorkflowStatusResponseSchema:
     """
     Return the status of a workflow in `pflink` by asking `pfdcm` & `cube`. The sequence is as follows:
@@ -77,62 +82,64 @@ def get_current_status(
         3) Parse both the results to a response schema
         4) Return the response
     """
-    cube_url = get_cube_url_from_pfdcm(pfdcm_url, request.pfdcm_info.cube_service)
-    pfdcm_resp = _get_pfdcm_status(pfdcm_url, request)
-    cube_resp = _get_feed_status(cube_url, request)
+    pfdcm_resp = _get_pfdcm_status(request)
+    cube_resp = _get_feed_status(request)
     status = _parse_response(pfdcm_resp, cube_resp)
     return status
 
 
-def _get_pfdcm_status(pfdcm_url: str, request: WorkflowRequestSchema):
+def _get_pfdcm_status(request: WorkflowRequestSchema):
     """
     Get the status of PACS from `pfdcm`
     by running the synchronous API of `pfdcm`
     """
-    pfdcm_status_url = f'{pfdcm_url}/api/v1/PACS/sync/pypx/'
-    headers = {'Content-Type': 'application/json', 'accept': 'application/json'}
-    
-    pfdcm_body = {
-        "PACSservice": {
-          "value": request.pfdcm_info.PACS_service
-        },
-        "listenerService": {
-          "value": "default"
-         },
-        "PACSdirective": {
-          "AccessionNumber": request.PACS_directive.AccessionNumber,
-          "PatientID": request.PACS_directive.PatientID,
-          "PatientName": request.PACS_directive.PatientName,
-          "PatientBirthDate": request.PACS_directive.PatientBirthDate,
-          "PatientAge": request.PACS_directive.PatientAge,
-          "PatientSex": request.PACS_directive.PatientSex,
-          "StudyDate": request.PACS_directive.StudyDate,
-          "StudyDescription": request.PACS_directive.StudyDescription,
-          "StudyInstanceUID": request.PACS_directive.StudyInstanceUID,
-          "Modality": request.PACS_directive.Modality,
-          "ModalitiesInStudy": request.PACS_directive.ModalitiesInStudy,
-          "PerformedStationAETitle": request.PACS_directive.PerformedStationAETitle,
-          "NumberOfSeriesRelatedInstances": request.PACS_directive.NumberOfSeriesRelatedInstances,
-          "InstanceNumber": request.PACS_directive.InstanceNumber,
-          "SeriesDate": request.PACS_directive.SeriesDate,
-          "SeriesDescription": request.PACS_directive.SeriesDescription,
-          "SeriesInstanceUID": request.PACS_directive.SeriesInstanceUID,
-          "ProtocolName": request.PACS_directive.ProtocolName,
-          "AcquisitionProtocolDescription": request.PACS_directive.AcquisitionProtocolDescription,
-          "AcquisitionProtocolName": request.PACS_directive.AcquisitionProtocolName,
-          "withFeedBack": True,
-          "then": 'status',
-          "thenArgs": "",
-          "dblogbasepath": request.pfdcm_info.db_log_path,
-          "json_response": True
+    try:
+        pfdcm_url = retrieve_pfdcm_url(request.pfdcm_info.pfdcm_service)
+        pfdcm_status_url = f'{pfdcm_url}/api/v1/PACS/sync/pypx/'
+        headers = {'Content-Type': 'application/json', 'accept': 'application/json'}
+
+        pfdcm_body = {
+            "PACSservice": {
+                "value": request.pfdcm_info.PACS_service
+            },
+            "listenerService": {
+                "value": "default"
+            },
+            "PACSdirective": {
+                "AccessionNumber": request.PACS_directive.AccessionNumber,
+                "PatientID": request.PACS_directive.PatientID,
+                "PatientName": request.PACS_directive.PatientName,
+                "PatientBirthDate": request.PACS_directive.PatientBirthDate,
+                "PatientAge": request.PACS_directive.PatientAge,
+                "PatientSex": request.PACS_directive.PatientSex,
+                "StudyDate": request.PACS_directive.StudyDate,
+                "StudyDescription": request.PACS_directive.StudyDescription,
+                "StudyInstanceUID": request.PACS_directive.StudyInstanceUID,
+                "Modality": request.PACS_directive.Modality,
+                "ModalitiesInStudy": request.PACS_directive.ModalitiesInStudy,
+                "PerformedStationAETitle": request.PACS_directive.PerformedStationAETitle,
+                "NumberOfSeriesRelatedInstances": request.PACS_directive.NumberOfSeriesRelatedInstances,
+                "InstanceNumber": request.PACS_directive.InstanceNumber,
+                "SeriesDate": request.PACS_directive.SeriesDate,
+                "SeriesDescription": request.PACS_directive.SeriesDescription,
+                "SeriesInstanceUID": request.PACS_directive.SeriesInstanceUID,
+                "ProtocolName": request.PACS_directive.ProtocolName,
+                "AcquisitionProtocolDescription": request.PACS_directive.AcquisitionProtocolDescription,
+                "AcquisitionProtocolName": request.PACS_directive.AcquisitionProtocolName,
+                "withFeedBack": True,
+                "then": 'status',
+                "thenArgs": "",
+                "dblogbasepath": request.pfdcm_info.db_log_path,
+                "json_response": True
+            }
         }
-      }
+        response = requests.post(pfdcm_status_url, json=pfdcm_body, headers=headers)
+        return json.loads(response.text)
+    except Exception as ex:
+        return {"error": Error.pfdcm.value + str(ex)}
 
-    response = requests.post(pfdcm_status_url, json=pfdcm_body, headers=headers)
-    return json.loads(response.text) 
 
-
-def _get_feed_status(cube_url: str, request: WorkflowRequestSchema):
+def _get_feed_status(request: WorkflowRequestSchema) -> dict:
     """
     Get the status of a feed inside `CUBE`
     1) Create/get a cube client using user_name
@@ -140,9 +147,10 @@ def _get_feed_status(cube_url: str, request: WorkflowRequestSchema):
     3) Serialize for information
     4) Return a suitable response
     """
-    response = WorkflowStatusResponseSchema()
-      
     try:
+        pfdcm_url = retrieve_pfdcm_url(request.pfdcm_info.pfdcm_service)
+        cube_url = get_cube_url_from_pfdcm(pfdcm_url, request.pfdcm_info.cube_service)
+
         # create a client using the username
         cl = _do_cube_create_user(cube_url, request.workflow_info.user_name)
 
@@ -153,22 +161,9 @@ def _get_feed_status(cube_url: str, request: WorkflowRequestSchema):
 
         # search for feed
         resp = cl.getFeed({"name_exact": feed_name})
-        if resp:
-            response.workflow_state = State.FEED_CREATED.value
-            response.feed_name = resp['name']
-            response.feed_id = resp['id']
-            response.state_progress = "100%"
-
-            # check if analysis is scheduled
-            analysis = get_analysis_status(resp)
-            if analysis:
-                response.workflow_state = analysis["state"]
-                response.state_progress = analysis["progress"]
-                response.error = analysis["error"]
+        return resp
     except Exception as ex:
-        response.status = False
-        response.error = Error.user.value + str(ex)
-    return response
+        return {"error": Error.cube.value + str(ex)}
 
 
 def get_analysis_status(response: dict) -> dict:
@@ -194,7 +189,7 @@ def get_analysis_status(response: dict) -> dict:
         analysis_details['progress'] = str(feed_progress) + "%"
 
         if errored > 0 or cancelled > 0:
-            analysis_details['error'] = str(errored + cancelled) + " job(s) failed"
+            analysis_details["error"] = str(errored + cancelled) + " job(s) failed"
         if feed_progress == 100:
             analysis_details["state"] = State.COMPLETED.value
         else:
@@ -204,13 +199,19 @@ def get_analysis_status(response: dict) -> dict:
 
 
 def _parse_response(
-    pfdcm_response: dict,
-    cube_response: WorkflowStatusResponseSchema,
+        pfdcm_response: dict,
+        cube_response: dict,
 ) -> WorkflowStatusResponseSchema:
     """
     Parse JSON object for workflow status response
     """
     status = WorkflowStatusResponseSchema()
+    pfdcm_has_error = pfdcm_response.get("error")
+    cube_has_error = cube_response.get("error")
+    if pfdcm_has_error:
+        status.status = False
+        status.error = pfdcm_response["error"]
+        return status
     valid = pfdcm_response.get('pypx')
     if not valid:
         status.status = False
@@ -218,19 +219,19 @@ def _parse_response(
         return status
     data = pfdcm_response['pypx']['data']
     study = pfdcm_response['pypx']['then']['00-status']['study']
-    
+
     if study:
         images = study[0][data[0]['StudyInstanceUID']['value']][0]['images']
         total_images = images["requested"]["count"]
         total_retrieved = images["packed"]["count"]
         total_pushed = images["pushed"]["count"]
         total_registered = images["registered"]["count"]
-        
+
         if total_images > 0:
-            total_ret_perc = round((total_retrieved/total_images)*100)
-            total_push_perc = round((total_pushed/total_images)*100)
-            total_reg_perc = round((total_registered/total_images)*100)       
-                  
+            total_ret_perc = round((total_retrieved / total_images) * 100)
+            total_push_perc = round((total_pushed / total_images) * 100)
+            total_reg_perc = round((total_registered / total_images) * 100)
+
             if total_ret_perc > 0:
                 status.workflow_state = State.RETRIEVING.value
                 status.state_progress = str(total_ret_perc) + "%"
@@ -243,13 +244,29 @@ def _parse_response(
     else:
         status.error = Error.study.value
         status.status = False
+        return status
 
-    if cube_response.feed_id:
-        status.feed_name = cube_response.feed_name
-        status.feed_id = cube_response.feed_id
-        status.workflow_state = cube_response.workflow_state
-        status.state_progress = cube_response.state_progress
-        status.error = cube_response.error
+    if cube_has_error:
+        status.status = False
+        status.error = cube_response["error"]
+        return status
+
+    if cube_response:
+        status.workflow_state = State.FEED_CREATED.value
+        status.feed_name = cube_response['name']
+        status.feed_id = cube_response['id']
+        status.state_progress = "100%"
+
+        # check if analysis is scheduled
+        analysis = get_analysis_status(cube_response)
+        if analysis:
+            analysis_has_error = analysis.get("error")
+            status.workflow_state = analysis["state"]
+            status.state_progress = analysis["progress"]
+            if analysis_has_error:
+                status.error = analysis["error"]
+                status.status = False
+                return status
 
     return status
 
@@ -261,25 +278,25 @@ def get_simulated_status(workflow: WorkflowDBSchema) -> WorkflowStatusResponseSc
     MAX_N = 9999
     PROGRESS_JUMP = 25
     current_status = workflow.response
-        
+
     match current_status.workflow_state:
-    
+
         case State.INITIALIZING.value:
             current_status.workflow_state = State.RETRIEVING.value
             current_status.state_progress = "25%"
-         
+
         case State.RETRIEVING.value:
             progress = __get_progress_from_text(current_status.state_progress)
-            if progress >= 100:                
+            if progress >= 100:
                 current_status.workflow_state = State.PUSHING.value
                 current_status.state_progress = '25%'
-            else:                     
+            else:
                 progress += PROGRESS_JUMP
                 current_status.state_progress = str(progress) + '%'
-                 
+
         case State.PUSHING.value:
             progress = __get_progress_from_text(current_status.state_progress)
-            if progress >= 100:              
+            if progress >= 100:
                 current_status.workflow_state = State.REGISTERING.value
                 current_status.state_progress = '25%'
             else:
@@ -288,7 +305,7 @@ def get_simulated_status(workflow: WorkflowDBSchema) -> WorkflowStatusResponseSc
 
         case State.REGISTERING.value:
             progress = __get_progress_from_text(current_status.state_progress)
-            if progress >= 100:             
+            if progress >= 100:
                 current_status.workflow_state = State.FEED_CREATED.value
                 current_status.state_progress = '100%'
                 current_status.feed_id = random.randint(0, MAX_N)
@@ -304,12 +321,12 @@ def get_simulated_status(workflow: WorkflowDBSchema) -> WorkflowStatusResponseSc
 
         case State.ANALYZING.value:
             progress = __get_progress_from_text(current_status.state_progress)
-            if progress >= 100:                
+            if progress >= 100:
                 current_status.workflow_state = State.COMPLETED.value
             else:
                 progress += PROGRESS_JUMP
                 current_status.state_progress = str(progress) + '%'
-               
+
     return current_status
 
 
@@ -320,7 +337,7 @@ def __get_progress_from_text(progress: str):
     progress = progress.replace('%', '')
     return int(progress)
 
-    
+
 if __name__ == "__main__":
     """
     Main entry point
