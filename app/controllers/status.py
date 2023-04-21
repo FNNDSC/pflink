@@ -12,7 +12,6 @@ from app.models.workflow import (
     Error,
 )
 from app.controllers.utils import (
-    dict_to_query,
     query_to_dict,
     dict_to_hash,
     update_workflow,

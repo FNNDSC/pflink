@@ -8,7 +8,9 @@ from app.models.workflow import (
     WorkflowRequestSchema,
     WorkflowDBSchema,
 )
-
+from app.controllers.pfdcm import (
+    retrieve_pfdcm
+)
 MONGO_DETAILS = str(settings.pflink_mongodb)
 
 client = MongoClient(MONGO_DETAILS)
@@ -21,13 +23,6 @@ pfdcm_collection = pfdcm_database.get_collection("pfdcms_collection")
 
 
 # helpers
-def pfdcm_helper(pfdcm) -> dict:
-    key = str_to_hash(pfdcm["service_name"])
-    return {
-        "_id": key,
-        "service_name": pfdcm["service_name"],
-        "service_address": pfdcm["service_address"],
-    }
 
 
 def str_to_hash(str_data: str) -> str:
@@ -115,13 +110,7 @@ def retrieve_workflow(key: str) -> WorkflowDBSchema:
     """
     workflow = workflow_collection.find_one({"_id": key})
     if workflow:
-        return _workflow_retrieve_helper(workflow)  
-
-
-def retrieve_pfdcm(service_name: str) -> dict:
-    pfdcm = pfdcm_collection.find_one({"service_name": service_name})
-    if pfdcm:
-        return pfdcm_helper(pfdcm)
+        return _workflow_retrieve_helper(workflow)
 
 
 def retrieve_pfdcm_url(service_name: str) -> str:

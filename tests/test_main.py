@@ -1,4 +1,6 @@
 from app.config import settings
+
+
 def test_root(test_app):
     response = test_app.get("/")
     assert response.status_code == 200
@@ -14,5 +16,9 @@ def test_hello(test_app):
 def test_about(test_app):
     response = test_app.get("/about")
     assert response.status_code == 200
-    assert response.json() =={'about': 'App to communicate with pfdcm and CUBE', 'name': 'pflink', 'version': f'{settings.version}'}
+    assert response.json() == {
+        'about': 'App to communicate with pfdcm and CUBE',
+        'name': 'pflink',
+        'version': f'{settings.version}'
+    }
 

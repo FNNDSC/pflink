@@ -106,7 +106,7 @@ def update_status(request: WorkflowRequestSchema, test: str):
     str_data = json.dumps(d_data)
     process = subprocess.Popen(
         ['python',
-         'app/controllers/processes/status.py',
+         'app/controllers/status.py',
          "--data", str_data,
          "--test", test,
          ], stdout=subprocess.PIPE,
@@ -207,19 +207,14 @@ def do_cube_create_feed(request: WorkflowRequestSchema, cube_url: str) -> str:
     feed_name = substitute_dicom_tags(request.workflow_info.feed_name, pacs_details)
     data_path = client.getSwiftPath(pacs_details)
 
-    # check if feed already present
-    resp = client.getFeed({"name_exact": feed_name})
-    if resp:
-        return resp['id']
-    else:
-        # Get plugin Id
-        plugin_search_params = {"name": "pl-dircopy"}
-        plugin_id = client.getPluginId(plugin_search_params)
+    # Get plugin Id
+    plugin_search_params = {"name": "pl-dircopy"}
+    plugin_id = client.getPluginId(plugin_search_params)
 
-        # create a feed
-        feed_params = {'title': feed_name, 'dir': data_path}
-        feed_response = client.createFeed(plugin_id, feed_params)
-        return feed_response['id']
+    # create a feed
+    feed_params = {'title': feed_name, 'dir': data_path}
+    feed_response = client.createFeed(plugin_id, feed_params)
+    return feed_response['id']
 
 
 def do_cube_start_analysis(previous_id: str, workflow_info: WorkflowInfoSchema, cube_url: str):

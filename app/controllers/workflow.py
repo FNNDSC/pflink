@@ -1,6 +1,5 @@
-import motor.motor_asyncio
+from pymongo import MongoClient
 import json
-import hashlib
 import logging
 import subprocess
 
@@ -10,10 +9,19 @@ from app.models.workflow import (
     WorkflowDBSchema,
     Error,
 )
+
+from app.controllers.utils import (
+    _workflow_retrieve_helper,
+    _workflow_add_helper,
+    query_to_dict,
+    dict_to_hash,
+    retrieve_workflow
+
+)
 from app.config import settings
 
 MONGO_DETAILS = str(settings.pflink_mongodb)
-client = motor.motor_asyncio.AsyncIOMotorClient(MONGO_DETAILS)
+client = MongoClient(MONGO_DETAILS)
 database = client.workflows
 workflow_collection = database.get_collection("workflows_collection")
 
@@ -28,56 +36,7 @@ logging.basicConfig(
 # helpers
 
 
-def workflow_retrieve_helper(workflow: dict) -> WorkflowDBSchema:
-    request = WorkflowRequestSchema(
-        pfdcm_info=workflow["request"]["pfdcm_info"],
-        PACS_directive=workflow["request"]["PACS_directive"],
-        workflow_info=workflow["request"]["workflow_info"],
-    )
-    return WorkflowDBSchema(
-        key=workflow["_id"],
-        request=request,
-        response=workflow["response"],
-        stale=workflow["stale"],
-        started=workflow["started"],
-    )
-
-
-def workflow_add_helper(workflow: WorkflowDBSchema) -> dict:
-    d_request = {
-        "pfdcm_info": workflow.request.pfdcm_info.__dict__,
-        "PACS_directive": workflow.request.PACS_directive.__dict__,
-        "workflow_info": workflow.request.workflow_info.__dict__,
-    }
-
-    return {
-        "_id": workflow.key,
-        "request": d_request,
-        "response": workflow.response.__dict__,
-        "stale": workflow.stale,
-        "started": workflow.started,
-    }
-
-
-def query_to_dict(request: WorkflowRequestSchema) -> dict:
-    return {
-        "pfdcm_info": request.pfdcm_info.__dict__,
-        "PACS_directive": request.PACS_directive.__dict__,
-        "workflow_info": request.workflow_info.__dict__,
-    }
-
-
-def dict_to_hash(data: dict) -> str:
-    # convert to string and encode
-    str_data = json.dumps(data)
-    hash_request = hashlib.md5(str_data.encode())
-
-    # create a unique key
-    key = hash_request.hexdigest()
-    return key
-
-
-def validate_request(request: WorkflowRequestSchema, error_type: str):
+def validate_request(request: WorkflowRequestSchema):
     """
     A helper method validate all required fields in a request payload
     """
@@ -116,51 +75,30 @@ def validate_request(request: WorkflowRequestSchema, error_type: str):
 
 
 # Retrieve all workflows present in the DB
-async def retrieve_workflows():
+def retrieve_workflows():
     workflows = []
-    async for workflow in workflow_collection.find():
-        workflows.append(workflow_retrieve_helper(workflow))
+    for workflow in workflow_collection.find():
+        workflows.append(_workflow_retrieve_helper(workflow))
     return workflows
 
 
 # Add new workflow in the DB
-async def add_workflow(workflow_data: WorkflowDBSchema) -> WorkflowDBSchema:
-    new_workflow = await workflow_collection.insert_one(workflow_add_helper(workflow_data))
-    workflow = await workflow_collection.find_one({"_id": new_workflow.inserted_id})
-    return workflow_retrieve_helper(workflow)
+def add_workflow(workflow_data: WorkflowDBSchema) -> WorkflowDBSchema:
+    new_workflow = workflow_collection.insert_one(_workflow_add_helper(workflow_data))
+    workflow = workflow_collection.find_one({"_id": new_workflow.inserted_id})
+    return _workflow_retrieve_helper(workflow)
 
 
-def update_workflow(key: str, data: WorkflowDBSchema) -> bool:
+async def delete_single_workflow(request: WorkflowRequestSchema):
     """
-    Update an existing workflow in the DB
-    """
-    workflow = workflow_collection.find_one({"_id": key})
-    if workflow:
-        updated_workflow = workflow_collection.update_one(
-            {"_id": key}, {"$set": workflow_add_helper(data)}
-        )
-        if updated_workflow:
-            return True
-        return False
-
-
-async def retrieve_workflow(key: str) -> WorkflowDBSchema:
-    """
-    Retrieve an existing workflow from DB
-    """
-    workflow = await workflow_collection.find_one({"_id": key})
-    if workflow:
-        return workflow_retrieve_helper(workflow)
-
-
-async def delete_workflows():
-    """
-    Delete all workflow records from DB
+    Delete a workflow record from DB
     """
     delete_count = 0
-    async for workflow in workflow_collection.find():
-        workflow_collection.delete_one({"_id": workflow["_id"]})
-        delete_count += 1
+    key = request_to_hash(request)
+    for workflow in workflow_collection.find():
+        if workflow["_id"] == key:
+            workflow_collection.delete_one({"_id": workflow["_id"]})
+            delete_count += 1
     return {"Message": f"{delete_count} record(s) deleted!"}
 
 
@@ -186,24 +124,24 @@ async def post_workflow(
     """
     # create a hash key using the request
     db_key = request_to_hash(request)
-    workflow = await retrieve_workflow(db_key)
+    workflow = retrieve_workflow(db_key)
     if not workflow:
         # create a new workflow object
         response = WorkflowStatusResponseSchema()
         # validate request for errors
-        error = validate_request(request, error_type)
+        error = validate_request(request)
         if error:
             response.status = False
             response.error = error
             return response
         new_workflow = WorkflowDBSchema(key=db_key, request=request, response=response)
-        workflow = await add_workflow(new_workflow)
+        workflow = add_workflow(new_workflow)
 
     # 'error_type' is an optional test-only parameter that forces the workflow to error out
     # at a given error state
     if error_type:
         return create_response_with_error(error_type, workflow.response)
-    
+
     mode, str_data = await get_suproc_params(test, request)
     # run workflow manager subprocess on the workflow
     sub_mng = manage_workflow(mode, str_data)
@@ -261,6 +199,9 @@ def update_workflow_status(mode: str, str_data: str):
 
 
 def debug_process(bgprocess):
+    """
+    A blocking method to communicate with a background process and print stdout & stderr
+    """
     stderr, stdout = bgprocess.communicate()
     print(stderr, stdout)
 
@@ -275,4 +216,3 @@ async def get_suproc_params(test: bool, request: WorkflowRequestSchema) -> (str,
     d_data = query_to_dict(request)
     str_data = json.dumps(d_data)
     return mode, str_data
-

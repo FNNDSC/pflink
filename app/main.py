@@ -20,7 +20,7 @@ You can **add**,**retrieve** `pfdcm` service info.
 
 You can **create** new workflows and get status of the workflow.
 
-## testing
+## Testing
 
 You will be able to:
 

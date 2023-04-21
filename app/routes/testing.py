@@ -6,7 +6,7 @@ from app.models.workflow import (
 from app.controllers.workflow import (
     post_workflow,
     retrieve_workflows,
-    delete_workflows,
+    delete_single_workflow,
 )
 
 router = APIRouter()
@@ -17,7 +17,7 @@ async def test_get_workflows():
     """
     Fetch all workflows currently present in the database
     """
-    workflows = await retrieve_workflows()
+    workflows = retrieve_workflows()
     return workflows
 
 
@@ -48,11 +48,11 @@ async def test_create_workflow(
 
 
 @router.delete("", response_description="All workflows deleted")
-async def delete_all():
+async def delete_workflow(data: WorkflowRequestSchema):
     """
-    Delete all records: 
+    Delete a single workflow record
     # USE ONLY ON A TEST SETUP
     """
-    response = await delete_workflows()
+    response = await delete_single_workflow(data)
     return response
 

@@ -2,7 +2,8 @@ version: '3.8'
 
 services:
   pflink:
-    build: ./
+    image: local/pflink
+    container_name: pflink
     command: uvicorn app.main:app --reload --workers 1 --host 0.0.0.0 --port 8050
     volumes:
       - ./:/app/

@@ -42,9 +42,9 @@ class PFDCMInfoSchema(BaseModel):
     """This model contains service details of a pfdcm instance"""
     pfdcm_service: str = Field(...)
     PACS_service: str = Field(...)
-    cube_service: str = Field(...)
+    cube_service: str = "local"
     swift_service: str = "local"
-    swift_service_PACS: str = "orthanc"
+    swift_service_PACS: str = Field(...)
     dicom_file_extension: str = "dcm"
     db_log_path: str = "/home/dicom/log"
 
@@ -95,7 +95,7 @@ class WorkflowRequestSchema(BaseModel):
                 "pfdcm_info": {
                     "pfdcm_service": "PFDCM",
                     "PACS_service": "orthanc",
-                    "cube_service": "local"
+                    "swift_service_PACS": "orthanc"
                 },
                 "PACS_directive": {
                     "StudyInstanceUID": "12365548",

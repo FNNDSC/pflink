@@ -59,7 +59,7 @@ async def get_pfdcm_data(service_name: str) -> PfdcmQueryResponseSchema:
     """
     Fetch service address of a pfdcm instance from the DB for an existing service name.
     """
-    pfdcm = await retrieve_pfdcm(service_name)
+    pfdcm = retrieve_pfdcm(service_name)
     if pfdcm:
         return PfdcmQueryResponseSchema(data=pfdcm, message="pfdcm data retrieved successfully.")
     return PfdcmQueryResponseSchema(data=[], message=f"No existing record found for {service_name}.")
