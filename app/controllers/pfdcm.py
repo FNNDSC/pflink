@@ -2,7 +2,7 @@ import motor.motor_asyncio
 import requests
 import json
 import hashlib
-from config import settings
+from app.config import settings
 
 MONGO_DETAILS = str(settings.pflink_mongodb)
 client = motor.motor_asyncio.AsyncIOMotorClient(MONGO_DETAILS)
@@ -78,3 +78,4 @@ async def about_pfdcm(service_name: str) -> dict:
     response = requests.get(pfdcm_about_api)
     d_results = json.loads(response.text)
     return d_results
+

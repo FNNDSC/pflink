@@ -4,13 +4,13 @@ import hashlib
 import logging
 import subprocess
 
-from .processes.workflow import (
+from app.models.workflow import (
     WorkflowRequestSchema,
     WorkflowStatusResponseSchema,
     WorkflowDBSchema,
     Error,
 )
-from config import settings
+from app.config import settings
 
 MONGO_DETAILS = str(settings.pflink_mongodb)
 client = motor.motor_asyncio.AsyncIOMotorClient(MONGO_DETAILS)
@@ -109,12 +109,6 @@ def validate_request(request: WorkflowRequestSchema, error_type: str):
     if not request.workflow_info.plugin_name:
         error += f"\n{Error.required_plugin.value}"
 
-    if error_type:
-        try:
-            error += f"\n{Error[error_type].value}"
-        except:
-            error += f"\n{Error.undefined.value}"
-
     return error
 
 
@@ -197,8 +191,6 @@ async def post_workflow(
         # create a new workflow object
         response = WorkflowStatusResponseSchema()
         # validate request for errors
-        # error_type is an optional test-only parameter that forces the workflow to error out
-        # at a given error state
         error = validate_request(request, error_type)
         if error:
             response.status = False
@@ -207,6 +199,11 @@ async def post_workflow(
         new_workflow = WorkflowDBSchema(key=db_key, request=request, response=response)
         workflow = await add_workflow(new_workflow)
 
+    # 'error_type' is an optional test-only parameter that forces the workflow to error out
+    # at a given error state
+    if error_type:
+        return create_response_with_error(error_type, workflow.response)
+    
     mode, str_data = await get_suproc_params(test, request)
     # run workflow manager subprocess on the workflow
     sub_mng = manage_workflow(mode, str_data)
@@ -217,13 +214,29 @@ async def post_workflow(
     return workflow.response
 
 
+def create_response_with_error(
+        error_type: str,
+        response: WorkflowStatusResponseSchema
+) -> WorkflowStatusResponseSchema:
+    """
+    This is a test-only method that sets the response of a workflow
+    to an error state
+    """
+    response.status = False
+    try:
+        response.error = Error[error_type].value
+    except:
+        response.error = Error.undefined.value
+    return response
+
+
 def manage_workflow(mode: str, str_data: str):
     """
     Manage a workflow request in a separate subprocess
     """
     subproc = subprocess.Popen(
         ['python',
-         'app/controllers/processes/wf_manager.py',
+         'app/controllers/wf_manager.py',
          "--data", str_data,
          "--test", mode,
          ], stdout=subprocess.PIPE,
@@ -238,7 +251,7 @@ def update_workflow_status(mode: str, str_data: str):
     """
     subproc = subprocess.Popen(
         ['python',
-         'app/controllers/processes/status.py',
+         'app/controllers/status.py',
          "--data", str_data,
          "--test", mode,
          ], stdout=subprocess.PIPE,
@@ -262,3 +275,4 @@ async def get_suproc_params(test: bool, request: WorkflowRequestSchema) -> (str,
     d_data = query_to_dict(request)
     str_data = json.dumps(d_data)
     return mode, str_data
+

@@ -1,11 +1,11 @@
 from fastapi import APIRouter
 
-from controllers.processes.workflow import (
+from app.models.workflow import (
     WorkflowRequestSchema,
     WorkflowStatusResponseSchema,
 )
 
-from controllers.workflow import (
+from app.controllers.workflow import (
     post_workflow,
 )
 
@@ -24,3 +24,4 @@ async def create_workflow(data: WorkflowRequestSchema) -> WorkflowStatusResponse
     """  
     response = await post_workflow(data)   
     return response
+

@@ -1,4 +1,3 @@
 #!/bin/bash
-docker build -t local/pflink .
-docker-compose up -d --remove-orphans
-#exec python app/main.py
+docker-compose up -d --build --remove-orphans
+docker-compose exec pflink pytest .

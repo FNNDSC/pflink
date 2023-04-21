@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Body
 from fastapi.encoders import jsonable_encoder
 
-from controllers.pfdcm import (
+from app.controllers.pfdcm import (
     add_pfdcm,
     retrieve_pfdcm,
     retrieve_pfdcms,
@@ -9,7 +9,7 @@ from controllers.pfdcm import (
     about_pfdcm,
     
 )
-from models.pfdcm import (
+from app.models.pfdcm import (
     PfdcmQuerySchema,
     PfdcmQueryResponseSchema,
     PfdcmCollectionResponseModel,

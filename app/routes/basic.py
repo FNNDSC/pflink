@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Body
-from models.basic import AboutModel
-from config import settings
+from app.models.basic import AboutModel
+from app.config import settings
 
 router = APIRouter()
 

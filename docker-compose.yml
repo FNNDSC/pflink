@@ -2,9 +2,10 @@ version: '3.8'
 
 services:
   pflink:
-    image: local/pflink
-    container_name: pflink
-    restart: unless-stopped
+    build: ./
+    command: uvicorn app.main:app --reload --workers 1 --host 0.0.0.0 --port 8050
+    volumes:
+      - ./:/app/
     environment:
       PFLINK_MONGODB: mongodb://pflink-db:27017
     ports:
@@ -33,5 +34,3 @@ networks:
 volumes:
   pflink-db-data:
   
-  
-
