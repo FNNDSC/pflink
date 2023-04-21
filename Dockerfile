@@ -3,7 +3,7 @@ FROM tiangolo/uvicorn-gunicorn-fastapi:python3.10
 # set working directory
 WORKDIR /app
 
-# set enviroment variables
+# set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 

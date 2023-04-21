@@ -24,10 +24,10 @@ You can **create** new workflows and get status of the workflow.
 
 You will be able to:
 
-* **Get Input Image** (_test only_).
-* **Get Image with Heatmaps** (_test only_).
-* **Get Image with Measurements** (_test only_).
-* **Get Output Image** (_test only_).
+* **Get all workflow records present in the DB.**
+* **Submit a test workflow request and get its simulated status in response.**
+* **Delete a specific workflow record from the database.**
+
 """
 
 tags_metadata = [

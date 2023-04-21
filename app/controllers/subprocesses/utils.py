@@ -1,7 +1,7 @@
 import hashlib
 import json
 import requests
-from app.controllers.python_chris_client import PythonChrisClient
+from app.controllers.subprocesses.python_chris_client import PythonChrisClient
 from pymongo import MongoClient
 from app.config import settings
 from app.models.workflow import (
@@ -31,7 +31,7 @@ def str_to_hash(str_data: str) -> str:
     return key
 
 
-def _workflow_retrieve_helper(workflow: dict) -> WorkflowDBSchema:
+def workflow_retrieve_helper(workflow: dict) -> WorkflowDBSchema:
     request = WorkflowRequestSchema(
                    pfdcm_info=workflow["request"]["pfdcm_info"],
                    PACS_directive=workflow["request"]["PACS_directive"],
@@ -46,7 +46,7 @@ def _workflow_retrieve_helper(workflow: dict) -> WorkflowDBSchema:
     )
 
 
-def _workflow_add_helper(workflow: WorkflowDBSchema) -> dict:
+def workflow_add_helper(workflow: WorkflowDBSchema) -> dict:
     d_request = {
         "pfdcm_info": workflow.request.pfdcm_info.__dict__,
         "PACS_directive": workflow.request.PACS_directive.__dict__,
@@ -96,7 +96,7 @@ def update_workflow(key: str, data: WorkflowDBSchema) -> bool:
     workflow = workflow_collection.find_one({"_id": key})
     if workflow:
         updated_workflow = workflow_collection.update_one(
-            {"_id": key}, {"$set": _workflow_add_helper(data)}
+            {"_id": key}, {"$set": workflow_add_helper(data)}
         )
         if updated_workflow:
             return True
@@ -110,7 +110,7 @@ def retrieve_workflow(key: str) -> WorkflowDBSchema:
     """
     workflow = workflow_collection.find_one({"_id": key})
     if workflow:
-        return _workflow_retrieve_helper(workflow)
+        return workflow_retrieve_helper(workflow)
 
 
 def retrieve_pfdcm_url(service_name: str) -> str:
@@ -160,7 +160,7 @@ def substitute_dicom_tags(
     return text_w_values
 
 
-def _do_cube_create_user(cube_url: str, user_name: str) -> PythonChrisClient:
+def do_cube_create_user(cube_url: str, user_name: str) -> PythonChrisClient:
     """
     Create a new user in `CUBE` if not already present
     """

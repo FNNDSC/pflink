@@ -2,15 +2,15 @@
 
 from chrisclient import client
 
+
 class PythonChrisClient():
 
     def __init__(self,url: str, username: str, password: str):
         self.cl = client.Client(url,username,password)
 
-
     def getClient(self, params:dict):
         return self.cl
-        
+
 
     def getPluginId(self, searchParams:dict):
         response = self.cl.get_plugins(searchParams)

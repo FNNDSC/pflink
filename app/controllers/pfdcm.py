@@ -63,9 +63,12 @@ async def hello_pfdcm(service_name: str) -> dict:
         return {"error": f"{service_name} does not exist."}
     pfdcm_url = pfdcm_server['service_address']
     pfdcm_hello_api = f'{pfdcm_url}/api/v1/hello/'
-    response = requests.get(pfdcm_hello_api)
-    d_results = json.loads(response.text)
-    return d_results
+    try:
+        response = requests.get(pfdcm_hello_api)
+        d_results = json.loads(response.text)
+        return d_results
+    except:
+        return{"error": f"{pfdcm_hello_api} does not exist."}
 
 
 # Get details about pfdcm
@@ -74,8 +77,11 @@ async def about_pfdcm(service_name: str) -> dict:
     if not pfdcm_server:
         return {"error": f"{service_name} does not exist."}
     pfdcm_url = pfdcm_server['service_address']
-    pfdcm_about_api = f'{pfdcm_url}/api/v1/about/'    
-    response = requests.get(pfdcm_about_api)
-    d_results = json.loads(response.text)
-    return d_results
+    pfdcm_about_api = f'{pfdcm_url}/api/v1/about/'
+    try:
+        response = requests.get(pfdcm_about_api)
+        d_results = json.loads(response.text)
+        return d_results
+    except:
+        return{"error": f"{pfdcm_about_api} does not exist."}
 

@@ -10,14 +10,14 @@ from app.models.workflow import (
     WorkflowRequestSchema,
     WorkflowInfoSchema,
 )
-from app.controllers.utils import (
+from app.controllers.subprocesses.utils import (
     query_to_dict,
     dict_to_hash,
     update_workflow,
     retrieve_workflow,
     get_cube_url_from_pfdcm,
     substitute_dicom_tags,
-    _do_cube_create_user,
+    do_cube_create_user,
     retrieve_pfdcm_url,
 )
 
@@ -106,7 +106,7 @@ def update_status(request: WorkflowRequestSchema, test: str):
     str_data = json.dumps(d_data)
     process = subprocess.Popen(
         ['python',
-         'app/controllers/status.py',
+         'app/controllers/subprocesses/status.py',
          "--data", str_data,
          "--test", test,
          ], stdout=subprocess.PIPE,
@@ -202,7 +202,7 @@ def do_cube_create_feed(request: WorkflowRequestSchema, cube_url: str) -> str:
     """
     Create a new feed in `CUBE` if not already present
     """
-    client = _do_cube_create_user(cube_url, request.workflow_info.user_name)
+    client = do_cube_create_user(cube_url, request.workflow_info.user_name)
     pacs_details = client.getPACSdetails(request.PACS_directive.__dict__)
     feed_name = substitute_dicom_tags(request.workflow_info.feed_name, pacs_details)
     data_path = client.getSwiftPath(pacs_details)
@@ -221,7 +221,7 @@ def do_cube_start_analysis(previous_id: str, workflow_info: WorkflowInfoSchema, 
     """
     Create a new node (plugin instance) on an existing feed in `CUBE`
     """
-    client = _do_cube_create_user(cube_url, workflow_info.user_name)
+    client = do_cube_create_user(cube_url, workflow_info.user_name)
     # search for plugin
     plugin_search_params = {"name": workflow_info.plugin_name, "version": workflow_info.plugin_version}
     plugin_id = client.getPluginId(plugin_search_params)

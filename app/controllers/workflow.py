@@ -10,9 +10,9 @@ from app.models.workflow import (
     Error,
 )
 
-from app.controllers.utils import (
-    _workflow_retrieve_helper,
-    _workflow_add_helper,
+from app.controllers.subprocesses.utils import (
+    workflow_retrieve_helper,
+    workflow_add_helper,
     query_to_dict,
     dict_to_hash,
     retrieve_workflow
@@ -78,15 +78,15 @@ def validate_request(request: WorkflowRequestSchema):
 def retrieve_workflows():
     workflows = []
     for workflow in workflow_collection.find():
-        workflows.append(_workflow_retrieve_helper(workflow))
+        workflows.append(workflow_retrieve_helper(workflow))
     return workflows
 
 
 # Add new workflow in the DB
 def add_workflow(workflow_data: WorkflowDBSchema) -> WorkflowDBSchema:
-    new_workflow = workflow_collection.insert_one(_workflow_add_helper(workflow_data))
+    new_workflow = workflow_collection.insert_one(workflow_add_helper(workflow_data))
     workflow = workflow_collection.find_one({"_id": new_workflow.inserted_id})
-    return _workflow_retrieve_helper(workflow)
+    return workflow_retrieve_helper(workflow)
 
 
 async def delete_single_workflow(request: WorkflowRequestSchema):
@@ -118,9 +118,10 @@ async def post_workflow(
 ) -> WorkflowStatusResponseSchema:
     """
     The purpose of this method is to create a new workflow object in the DB if not already present.
-    If an object already exists, return the current status of the workflow
-    Start a new subprocess to create a workflow
-    Start a new subprocess to update the database
+    This method then starts two independent subprocesses in the background:
+        1) Run a new subprocess to manage the workflow of a given request
+        2) Run a new subprocess to update the status of the workflow
+    Finally, return the current status of the workflow from the database
     """
     # create a hash key using the request
     db_key = request_to_hash(request)
@@ -174,7 +175,7 @@ def manage_workflow(mode: str, str_data: str):
     """
     subproc = subprocess.Popen(
         ['python',
-         'app/controllers/wf_manager.py',
+         'app/controllers/subprocesses/wf_manager.py',
          "--data", str_data,
          "--test", mode,
          ], stdout=subprocess.PIPE,
@@ -189,7 +190,7 @@ def update_workflow_status(mode: str, str_data: str):
     """
     subproc = subprocess.Popen(
         ['python',
-         'app/controllers/status.py',
+         'app/controllers/subprocesses/status.py',
          "--data", str_data,
          "--test", mode,
          ], stdout=subprocess.PIPE,

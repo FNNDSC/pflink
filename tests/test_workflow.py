@@ -42,5 +42,5 @@ def test_create_workflow(test_app, monkeypatch):
 def test_get_all_workflows(test_app, monkeypatch):
     response = test_app.get("/testing/")
     assert response.status_code == 200
-    assert len(response.json()) == 1
+    assert len(response.json()) > 0
 

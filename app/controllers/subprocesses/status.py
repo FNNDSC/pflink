@@ -11,14 +11,14 @@ from app.models.workflow import (
     WorkflowStatusResponseSchema,
     Error,
 )
-from app.controllers.utils import (
+from app.controllers.subprocesses.utils import (
     query_to_dict,
     dict_to_hash,
     update_workflow,
     retrieve_workflow,
     get_cube_url_from_pfdcm,
     substitute_dicom_tags,
-    _do_cube_create_user,
+    do_cube_create_user,
     retrieve_pfdcm_url,
 )
 
@@ -151,7 +151,7 @@ def _get_feed_status(request: WorkflowRequestSchema) -> dict:
         cube_url = get_cube_url_from_pfdcm(pfdcm_url, request.pfdcm_info.cube_service)
 
         # create a client using the username
-        cl = _do_cube_create_user(cube_url, request.workflow_info.user_name)
+        cl = do_cube_create_user(cube_url, request.workflow_info.user_name)
 
         # substitute dicom values for dicom tags present in feed name
         requested_feed_name = request.workflow_info.feed_name
