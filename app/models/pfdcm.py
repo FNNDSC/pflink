@@ -10,7 +10,7 @@ class PfdcmQuerySchema(BaseModel):
 
 class PfdcmCollectionResponseModel(BaseModel):
     """pfdcm collection response model"""
-    data: List[dict]
+    data: List[str]
     message: str = ""
 
 

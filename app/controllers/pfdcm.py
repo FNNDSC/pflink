@@ -30,9 +30,7 @@ def str_to_hash(str_data: str) -> str:
     
 # Retrieve all pfdcm records present in the database
 async def retrieve_pfdcms():
-    pfdcms = []
-    for pfdcm in pfdcm_collection.find():
-        pfdcms.append(pfdcm_helper(pfdcm))
+    pfdcms = [pfdcm["service_name"] for pfdcm in pfdcm_collection.find()]
     return pfdcms
 
 
@@ -94,7 +92,7 @@ async def cube_list(service_name: str) -> dict:
     pfdcm_url = pfdcm_server['service_address']
     pfdcm_cube_list_api = f'{pfdcm_url}/api/v1/SMDB/CUBE/list/'
     try:
-        response = requests.get(pfdcm_about_api)
+        response = requests.get(pfdcm_cube_list_api)
         d_results = json.loads(response.text)
         return d_results
     except:
@@ -108,7 +106,7 @@ async def swift_list(service_name: str) -> dict:
     pfdcm_url = pfdcm_server['service_address']
     pfdcm_swift_list_api = f'{pfdcm_url}/api/v1/SMDB/swift/list/'
     try:
-        response = requests.get(pfdcm_about_api)
+        response = requests.get(pfdcm_swift_list_api)
         d_results = json.loads(response.text)
         return d_results
     except:
@@ -120,9 +118,9 @@ async def pacs_list(service_name: str) -> dict:
     if not pfdcm_server:
         return {"error": f"{service_name} does not exist."}
     pfdcm_url = pfdcm_server['service_address']
-    pfdcm_pacs_list_api = f'{pfdcm_url}/api/v1/SMDB/PACSservice/list'
+    pfdcm_pacs_list_api = f'{pfdcm_url}/api/v1/PACSservice/list'
     try:
-        response = requests.get(pfdcm_about_api)
+        response = requests.get(pfdcm_pacs_list_api)
         d_results = json.loads(response.text)
         return d_results
     except:

@@ -7,6 +7,9 @@ from app.controllers.pfdcm import (
     retrieve_pfdcms,
     hello_pfdcm,
     about_pfdcm,
+    pacs_list,
+    swift_list,
+    cube_list,
     
 )
 from app.models.pfdcm import (
@@ -89,3 +92,39 @@ async def get_about_pfdcm(service_name: str) -> PfdcmQueryResponseSchema:
     """
     response = await about_pfdcm(service_name)
     return PfdcmQueryResponseSchema(data=response, message="")
+
+@router.get(
+    "/{service_name}/cube/list",
+    response_description="About PFDCM",
+    summary="Get details about a `pfdcm` instance"
+)
+async def cube_service_list(service_name: str) -> PfdcmCollectionResponseModel:
+    """
+    Get details about a specific `pfdcm` instance by providing its service name
+    """
+    response = await cube_list(service_name)
+    return PfdcmCollectionResponseModel(data=response, message="")
+
+@router.get(
+    "/{service_name}/swift/list",
+    response_description="About PFDCM",
+    summary="Get details about a `pfdcm` instance"
+)
+async def swift_service_list(service_name: str) -> PfdcmCollectionResponseModel:
+    """
+    Get details about a specific `pfdcm` instance by providing its service name
+    """
+    response = await swift_list(service_name)
+    return PfdcmCollectionResponseModel(data=response, message="")
+
+@router.get(
+    "/{service_name}/PACSservice/list",
+    response_description="About PFDCM",
+    summary="Get details about a `pfdcm` instance"
+)
+async def pacs_service_list(service_name: str) -> PfdcmCollectionResponseModel:
+    """
+    Get details about a specific `pfdcm` instance by providing its service name
+    """
+    response = await pacs_list(service_name)
+    return PfdcmCollectionResponseModel(data=response, message="")
