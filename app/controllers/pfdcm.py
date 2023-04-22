@@ -85,3 +85,45 @@ async def about_pfdcm(service_name: str) -> dict:
     except:
         return{"error": f"{pfdcm_about_api} does not exist."}
 
+
+# Get the list of `cube` available in a pfdcm instance
+async def cube_list(service_name: str) -> dict:
+    pfdcm_server = retrieve_pfdcm(service_name)
+    if not pfdcm_server:
+        return {"error": f"{service_name} does not exist."}
+    pfdcm_url = pfdcm_server['service_address']
+    pfdcm_cube_list_api = f'{pfdcm_url}/api/v1/SMDB/CUBE/list/'
+    try:
+        response = requests.get(pfdcm_about_api)
+        d_results = json.loads(response.text)
+        return d_results
+    except:
+        return{"error": f"{pfdcm_cube_list_api} does not exist."}
+
+# Get the list of `swift` servers available in a pfdcm instance
+async def swift_list(service_name: str) -> dict:
+    pfdcm_server = retrieve_pfdcm(service_name)
+    if not pfdcm_server:
+        return {"error": f"{service_name} does not exist."}
+    pfdcm_url = pfdcm_server['service_address']
+    pfdcm_swift_list_api = f'{pfdcm_url}/api/v1/SMDB/swift/list/'
+    try:
+        response = requests.get(pfdcm_about_api)
+        d_results = json.loads(response.text)
+        return d_results
+    except:
+        return{"error": f"{pfdcm_swift_list_api} does not exist."}
+
+# Get the list of `PACS service` available in a pfdcm instance
+async def pacs_list(service_name: str) -> dict:
+    pfdcm_server = retrieve_pfdcm(service_name)
+    if not pfdcm_server:
+        return {"error": f"{service_name} does not exist."}
+    pfdcm_url = pfdcm_server['service_address']
+    pfdcm_pacs_list_api = f'{pfdcm_url}/api/v1/SMDB/PACSservice/list'
+    try:
+        response = requests.get(pfdcm_about_api)
+        d_results = json.loads(response.text)
+        return d_results
+    except:
+        return{"error": f"{pfdcm_pacs_list_api} does not exist."}
