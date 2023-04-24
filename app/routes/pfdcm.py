@@ -23,6 +23,7 @@ router = APIRouter()
 
 @router.post(
     "",
+    status_code=201,
     response_description="pfdcm data added into the database.",
     summary="Add new `pfdcm` service details."
 )

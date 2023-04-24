@@ -51,26 +51,26 @@ def manage_workflow(db_key: str, test: str):
     pfdcm_url = retrieve_pfdcm_url(request.pfdcm_info.pfdcm_service)
     cube_url = get_cube_url_from_pfdcm(pfdcm_url, request.pfdcm_info.cube_service)
 
-    while not workflow.response.workflow_state == State.FEED_CREATED.value and MAX_RETRIES > 0:
+    while not workflow.response.workflow_state == State.FEED_CREATED and MAX_RETRIES > 0:
         workflow.started = True
         update_workflow(key, workflow)
         MAX_RETRIES -= 1
 
         match workflow.response.workflow_state:
 
-            case State.INITIALIZING.value:
+            case State.INITIALIZING:
                 if workflow.stale:
                     do_pfdcm_retrieve(request, pfdcm_url)
 
-            case State.RETRIEVING.value:
+            case State.RETRIEVING:
                 if workflow.response.state_progress == "100%" and workflow.stale:
                     do_pfdcm_push(request, pfdcm_url)
 
-            case State.PUSHING.value:
+            case State.PUSHING:
                 if workflow.response.state_progress == "100%" and workflow.stale:
                     do_pfdcm_register(request, pfdcm_url)
 
-            case State.REGISTERING.value:
+            case State.REGISTERING:
                 if workflow.response.state_progress == "100%" and workflow.stale:
                     try:
                         pl_inst_id = do_cube_create_feed(request, cube_url)

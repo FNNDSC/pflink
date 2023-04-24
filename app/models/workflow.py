@@ -6,7 +6,7 @@ str_description = """
 """
 
 
-class State(Enum):
+class State(str, Enum):
     """This Enum represents all the possible states of a workflow"""
     INITIALIZING = "initializing workflow"
     RETRIEVING = "retrieving from PACS"
@@ -17,7 +17,7 @@ class State(Enum):
     COMPLETED = "completed"
 
 
-class Error(Enum):
+class Error(str, Enum):
     """This Enum represents all the possible errors in a workflow"""
     pfdcm = "PFDCM server is unavailable."
     study = "Study not found in the PACS server. Please enter valid study info."
@@ -112,7 +112,7 @@ class WorkflowRequestSchema(BaseModel):
 class WorkflowStatusResponseSchema(BaseModel):
     """The Workflow status response model"""
     status: bool = True
-    workflow_state: str = State.INITIALIZING.value
+    workflow_state: State = State.INITIALIZING
     state_progress: str = "0%"
     feed_id: str = ""
     feed_name: str = ""

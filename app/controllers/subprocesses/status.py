@@ -44,7 +44,7 @@ def update_workflow_status(key: str, test: str):
     # If the status of the workflow is currently being updated by another process
     # or the workflow is in `Completed` state
     # or some error occurred and the workflow status is already marked as false, then do nothing
-    if not workflow.stale or workflow.response.workflow_state == State.COMPLETED.value or not workflow.response.status:
+    if not workflow.stale or workflow.response.workflow_state == State.COMPLETED or not workflow.response.status:
         # Do nothing and exit
         return
 
@@ -190,9 +190,9 @@ def get_analysis_status(response: dict) -> dict:
         if errored > 0 or cancelled > 0:
             analysis_details["error"] = str(errored + cancelled) + " job(s) failed"
         if feed_progress == 100:
-            analysis_details["state"] = State.COMPLETED.value
+            analysis_details["state"] = State.COMPLETED
         else:
-            analysis_details["state"] = State.ANALYZING.value
+            analysis_details["state"] = State.ANALYZING
 
     return analysis_details
 
@@ -232,13 +232,13 @@ def _parse_response(
             total_reg_perc = round((total_registered / total_images) * 100)
 
             if total_ret_perc > 0:
-                status.workflow_state = State.RETRIEVING.value
+                status.workflow_state = State.RETRIEVING
                 status.state_progress = str(total_ret_perc) + "%"
             if total_push_perc > 0:
-                status.workflow_state = State.PUSHING.value
+                status.workflow_state = State.PUSHING
                 status.state_progress = str(total_push_perc) + "%"
             if total_reg_perc > 0:
-                status.workflow_state = State.REGISTERING.value
+                status.workflow_state = State.REGISTERING
                 status.state_progress = str(total_reg_perc) + "%"
     else:
         status.error = Error.study.value
@@ -251,7 +251,7 @@ def _parse_response(
         return status
 
     if cube_response:
-        status.workflow_state = State.FEED_CREATED.value
+        status.workflow_state = State.FEED_CREATED
         status.feed_name = cube_response['name']
         status.feed_id = cube_response['id']
         status.state_progress = "100%"
@@ -280,32 +280,32 @@ def get_simulated_status(workflow: WorkflowDBSchema) -> WorkflowStatusResponseSc
 
     match current_status.workflow_state:
 
-        case State.INITIALIZING.value:
-            current_status.workflow_state = State.RETRIEVING.value
+        case State.INITIALIZING:
+            current_status.workflow_state = State.RETRIEVING
             current_status.state_progress = "25%"
 
-        case State.RETRIEVING.value:
+        case State.RETRIEVING:
             progress = __get_progress_from_text(current_status.state_progress)
             if progress >= 100:
-                current_status.workflow_state = State.PUSHING.value
+                current_status.workflow_state = State.PUSHING
                 current_status.state_progress = '25%'
             else:
                 progress += PROGRESS_JUMP
                 current_status.state_progress = str(progress) + '%'
 
-        case State.PUSHING.value:
+        case State.PUSHING:
             progress = __get_progress_from_text(current_status.state_progress)
             if progress >= 100:
-                current_status.workflow_state = State.REGISTERING.value
+                current_status.workflow_state = State.REGISTERING
                 current_status.state_progress = '25%'
             else:
                 progress += PROGRESS_JUMP
                 current_status.state_progress = str(progress) + '%'
 
-        case State.REGISTERING.value:
+        case State.REGISTERING:
             progress = __get_progress_from_text(current_status.state_progress)
             if progress >= 100:
-                current_status.workflow_state = State.FEED_CREATED.value
+                current_status.workflow_state = State.FEED_CREATED
                 current_status.state_progress = '100%'
                 current_status.feed_id = random.randint(0, MAX_N)
                 d_directive = query_to_dict(workflow.request)['PACS_directive']
@@ -314,14 +314,14 @@ def get_simulated_status(workflow: WorkflowDBSchema) -> WorkflowStatusResponseSc
                 progress += PROGRESS_JUMP
                 current_status.state_progress = str(progress) + '%'
 
-        case State.FEED_CREATED.value:
-            current_status.workflow_state = State.ANALYZING.value
+        case State.FEED_CREATED:
+            current_status.workflow_state = State.ANALYZING
             current_status.state_progress = '25%'
 
-        case State.ANALYZING.value:
+        case State.ANALYZING:
             progress = __get_progress_from_text(current_status.state_progress)
             if progress >= 100:
-                current_status.workflow_state = State.COMPLETED.value
+                current_status.workflow_state = State.COMPLETED
             else:
                 progress += PROGRESS_JUMP
                 current_status.state_progress = str(progress) + '%'

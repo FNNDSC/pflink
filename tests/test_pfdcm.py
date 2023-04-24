@@ -19,7 +19,7 @@ def test_create_pfdcm(test_app, monkeypatch):
     monkeypatch.setattr(app.controllers.pfdcm, "add_pfdcm", mock_post)
     response = test_app.post("/api/v1/pfdcm/", content=json.dumps(test_request_payload), )
 
-    assert response.status_code == 200
+    assert response.status_code == 201
     assert response.json() == test_response_payload
 
 

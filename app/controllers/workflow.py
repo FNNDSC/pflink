@@ -44,26 +44,26 @@ def validate_request(request: WorkflowRequestSchema):
     attr_count = 0
 
     if not request.pfdcm_info.pfdcm_service:
-        error += f"\n{Error.required_pfdcm.value}"
+        error += f"\n{Error.required_pfdcm}"
 
     if not request.pfdcm_info.PACS_service:
-        error += f"\n{Error.required_PACS.value}"
+        error += f"\n{Error.required_PACS}"
 
     for k, v in request.PACS_directive:
         if v:
             attr_count += 1
 
     if attr_count == 0:
-        error += f"\n{Error.required_directive.value}"
+        error += f"\n{Error.required_directive}"
 
     if not request.workflow_info.user_name:
-        error += f"\n{Error.required_user.value}"
+        error += f"\n{Error.required_user}"
 
     if not request.workflow_info.feed_name:
-        error += f"\n{Error.required_feed.value}"
+        error += f"\n{Error.required_feed}"
 
     if not request.workflow_info.plugin_name:
-        error += f"\n{Error.required_plugin.value}"
+        error += f"\n{Error.required_plugin}"
 
     return error
 
@@ -160,9 +160,9 @@ def create_response_with_error(
     """
     response.status = False
     try:
-        response.error = Error[error_type].value
+        response.error = Error[error_type]
     except:
-        response.error = Error.undefined.value
+        response.error = Error.undefined
     return response
 
 
