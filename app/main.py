@@ -69,7 +69,7 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "OPTIONS"],
     allow_headers=["*"],
 )
-app.include_router(BasicRouter, tags=["Basic Info"], prefix="")
-app.include_router(PfdcmRouter, tags=["Pfdcm Service Info"], prefix="/pfdcm")
-app.include_router(WorkflowRouter, tags=["Workflow Services"], prefix="/workflow")
-app.include_router(WorkflowTestRouter, tags=["Test Workflow Services"], prefix="/testing")
+app.include_router(BasicRouter, tags=["Basic Info"], prefix="/api/v1")
+app.include_router(PfdcmRouter, tags=["Pfdcm Service Info"], prefix="/api/v1/pfdcm")
+app.include_router(WorkflowRouter, tags=["Workflow Services"], prefix="/api/v1/workflow")
+app.include_router(WorkflowTestRouter, tags=["Test Workflow Services"], prefix="/api/v1/testing")

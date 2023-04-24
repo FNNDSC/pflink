@@ -21,21 +21,6 @@ from app.models.pfdcm import (
 router = APIRouter()
 
 
-@router.get(
-    "",
-    response_description="pfdcm setup info.",
-    summary="Retrieve all `pfdcm` services saved."
-)
-async def get_pfdcms() -> PfdcmCollectionResponseModel:
-    """
-    Fetch all `pfdcm` service addresses from the DB.
-    """
-    pfdcms = await retrieve_pfdcms()
-    if pfdcms:
-        return PfdcmCollectionResponseModel(data=pfdcms, message="pfdcm data retrieved successfully.")
-    return PfdcmCollectionResponseModel(data=pfdcms, message="There are no records in the DB.")
-
-    
 @router.post(
     "",
     response_description="pfdcm data added into the database.",
@@ -51,6 +36,21 @@ async def add_pfdcm_data(pfdcm: PfdcmQuerySchema = Body(...)) -> PfdcmQueryRespo
         return PfdcmQueryResponseSchema(data={}, message=f"service_name must be unique."
                                                          f" {pfdcm['service_name']} already exists.")
     return PfdcmQueryResponseSchema(data=new_pfdcm, message="New record created.")
+
+
+@router.get(
+    "/list",
+    response_description="pfdcm setup info.",
+    summary="Retrieve all `pfdcm` services saved."
+)
+async def get_pfdcms() -> PfdcmCollectionResponseModel:
+    """
+    Fetch all `pfdcm` service addresses from the DB.
+    """
+    pfdcms = await retrieve_pfdcms()
+    if pfdcms:
+        return PfdcmCollectionResponseModel(data=pfdcms, message="pfdcm data retrieved successfully.")
+    return PfdcmCollectionResponseModel(data=pfdcms, message="There are no records in the DB.")
 
 
 @router.get(
@@ -93,38 +93,41 @@ async def get_about_pfdcm(service_name: str) -> PfdcmQueryResponseSchema:
     response = await about_pfdcm(service_name)
     return PfdcmQueryResponseSchema(data=response, message="")
 
+
 @router.get(
     "/{service_name}/cube/list",
     response_description="About PFDCM",
-    summary="Get details about a `pfdcm` instance"
+    summary="Get the list of cube services registered to a `pfdcm` instance"
 )
 async def cube_service_list(service_name: str) -> PfdcmCollectionResponseModel:
     """
-    Get details about a specific `pfdcm` instance by providing its service name
+    Get the list of PACS services registered to a `pfdcm` instance by providing its service name
     """
     response = await cube_list(service_name)
-    return PfdcmCollectionResponseModel(data=response, message="")
+    return PfdcmQueryResponseSchema(data=response, message="")
+
 
 @router.get(
     "/{service_name}/swift/list",
     response_description="About PFDCM",
-    summary="Get details about a `pfdcm` instance"
+    summary="Get the list of swift services registered to a `pfdcm` instance"
 )
 async def swift_service_list(service_name: str) -> PfdcmCollectionResponseModel:
     """
-    Get details about a specific `pfdcm` instance by providing its service name
+    Get the list of PACS services registered to a `pfdcm` instance by providing its service name
     """
     response = await swift_list(service_name)
-    return PfdcmCollectionResponseModel(data=response, message="")
+    return PfdcmQueryResponseSchema(data=response, message="")
+
 
 @router.get(
     "/{service_name}/PACSservice/list",
     response_description="About PFDCM",
-    summary="Get details about a `pfdcm` instance"
+    summary="Get the list of PACS services registered to a `pfdcm` instance"
 )
 async def pacs_service_list(service_name: str) -> PfdcmCollectionResponseModel:
     """
-    Get details about a specific `pfdcm` instance by providing its service name
+    Get the list of PACS services registered to a `pfdcm` instance by providing its service name
     """
     response = await pacs_list(service_name)
-    return PfdcmCollectionResponseModel(data=response, message="")
+    return PfdcmQueryResponseSchema(data=response, message="")

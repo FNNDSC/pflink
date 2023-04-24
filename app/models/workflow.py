@@ -30,7 +30,6 @@ class Error(Enum):
     PACS = "Error while connecting to PACS server."
     required_pfdcm = "Please provide a pfdcm service name."
     required_PACS = "Please provide a PACS service name."
-    required_cube = "Please provide a cube service name."
     required_directive = "Please enter at least one value in PACS_directive"
     required_feed = "Please provide a feed name."
     required_user = "Please provide a user name."
@@ -44,7 +43,6 @@ class PFDCMInfoSchema(BaseModel):
     PACS_service: str = Field(...)
     cube_service: str = "local"
     swift_service: str = "local"
-    swift_service_PACS: str = Field(...)
     dicom_file_extension: str = "dcm"
     db_log_path: str = "/home/dicom/log"
 
@@ -94,8 +92,7 @@ class WorkflowRequestSchema(BaseModel):
             "example": {
                 "pfdcm_info": {
                     "pfdcm_service": "PFDCM",
-                    "PACS_service": "orthanc",
-                    "swift_service_PACS": "orthanc"
+                    "PACS_service": "orthanc"
                 },
                 "PACS_directive": {
                     "StudyInstanceUID": "12365548",

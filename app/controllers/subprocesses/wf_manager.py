@@ -179,7 +179,7 @@ def do_pfdcm_push(request: WorkflowRequestSchema, pfdcm_url: str):
     push_args = {
         'db': request.pfdcm_info.db_log_path,
         'swift': request.pfdcm_info.swift_service,
-        'swiftServicesPACS': request.pfdcm_info.swift_service_PACS,
+        'swiftServicesPACS': request.pfdcm_info.PACS_service,
         'swiftPackEachDICOM': True
     }
     pfdcm_do("push", push_args, request, pfdcm_url)
@@ -192,7 +192,7 @@ def do_pfdcm_register(request: WorkflowRequestSchema, pfdcm_url: str):
     register_args = {
         "db": request.pfdcm_info.db_log_path,
         "CUBE": request.pfdcm_info.cube_service,
-        "swiftServicesPACS": request.pfdcm_info.swift_service_PACS,
+        "swiftServicesPACS": request.pfdcm_info.PACS_service,
         "parseAllFilesWithSubStr": request.pfdcm_info.dicom_file_extension
     }
     pfdcm_do("register", register_args, request, pfdcm_url)

@@ -49,9 +49,6 @@ def validate_request(request: WorkflowRequestSchema):
     if not request.pfdcm_info.PACS_service:
         error += f"\n{Error.required_PACS.value}"
 
-    if not request.pfdcm_info.cube_service:
-        error += f"\n{Error.required_cube.value}"
-
     for k, v in request.PACS_directive:
         if v:
             attr_count += 1

@@ -66,7 +66,7 @@ async def hello_pfdcm(service_name: str) -> dict:
         d_results = json.loads(response.text)
         return d_results
     except:
-        return{"error": f"{pfdcm_hello_api} does not exist."}
+        return{"error": f"Unable to reach {pfdcm_url}."}
 
 
 # Get details about pfdcm
@@ -81,7 +81,7 @@ async def about_pfdcm(service_name: str) -> dict:
         d_results = json.loads(response.text)
         return d_results
     except:
-        return{"error": f"{pfdcm_about_api} does not exist."}
+        return{"error": f"Unable to reach {pfdcm_url}."}
 
 
 # Get the list of `cube` available in a pfdcm instance
@@ -96,7 +96,8 @@ async def cube_list(service_name: str) -> dict:
         d_results = json.loads(response.text)
         return d_results
     except:
-        return{"error": f"{pfdcm_cube_list_api} does not exist."}
+        return{"error": f"Unable to reach {pfdcm_url}."}
+
 
 # Get the list of `swift` servers available in a pfdcm instance
 async def swift_list(service_name: str) -> dict:
@@ -110,7 +111,8 @@ async def swift_list(service_name: str) -> dict:
         d_results = json.loads(response.text)
         return d_results
     except:
-        return{"error": f"{pfdcm_swift_list_api} does not exist."}
+        return{"error": f"Unable to reach {pfdcm_url}."}
+
 
 # Get the list of `PACS service` available in a pfdcm instance
 async def pacs_list(service_name: str) -> dict:
@@ -124,4 +126,4 @@ async def pacs_list(service_name: str) -> dict:
         d_results = json.loads(response.text)
         return d_results
     except:
-        return{"error": f"{pfdcm_pacs_list_api} does not exist."}
+        return{"error": f"Unable to reach {pfdcm_url}."}

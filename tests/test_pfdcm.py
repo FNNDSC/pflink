@@ -17,14 +17,14 @@ def test_create_pfdcm(test_app, monkeypatch):
         return 1
 
     monkeypatch.setattr(app.controllers.pfdcm, "add_pfdcm", mock_post)
-    response = test_app.post("/pfdcm/", content=json.dumps(test_request_payload), )
+    response = test_app.post("/api/v1/pfdcm/", content=json.dumps(test_request_payload), )
 
     assert response.status_code == 200
     assert response.json() == test_response_payload
 
 
-def test_get_pfdcms(test_app, monkeypatch):
-    response = test_app.get("/pfdcm/")
+def test_get_pfdcm_list(test_app, monkeypatch):
+    response = test_app.get("/api/v1/pfdcm/list")
 
     assert response.status_code == 200
     assert len(response.json()) > 0
@@ -39,7 +39,7 @@ def test_get_pfdcm(test_app, monkeypatch):
         },
         "message": "pfdcm data retrieved successfully."
     }
-    response = test_app.get("/pfdcm/something")
+    response = test_app.get("/api/v1/pfdcm/something")
 
     assert response.status_code == 200
     assert response.json() == test_response_payload
@@ -48,11 +48,11 @@ def test_get_pfdcm(test_app, monkeypatch):
 def test_get_pfdcm_hello(test_app, monkeypatch):
     test_response_payload = {
         "data": {
-            "error": "something else/api/v1/hello/ does not exist."
+            "error": "Unable to reach something else."
         },
         "message": ""
     }
-    response = test_app.get("/pfdcm/something/hello")
+    response = test_app.get("/api/v1/pfdcm/something/hello")
     assert response.status_code == 200
     assert response.json() == test_response_payload
 
@@ -60,10 +60,47 @@ def test_get_pfdcm_hello(test_app, monkeypatch):
 def test_get_pfdcm_about(test_app, monkeypatch):
     test_response_payload = {
         "data": {
-            "error": "something else/api/v1/about/ does not exist."
+            "error": "Unable to reach something else."
         },
         "message": ""
     }
-    response = test_app.get("/pfdcm/something/about")
+    response = test_app.get("/api/v1/pfdcm/something/about")
     assert response.status_code == 200
     assert response.json() == test_response_payload
+
+
+def test_get_pfdcm_cube_list(test_app, monkeypatch):
+    test_response_payload = {
+        "data": {
+            "error": "Unable to reach something else."
+        },
+        "message": ""
+    }
+    response = test_app.get("/api/v1/pfdcm/something/cube/list")
+    assert response.status_code == 200
+    assert response.json() == test_response_payload
+
+
+def test_get_pfdcm_swift_list(test_app, monkeypatch):
+    test_response_payload = {
+        "data": {
+            "error": "Unable to reach something else."
+        },
+        "message": ""
+    }
+    response = test_app.get("/api/v1/pfdcm/something/swift/list")
+    assert response.status_code == 200
+    assert response.json() == test_response_payload
+
+
+def test_get_pfdcm_pacs_list(test_app, monkeypatch):
+    test_response_payload = {
+        "data": {
+            "error": "Unable to reach something else."
+        },
+        "message": ""
+    }
+    response = test_app.get("/api/v1/pfdcm/something/PACSservice/list")
+    assert response.status_code == 200
+    assert response.json() == test_response_payload
+
