@@ -33,7 +33,7 @@ def test_get_pfdcm_list(test_app, monkeypatch):
 def test_get_pfdcm(test_app, monkeypatch):
     test_response_payload = {
         "data": {
-            "_id": "437b930db84b8079c2dd804a71936b5f",
+            '_id': '437b930db84b8079c2dd804a71936b5f',
             "service_name": "something",
             "service_address": "something else"
         },
