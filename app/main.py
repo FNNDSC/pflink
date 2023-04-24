@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes.basic import router as BasicRouter
-from app.routes.pfdcm import router as PfdcmRouter
-from app.routes.workflow import router as WorkflowRouter
-from app.routes.testing import router as WorkflowTestRouter
+from app.routes.basic import router as basic_router
+from app.routes.pfdcm import router as pfdcm_router
+from app.routes.workflow import router as workflow_router
+from app.routes.testing import router as workflow_testing_router
 from app.config import settings
 
 description = """
@@ -15,8 +15,15 @@ add new node or pipeline on the registered dicoms in CUBE using pflink.
 ## pfdcm
 
 You can **add**,**retrieve** `pfdcm` service info.
+Additionally you can:
 
-## Workflows
+* **Get a `hello` response from a pfdcm instance.**
+* **Know `about` a pfdcm instance.**
+* **Get the list of the names of all `cube` instances available in a pfdcm instance.**
+* **Get the list of the names of all `swift` instances available in a pfdcm instance.**
+* **Get the list of the names of all `PACS` instances available in a pfdcm instance.**
+
+## Workflow
 
 You can **create** new workflows and get status of the workflow.
 
@@ -69,7 +76,7 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "OPTIONS"],
     allow_headers=["*"],
 )
-app.include_router(BasicRouter, tags=["Basic Info"], prefix="/api/v1")
-app.include_router(PfdcmRouter, tags=["Pfdcm Service Info"], prefix="/api/v1/pfdcm")
-app.include_router(WorkflowRouter, tags=["Workflow Services"], prefix="/api/v1/workflow")
-app.include_router(WorkflowTestRouter, tags=["Test Workflow Services"], prefix="/api/v1/testing")
+app.include_router(basic_router, tags=["Basic Info"], prefix="/api/v1")
+app.include_router(pfdcm_router, tags=["Pfdcm Service Info"], prefix="/api/v1/pfdcm")
+app.include_router(workflow_router, tags=["Workflow Services"], prefix="/api/v1/workflow")
+app.include_router(workflow_testing_router, tags=["Test Workflow Services"], prefix="/api/v1/testing")

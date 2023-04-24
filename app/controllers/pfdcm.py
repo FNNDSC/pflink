@@ -85,10 +85,11 @@ async def about_pfdcm(service_name: str) -> dict:
 
 
 # Get the list of `cube` available in a pfdcm instance
-async def cube_list(service_name: str) -> dict:
+async def cube_list(service_name: str) -> list[str]:
+    d_results = []
     pfdcm_server = retrieve_pfdcm(service_name)
     if not pfdcm_server:
-        return {"error": f"{service_name} does not exist."}
+        return d_results
     pfdcm_url = pfdcm_server['service_address']
     pfdcm_cube_list_api = f'{pfdcm_url}/api/v1/SMDB/CUBE/list/'
     try:
@@ -96,14 +97,15 @@ async def cube_list(service_name: str) -> dict:
         d_results = json.loads(response.text)
         return d_results
     except:
-        return{"error": f"Unable to reach {pfdcm_url}."}
+        return d_results
 
 
 # Get the list of `swift` servers available in a pfdcm instance
-async def swift_list(service_name: str) -> dict:
+async def swift_list(service_name: str) -> list[str]:
+    d_results = []
     pfdcm_server = retrieve_pfdcm(service_name)
     if not pfdcm_server:
-        return {"error": f"{service_name} does not exist."}
+        return d_results
     pfdcm_url = pfdcm_server['service_address']
     pfdcm_swift_list_api = f'{pfdcm_url}/api/v1/SMDB/swift/list/'
     try:
@@ -111,14 +113,15 @@ async def swift_list(service_name: str) -> dict:
         d_results = json.loads(response.text)
         return d_results
     except:
-        return{"error": f"Unable to reach {pfdcm_url}."}
+        return d_results
 
 
 # Get the list of `PACS service` available in a pfdcm instance
-async def pacs_list(service_name: str) -> dict:
+async def pacs_list(service_name: str) -> list[str]:
+    d_results = []
     pfdcm_server = retrieve_pfdcm(service_name)
     if not pfdcm_server:
-        return {"error": f"{service_name} does not exist."}
+        return d_results
     pfdcm_url = pfdcm_server['service_address']
     pfdcm_pacs_list_api = f'{pfdcm_url}/api/v1/PACSservice/list'
     try:
@@ -126,4 +129,4 @@ async def pacs_list(service_name: str) -> dict:
         d_results = json.loads(response.text)
         return d_results
     except:
-        return{"error": f"Unable to reach {pfdcm_url}."}
+        return d_results

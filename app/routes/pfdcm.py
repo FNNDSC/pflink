@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Body
+from fastapi import APIRouter, Body, HTTPException
 from fastapi.encoders import jsonable_encoder
 
 from app.controllers.pfdcm import (
@@ -15,7 +15,6 @@ from app.controllers.pfdcm import (
 from app.models.pfdcm import (
     PfdcmQuerySchema,
     PfdcmQueryResponseSchema,
-    PfdcmCollectionResponseModel,
 )
 
 router = APIRouter()
@@ -44,14 +43,12 @@ async def add_pfdcm_data(pfdcm: PfdcmQuerySchema = Body(...)) -> PfdcmQueryRespo
     response_description="pfdcm setup info.",
     summary="Retrieve all `pfdcm` services saved."
 )
-async def get_pfdcms() -> PfdcmCollectionResponseModel:
+async def get_pfdcms() -> list[str]:
     """
     Fetch all `pfdcm` service addresses from the DB.
     """
     pfdcms = await retrieve_pfdcms()
-    if pfdcms:
-        return PfdcmCollectionResponseModel(data=pfdcms, message="pfdcm data retrieved successfully.")
-    return PfdcmCollectionResponseModel(data=pfdcms, message="There are no records in the DB.")
+    return pfdcms
 
 
 @router.get(
@@ -100,12 +97,14 @@ async def get_about_pfdcm(service_name: str) -> PfdcmQueryResponseSchema:
     response_description="About PFDCM",
     summary="Get the list of cube services registered to a `pfdcm` instance"
 )
-async def cube_service_list(service_name: str) -> PfdcmCollectionResponseModel:
+async def cube_service_list(service_name: str) -> list[str]:
     """
     Get the list of PACS services registered to a `pfdcm` instance by providing its service name
     """
     response = await cube_list(service_name)
-    return PfdcmQueryResponseSchema(data=response, message="")
+    if not response:
+        raise HTTPException(status_code=404, detail=f"Unable to reach endpoints of {service_name}")
+    return response
 
 
 @router.get(
@@ -113,12 +112,14 @@ async def cube_service_list(service_name: str) -> PfdcmCollectionResponseModel:
     response_description="About PFDCM",
     summary="Get the list of swift services registered to a `pfdcm` instance"
 )
-async def swift_service_list(service_name: str) -> PfdcmCollectionResponseModel:
+async def swift_service_list(service_name: str) -> list[str]:
     """
     Get the list of PACS services registered to a `pfdcm` instance by providing its service name
     """
     response = await swift_list(service_name)
-    return PfdcmQueryResponseSchema(data=response, message="")
+    if not response:
+        raise HTTPException(status_code=404, detail=f"Unable to reach endpoints of {service_name}")
+    return response
 
 
 @router.get(
@@ -126,9 +127,11 @@ async def swift_service_list(service_name: str) -> PfdcmCollectionResponseModel:
     response_description="About PFDCM",
     summary="Get the list of PACS services registered to a `pfdcm` instance"
 )
-async def pacs_service_list(service_name: str) -> PfdcmCollectionResponseModel:
+async def pacs_service_list(service_name: str) -> list[str]:
     """
     Get the list of PACS services registered to a `pfdcm` instance by providing its service name
     """
     response = await pacs_list(service_name)
-    return PfdcmQueryResponseSchema(data=response, message="")
+    if not response:
+        raise HTTPException(status_code=404, detail=f"Unable to reach endpoints of {service_name}")
+    return response

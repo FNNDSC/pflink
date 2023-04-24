@@ -31,7 +31,7 @@ async def test_create_workflow(
      * **compute**
      * **cube**
 
-     For an invalid error_type you get a error message as follows:
+     For an invalid error_type you get an error message as follows:
       * "Undefined error_type : Please pass values as pfdcm/study/feed/analysis/compute/cube as valid error_type"
     """
     response = await post_workflow(data, test=True, error_type=error_type)

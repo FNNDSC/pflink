@@ -71,36 +71,26 @@ def test_get_pfdcm_about(test_app, monkeypatch):
 
 def test_get_pfdcm_cube_list(test_app, monkeypatch):
     test_response_payload = {
-        "data": {
-            "error": "Unable to reach something else."
-        },
-        "message": ""
+        "detail": "Unable to reach endpoints of something"
     }
     response = test_app.get("/api/v1/pfdcm/something/cube/list")
-    assert response.status_code == 200
+    assert response.status_code == 404
     assert response.json() == test_response_payload
 
 
 def test_get_pfdcm_swift_list(test_app, monkeypatch):
     test_response_payload = {
-        "data": {
-            "error": "Unable to reach something else."
-        },
-        "message": ""
+        "detail": "Unable to reach endpoints of something"
     }
     response = test_app.get("/api/v1/pfdcm/something/swift/list")
-    assert response.status_code == 200
+    assert response.status_code == 404
     assert response.json() == test_response_payload
 
 
 def test_get_pfdcm_pacs_list(test_app, monkeypatch):
     test_response_payload = {
-        "data": {
-            "error": "Unable to reach something else."
-        },
-        "message": ""
+        "detail": "Unable to reach endpoints of something"
     }
     response = test_app.get("/api/v1/pfdcm/something/PACSservice/list")
-    assert response.status_code == 200
+    assert response.status_code == 404
     assert response.json() == test_response_payload
-
