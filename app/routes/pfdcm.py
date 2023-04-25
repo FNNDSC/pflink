@@ -64,8 +64,8 @@ async def get_pfdcm_data(service_name: str) -> PfdcmQueryResponseSchema:
     if pfdcm:
         return PfdcmQueryResponseSchema(data=pfdcm, message="pfdcm data retrieved successfully.")
     return PfdcmQueryResponseSchema(data=[], message=f"No existing record found for {service_name}.")
-    
-    
+
+
 @router.get(
     "/{service_name}/hello",
     response_description="Hello from PFDCM",

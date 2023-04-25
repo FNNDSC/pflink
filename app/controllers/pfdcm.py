@@ -52,13 +52,13 @@ def retrieve_pfdcm(service_name: str) -> dict:
     pfdcm = pfdcm_collection.find_one({"service_name": service_name})
     if pfdcm:
         return pfdcm_helper(pfdcm)
-
-
+        
+        
 # Get a 'hello' response from pfdcm
-async def hello_pfdcm(service_name: str) -> dict:
-    pfdcm_server = retrieve_pfdcm(service_name)
+async def hello_pfdcm(pfdcm_name: str) -> dict:
+    pfdcm_server = retrieve_pfdcm(pfdcm_name)
     if not pfdcm_server:
-        return {"error": f"{service_name} does not exist."}
+        return {"Error": f"Service {pfdcm_name} not found in the DB"}
     pfdcm_url = pfdcm_server['service_address']
     pfdcm_hello_api = f'{pfdcm_url}/api/v1/hello/'
     try:
@@ -69,7 +69,6 @@ async def hello_pfdcm(service_name: str) -> dict:
         return {"error": f"Unable to reach {pfdcm_url}."}
 
 
-# Get details about pfdcm
 async def about_pfdcm(service_name: str) -> dict:
     pfdcm_server = retrieve_pfdcm(service_name)
     if not pfdcm_server:
@@ -143,3 +142,4 @@ def delete_pfdcm(service_name: str):
             pfdcm_collection.delete_one({"_id": pfdcm["_id"]})
             delete_count += 1
     return {"Message": f"{delete_count} record(s) deleted!"}
+
