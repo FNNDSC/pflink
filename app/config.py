@@ -1,12 +1,10 @@
-from pydantic import BaseSettings, MongoDsn, AnyHttpUrl
+from pydantic import BaseSettings, MongoDsn
 
 
 class Settings(BaseSettings):
-    pfdcm_name: str = 'PFDCMLOCAL'
     pflink_mongodb: MongoDsn = 'mongodb://localhost:27017'
-    pflink_pfdcm: AnyHttpUrl = 'http://localhost:4005'
-    pflink_port: int = 8050
-    version: str = "2.0.3"
+    version: str = "2.1.7"
 
 
 settings = Settings()
+

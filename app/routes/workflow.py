@@ -1,21 +1,22 @@
 from fastapi import APIRouter
 
-from models.workflow import (
-    DicomStatusQuerySchema,
-    DicomStatusResponseSchema,
+from app.models.workflow import (
+    WorkflowRequestSchema,
+    WorkflowStatusResponseSchema,
 )
 
-from controllers.workflow import (
+from app.controllers.workflow import (
     post_workflow,
 )
 
 router = APIRouter()
-        
+
+
 @router.post(
-    "/",
+    "",
     response_description="Workflow response retrieved",
-    summary             = "Create a workflow")
-async def create_workflow(data : DicomStatusQuerySchema) -> DicomStatusResponseSchema: 
+    summary="Create a workflow")
+async def create_workflow(data: WorkflowRequestSchema) -> WorkflowStatusResponseSchema:
     """
     Get the status of a workflow by POSTing a payload using this API endpoint.
     If it's the first time a client is POSTing a payload, this API creates a new
@@ -23,3 +24,4 @@ async def create_workflow(data : DicomStatusQuerySchema) -> DicomStatusResponseS
     """  
     response = await post_workflow(data)   
     return response
+

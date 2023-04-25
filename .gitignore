@@ -9,3 +9,6 @@ htmlcov
 .idea/
 .vscode/
 database
+venv
+
+
