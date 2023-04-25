@@ -22,6 +22,7 @@ from app.controllers.subprocesses.utils import (
     retrieve_pfdcm_url,
 )
 
+from app.controllers.subprocesses.subprocess_helper import get_process_count
 log_format = "%(asctime)s: %(message)s"
 logging.basicConfig(
     format=log_format,
@@ -44,7 +45,7 @@ def update_workflow_status(key: str, test: str):
     # If the status of the workflow is currently being updated by another process
     # or the workflow is in `Completed` state
     # or some error occurred and the workflow status is already marked as false, then do nothing
-    if not workflow.stale or workflow.response.workflow_state == State.COMPLETED or not workflow.response.status:
+    if is_status_subprocess_running(workflow) or workflow.response.workflow_state == State.COMPLETED or not workflow.response.status:
         # Do nothing and exit
         return
 
@@ -59,6 +60,14 @@ def update_workflow_status(key: str, test: str):
     workflow.response = updated_status
     update_status_flag(key, workflow, True)
     logging.info(f"UPDATED status for {key}, releasing lock")
+
+
+def is_status_subprocess_running(workflow: WorkflowDBSchema):
+    proc_count = get_process_count("status",args.data)
+
+    if not workflow.stale and proc_count>0:
+        return True
+    return False
 
 
 def update_status_flag(key: str, workflow: WorkflowDBSchema, flag: bool):

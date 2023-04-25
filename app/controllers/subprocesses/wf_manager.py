@@ -56,7 +56,7 @@ def manage_workflow(db_key: str, test: str):
         update_workflow(key, workflow)
         MAX_RETRIES -= 1
 
-        match workflow.response.workflow_state:
+        match workflow.response.workflow_state and workflow.response.status:
 
             case State.INITIALIZING:
                 if workflow.stale:

@@ -140,7 +140,7 @@ async def post_workflow(
     if error_type:
         return create_response_with_error(error_type, workflow.response)
 
-    mode, str_data = await get_suproc_params(test, request)
+    mode, str_data = get_suproc_params(test, request)
     # run workflow manager subprocess on the workflow
     sub_mng = manage_workflow(mode, str_data)
 
@@ -204,7 +204,7 @@ def debug_process(bgprocess):
     print(stderr, stdout)
 
 
-async def get_suproc_params(test: bool, request: WorkflowRequestSchema) -> (str, str):
+def get_suproc_params(test: bool, request: WorkflowRequestSchema) -> (str, str):
     """
     Return mode, str_data
     """
