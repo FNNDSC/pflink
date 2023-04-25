@@ -1,4 +1,5 @@
 # pflink
+[![Build](https://github.com/FNNDSC/pflink/actions/workflows/build.yml/badge.svg)](https://github.com/FNNDSC/pflink/actions/workflows/build.yml)
 A Python-FastAPI application to interact with CUBE and pfdcm.
 
 User can Query/Retrieve/Push/Register dicoms and additionally create new feed, add new node or pipeline on the registered dicoms in CUBE using `pflink`.
