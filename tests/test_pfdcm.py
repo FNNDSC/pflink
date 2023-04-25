@@ -94,3 +94,13 @@ def test_get_pfdcm_pacs_list(test_app, monkeypatch):
     response = test_app.get("/api/v1/pfdcm/something/PACSservice/list")
     assert response.status_code == 404
     assert response.json() == test_response_payload
+
+# Functional testing
+
+
+def test_delete_pfdcm(test_app):
+    test_response_payload = {
+        "Message": "1 record(s) deleted!"
+    }
+    response = app.controllers.pfdcm.delete_pfdcm("something")
+    assert response == test_response_payload

@@ -26,8 +26,8 @@ def str_to_hash(str_data: str) -> str:
     hash_request = hashlib.md5(str_data.encode())
     key = hash_request.hexdigest()
     return key
-    
-    
+
+
 # Retrieve all pfdcm records present in the database
 async def retrieve_pfdcms():
     pfdcms = [pfdcm["service_name"] for pfdcm in pfdcm_collection.find()]
@@ -66,7 +66,7 @@ async def hello_pfdcm(service_name: str) -> dict:
         d_results = json.loads(response.text)
         return d_results
     except:
-        return{"error": f"Unable to reach {pfdcm_url}."}
+        return {"error": f"Unable to reach {pfdcm_url}."}
 
 
 # Get details about pfdcm
@@ -81,7 +81,7 @@ async def about_pfdcm(service_name: str) -> dict:
         d_results = json.loads(response.text)
         return d_results
     except:
-        return{"error": f"Unable to reach {pfdcm_url}."}
+        return {"error": f"Unable to reach {pfdcm_url}."}
 
 
 # Get the list of `cube` available in a pfdcm instance
@@ -130,3 +130,16 @@ async def pacs_list(service_name: str) -> list[str]:
         return d_results
     except:
         return d_results
+
+
+def delete_pfdcm(service_name: str):
+    """
+    Delete a pfdcm record from the DB
+    """
+    delete_count = 0
+    key = str_to_hash(service_name)
+    for pfdcm in pfdcm_collection.find():
+        if pfdcm["_id"] == key:
+            pfdcm_collection.delete_one({"_id": pfdcm["_id"]})
+            delete_count += 1
+    return {"Message": f"{delete_count} record(s) deleted!"}

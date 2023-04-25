@@ -86,12 +86,12 @@ def add_workflow(workflow_data: WorkflowDBSchema) -> WorkflowDBSchema:
     return workflow_retrieve_helper(workflow)
 
 
-async def delete_single_workflow(request: WorkflowRequestSchema):
+def delete_workflow(request: dict):
     """
     Delete a workflow record from DB
     """
     delete_count = 0
-    key = request_to_hash(request)
+    key = dict_to_hash(request)
     for workflow in workflow_collection.find():
         if workflow["_id"] == key:
             workflow_collection.delete_one({"_id": workflow["_id"]})

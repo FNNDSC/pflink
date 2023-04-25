@@ -14,13 +14,19 @@ cd pflink
 ### An instance of `mongodb` & `pflink` should be up and running on `localhost` on the following ports:
 
 
-app           |  URL
---------------|---------------------------
-mongoDB       | http://localhost:27017
-pflink        | http://localhost:8050
-
+| app     | URL                    |
+|---------|------------------------|
+| mongoDB | http://localhost:27017 |
+| pflink  | http://localhost:8050  |
 
 Go to http://localhost:8050/docs for API usage
+
+## Testing
+
+```bash
+cd pflink
+./test.sh
+```
 
 ## Unmake
 
