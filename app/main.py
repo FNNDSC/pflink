@@ -33,7 +33,6 @@ You will be able to:
 
 * **Get all workflow records present in the DB.**
 * **Submit a test workflow request and get its simulated status in response.**
-* **Delete a specific workflow record from the database.**
 
 """
 
