@@ -51,8 +51,8 @@ tags_metadata = [
     },
     {
         "name": "Test Workflow Services",
-        "description": "Create dummy workflow records and get updated **status**. You can also **retrieve** and "
-                       "**delete** all dummy records in the DB"
+        "description": "Create dummy workflow records and get updated **status**. You can also **retrieve** all "
+                       "the records from DB"
     }
 ]
     

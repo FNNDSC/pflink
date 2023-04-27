@@ -116,7 +116,7 @@ async def post_workflow(
     """
     The purpose of this method is to create a new workflow object in the DB if not already present.
     This method then starts two independent subprocesses in the background:
-        1) Run a new subprocess to manage the workflow of a given request
+        1) Run a new subprocess to manage the workflow
         2) Run a new subprocess to update the status of the workflow
     Finally, return the current status of the workflow from the database
     """
