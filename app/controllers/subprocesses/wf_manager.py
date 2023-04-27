@@ -1,3 +1,6 @@
+"""
+This module manages different states of a workflow by constantly checking the status of a workflow in the DB.
+"""
 import argparse
 import json
 import logging
@@ -37,8 +40,7 @@ args = parser.parse_args()
 def manage_workflow(db_key: str, test: str):
     """
     Manage workflow:
-    Schedule task based on status 
-    from the DB
+    Schedule task based on status from the DB
     """
     MAX_RETRIES = 50
     pl_inst_id = 0
@@ -51,7 +53,7 @@ def manage_workflow(db_key: str, test: str):
     pfdcm_url = retrieve_pfdcm_url(request.pfdcm_info.pfdcm_service)
     cube_url = get_cube_url_from_pfdcm(pfdcm_url, request.pfdcm_info.cube_service)
 
-    while not workflow.response.workflow_state == State.FEED_CREATED and MAX_RETRIES > 0 and workflow.response.status:
+    while not workflow.response.workflow_state == State.ANALYZING and MAX_RETRIES > 0 and workflow.response.status:
         workflow.started = True
         update_workflow(key, workflow)
         MAX_RETRIES -= 1
@@ -81,20 +83,19 @@ def manage_workflow(db_key: str, test: str):
                         update_workflow(key, workflow)
                         break
 
+            case State.FEED_CREATED:
+                if workflow.stale:
+                    try:
+                        do_cube_start_analysis(pl_inst_id, request.workflow_info, cube_url)
+                    except Exception as ex:
+                        logging.info(Error.analysis.value)
+                        workflow.response.error = Error.analysis.value + str(ex)
+                        workflow.response.status = False
+                        update_workflow(key, workflow)
+
         update_status(request, test)
         time.sleep(10)
         workflow = retrieve_workflow(key)
-
-    if pl_inst_id == 0:
-        return
-
-    try:
-        do_cube_start_analysis(pl_inst_id, request.workflow_info, cube_url)
-    except Exception as ex:
-        logging.info(Error.analysis.value)
-        workflow.response.error = Error.analysis.value + str(ex)
-        workflow.response.status = False
-        update_workflow(key, workflow)
 
 
 def update_status(request: WorkflowRequestSchema, test: str):

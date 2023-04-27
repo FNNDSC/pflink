@@ -1,3 +1,6 @@
+"""
+This module updates the state of a workflow in the DB
+"""
 import argparse
 import json
 import logging
@@ -45,7 +48,8 @@ def update_workflow_status(key: str, test: str):
     # If the status of the workflow is currently being updated by another process
     # or the workflow is in `Completed` state
     # or some error occurred and the workflow status is already marked as false, then do nothing
-    if is_status_subprocess_running(workflow) or workflow.response.workflow_state == State.COMPLETED or not workflow.response.status:
+    if is_status_subprocess_running(workflow) or workflow.response.workflow_state == State.COMPLETED\
+            or not workflow.response.status:
         # Do nothing and exit
         return
 
@@ -63,9 +67,9 @@ def update_workflow_status(key: str, test: str):
 
 
 def is_status_subprocess_running(workflow: WorkflowDBSchema):
-    proc_count = get_process_count("status",args.data)
+    proc_count = get_process_count("status", args.data)
 
-    if not workflow.stale and proc_count>0:
+    if not workflow.stale and proc_count > 0:
         return True
     return False
 
@@ -87,7 +91,7 @@ def get_current_status(
     Return the status of a workflow in `pflink` by asking `pfdcm` & `cube`. The sequence is as follows:
         1) Ask `pfdcm` about the status of a study
         2) Ask `cube` about the status of the feed created using the study
-        3) Parse both the results to a response schema
+        3) Serialize both the results to a response schema
         4) Return the response
     """
     pfdcm_resp = _get_pfdcm_status(request)
