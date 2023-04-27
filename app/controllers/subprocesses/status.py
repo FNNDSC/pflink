@@ -146,9 +146,11 @@ def _get_pfdcm_status(request: WorkflowRequestSchema):
             }
         }
         response = requests.post(pfdcm_status_url, json=pfdcm_body, headers=headers)
-        return json.loads(response.text)
+        d_response = json.loads(response.text)
+        d_response["service_name"] = request.pfdcm_info.pfdcm_service
+        return d_response
     except Exception as ex:
-        return {"error": Error.pfdcm.value + str(ex)}
+        return {"error": Error.pfdcm.value + f" {str(ex)} for pfdcm_service {request.pfdcm_info.pfdcm_service}"}
 
 
 def _get_feed_status(request: WorkflowRequestSchema) -> dict:
@@ -227,7 +229,8 @@ def _parse_response(
     valid = pfdcm_response.get('pypx')
     if not valid:
         status.status = False
-        status.error = Error.PACS.value + pfdcm_response['message']
+        status.error = Error.PACS.value + f" {pfdcm_response['message']} for pfdcm_service" \
+                                          f" {pfdcm_response['service_name']}"
         return status
     data = pfdcm_response['pypx']['data']
     study = pfdcm_response['pypx']['then']['00-status']['study']
