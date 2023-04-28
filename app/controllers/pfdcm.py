@@ -1,6 +1,6 @@
-import requests
 import json
 import hashlib
+import httpx
 from app.config import settings
 from pymongo import MongoClient
 
@@ -61,12 +61,13 @@ async def hello_pfdcm(pfdcm_name: str) -> dict:
         return {"Error": f"Service {pfdcm_name} not found in the DB"}
     pfdcm_url = pfdcm_server['service_address']
     pfdcm_hello_api = f'{pfdcm_url}/api/v1/hello/'
-    try:
-        response = requests.get(pfdcm_hello_api)
-        d_results = json.loads(response.text)
-        return d_results
-    except:
-        return {"error": f"Unable to reach {pfdcm_url}."}
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(pfdcm_hello_api)
+            d_results = json.loads(response.text)
+            return d_results
+        except:
+            return {"error": f"Unable to reach {pfdcm_url}."}
 
 
 async def about_pfdcm(service_name: str) -> dict:
@@ -75,12 +76,13 @@ async def about_pfdcm(service_name: str) -> dict:
         return {"error": f"{service_name} does not exist."}
     pfdcm_url = pfdcm_server['service_address']
     pfdcm_about_api = f'{pfdcm_url}/api/v1/about/'
-    try:
-        response = requests.get(pfdcm_about_api)
-        d_results = json.loads(response.text)
-        return d_results
-    except:
-        return {"error": f"Unable to reach {pfdcm_url}."}
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(pfdcm_about_api)
+            d_results = json.loads(response.text)
+            return d_results
+        except:
+            return {"error": f"Unable to reach {pfdcm_url}."}
 
 
 # Get the list of `cube` available in a pfdcm instance
@@ -91,12 +93,13 @@ async def cube_list(service_name: str) -> list[str]:
         return d_results
     pfdcm_url = pfdcm_server['service_address']
     pfdcm_cube_list_api = f'{pfdcm_url}/api/v1/SMDB/CUBE/list/'
-    try:
-        response = requests.get(pfdcm_cube_list_api)
-        d_results = json.loads(response.text)
-        return d_results
-    except:
-        return d_results
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(pfdcm_cube_list_api)
+            d_results = json.loads(response.text)
+            return d_results
+        except:
+            return d_results
 
 
 # Get the list of `swift` servers available in a pfdcm instance
@@ -107,12 +110,13 @@ async def swift_list(service_name: str) -> list[str]:
         return d_results
     pfdcm_url = pfdcm_server['service_address']
     pfdcm_swift_list_api = f'{pfdcm_url}/api/v1/SMDB/swift/list/'
-    try:
-        response = requests.get(pfdcm_swift_list_api)
-        d_results = json.loads(response.text)
-        return d_results
-    except:
-        return d_results
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(pfdcm_swift_list_api)
+            d_results = json.loads(response.text)
+            return d_results
+        except:
+            return d_results
 
 
 # Get the list of `PACS service` available in a pfdcm instance
@@ -123,12 +127,13 @@ async def pacs_list(service_name: str) -> list[str]:
         return d_results
     pfdcm_url = pfdcm_server['service_address']
     pfdcm_pacs_list_api = f'{pfdcm_url}/api/v1/PACSservice/list'
-    try:
-        response = requests.get(pfdcm_pacs_list_api)
-        d_results = json.loads(response.text)
-        return d_results
-    except:
-        return d_results
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(pfdcm_pacs_list_api)
+            d_results = json.loads(response.text)
+            return d_results
+        except:
+            return d_results
 
 
 def delete_pfdcm(service_name: str):

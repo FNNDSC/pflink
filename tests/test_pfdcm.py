@@ -47,25 +47,19 @@ def test_get_pfdcm(test_app, monkeypatch):
 
 def test_get_pfdcm_hello(test_app, monkeypatch):
     test_response_payload = {
-        "data": {
-            "error": "Unable to reach something else."
-        },
-        "message": ""
-    }
+            "detail": "Unable to reach something else."
+        }
     response = test_app.get("/api/v1/pfdcm/something/hello")
-    assert response.status_code == 200
+    assert response.status_code == 404
     assert response.json() == test_response_payload
 
 
 def test_get_pfdcm_about(test_app, monkeypatch):
     test_response_payload = {
-        "data": {
-            "error": "Unable to reach something else."
-        },
-        "message": ""
+        "detail": "Unable to reach something else."
     }
     response = test_app.get("/api/v1/pfdcm/something/about")
-    assert response.status_code == 200
+    assert response.status_code == 404
     assert response.json() == test_response_payload
 
 

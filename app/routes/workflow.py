@@ -1,21 +1,25 @@
-from fastapi import APIRouter
+from typing import Annotated
 
+from fastapi import APIRouter, Depends
+from fastapi.security import HTTPBasicCredentials, HTTPBearer
+
+from app.controllers.workflow import (
+    post_workflow,
+)
 from app.models.workflow import (
     WorkflowRequestSchema,
     WorkflowStatusResponseSchema,
 )
 
-from app.controllers.workflow import (
-    post_workflow,
-)
-
+security = HTTPBearer()
 router = APIRouter()
 
 
 @router.post(
     "",
     response_description="Workflow response retrieved",
-    summary="Create a workflow")
+    summary="Create a workflow",
+)
 async def create_workflow(data: WorkflowRequestSchema) -> WorkflowStatusResponseSchema:
     """
     Get the status of a workflow by POSTing a payload using this API endpoint.

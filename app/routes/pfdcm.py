@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Body, HTTPException
 from fastapi.encoders import jsonable_encoder
+import time
 
 from app.controllers.pfdcm import (
     add_pfdcm,
@@ -76,7 +77,9 @@ async def get_hello_pfdcm(service_name: str) -> PfdcmQueryResponseSchema:
     Get a hello response from a specific `pfdcm` instance by providing its service name
     """
     response = await hello_pfdcm(service_name)
-    return PfdcmQueryResponseSchema(data=response, message="")
+    if response["error"]:
+        raise HTTPException(status_code=404, detail=response["error"])
+    return PfdcmQueryResponseSchema(data=response, message='')
     
     
 @router.get(
@@ -89,7 +92,9 @@ async def get_about_pfdcm(service_name: str) -> PfdcmQueryResponseSchema:
     Get details about a specific `pfdcm` instance by providing its service name
     """
     response = await about_pfdcm(service_name)
-    return PfdcmQueryResponseSchema(data=response, message="")
+    if response["error"]:
+        raise HTTPException(status_code=404, detail=response["error"])
+    return PfdcmQueryResponseSchema(data=response, message='')
 
 
 @router.get(
