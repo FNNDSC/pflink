@@ -1,8 +1,10 @@
 import json
 import app
 import httpx
+import pytest
 
 
+@pytest.mark.integtest
 def test_create_workflow(test_app, monkeypatch):
     test_request_payload = {
         "pfdcm_info": {
@@ -39,12 +41,14 @@ def test_create_workflow(test_app, monkeypatch):
     assert response.json() == test_response_payload
 
 
+@pytest.mark.integtest
 def test_get_all_workflows(test_app, monkeypatch):
     response = test_app.get("/api/v1/testing/list")
     assert response.status_code == 200
     assert len(response.json()) > 0
 
 
+@pytest.mark.integtest
 def test_delete_workflow(test_app):
     test_request_payload = {
       "pfdcm_info": {

@@ -1,7 +1,9 @@
 import json
 import app
+import pytest
 
 
+@pytest.mark.integtest
 def test_create_pfdcm(test_app, monkeypatch):
     test_request_payload = {"service_name": "something", "service_address": "something else"}
     test_response_payload = {
@@ -14,15 +16,16 @@ def test_create_pfdcm(test_app, monkeypatch):
     }
 
     async def mock_post(payload):
-        return 1
+        return {"test":"test"}
 
     monkeypatch.setattr(app.controllers.pfdcm, "add_pfdcm", mock_post)
-    response = test_app.post("/api/v1/pfdcm/", content=json.dumps(test_request_payload), )
+    response = test_app.post("/api/v1/pfdcm", data=json.dumps(test_request_payload), )
 
     assert response.status_code == 201
     assert response.json() == test_response_payload
 
 
+@pytest.mark.integtest
 def test_get_pfdcm_list(test_app, monkeypatch):
     response = test_app.get("/api/v1/pfdcm/list")
 
@@ -30,6 +33,7 @@ def test_get_pfdcm_list(test_app, monkeypatch):
     assert len(response.json()) > 0
 
 
+@pytest.mark.integtest
 def test_get_pfdcm(test_app, monkeypatch):
     test_response_payload = {
         "data": {
@@ -45,6 +49,7 @@ def test_get_pfdcm(test_app, monkeypatch):
     assert response.json() == test_response_payload
 
 
+@pytest.mark.integtest
 def test_get_pfdcm_hello(test_app, monkeypatch):
     test_response_payload = {
             "detail": "Unable to reach something else."
@@ -54,6 +59,7 @@ def test_get_pfdcm_hello(test_app, monkeypatch):
     assert response.json() == test_response_payload
 
 
+@pytest.mark.integtest
 def test_get_pfdcm_about(test_app, monkeypatch):
     test_response_payload = {
         "detail": "Unable to reach something else."
@@ -63,6 +69,7 @@ def test_get_pfdcm_about(test_app, monkeypatch):
     assert response.json() == test_response_payload
 
 
+@pytest.mark.integtest
 def test_get_pfdcm_cube_list(test_app, monkeypatch):
     test_response_payload = {
         "detail": "Unable to reach endpoints of something"
@@ -72,6 +79,7 @@ def test_get_pfdcm_cube_list(test_app, monkeypatch):
     assert response.json() == test_response_payload
 
 
+@pytest.mark.integtest
 def test_get_pfdcm_swift_list(test_app, monkeypatch):
     test_response_payload = {
         "detail": "Unable to reach endpoints of something"
@@ -81,6 +89,7 @@ def test_get_pfdcm_swift_list(test_app, monkeypatch):
     assert response.json() == test_response_payload
 
 
+@pytest.mark.integtest
 def test_get_pfdcm_pacs_list(test_app, monkeypatch):
     test_response_payload = {
         "detail": "Unable to reach endpoints of something"
@@ -92,6 +101,7 @@ def test_get_pfdcm_pacs_list(test_app, monkeypatch):
 # Functional testing
 
 
+@pytest.mark.integtest
 def test_delete_pfdcm(test_app):
     test_response_payload = {
         "Message": "1 record(s) deleted!"
