@@ -1,7 +1,5 @@
 from fastapi import APIRouter, Body, HTTPException
 from fastapi.encoders import jsonable_encoder
-import time
-
 from app.controllers.pfdcm import (
     add_pfdcm,
     retrieve_pfdcm,
@@ -25,7 +23,7 @@ router = APIRouter()
     "",
     status_code=201,
     response_description="pfdcm data added into the database.",
-    summary="Add new `pfdcm` service details."
+    summary="Add new `pfdcm` service details.",
 )
 async def add_pfdcm_data(pfdcm: PfdcmQuerySchema = Body(...)) -> PfdcmQueryResponseSchema:
     """

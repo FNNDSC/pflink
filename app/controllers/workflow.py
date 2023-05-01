@@ -36,7 +36,7 @@ logging.basicConfig(
 # helpers
 
 
-def validate_request(request: WorkflowRequestSchema):
+def validate_request(request: WorkflowRequestSchema) -> str:
     """
     A helper method validate all required fields in a request payload
     """
