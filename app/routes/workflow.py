@@ -1,19 +1,24 @@
 from fastapi import APIRouter, Depends
-from fastapi.security import HTTPBasicCredentials, HTTPBearer
+from fastapi.security import HTTPBasicCredentials, HTTPBearer, HTTPBasic
 from app.controllers import workflow
 from app.models.workflow import (
     WorkflowRequestSchema,
     WorkflowStatusResponseSchema,
 )
 
-security = HTTPBearer()
+security = HTTPBasic()
 router = APIRouter()
+
+
+def authenticate_user(credentials: HTTPBasicCredentials = Depends(security)):
+    return True
 
 
 @router.post(
     "",
     response_description="Workflow response retrieved",
     summary="Create a workflow",
+    dependencies=[Depends(authenticate_user)]
 )
 async def create_workflow(data: WorkflowRequestSchema) -> WorkflowStatusResponseSchema:
     """
