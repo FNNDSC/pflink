@@ -6,5 +6,11 @@ class Settings(BaseSettings):
     version: str = "2.1.9"
 
 
+class User(BaseSettings):
+    user_name: str = 'chris'
+    password: str = 'chris1234'
+
+
 settings = Settings()
+user = User()
 

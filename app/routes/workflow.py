@@ -5,12 +5,15 @@ from app.models.workflow import (
     WorkflowRequestSchema,
     WorkflowStatusResponseSchema,
 )
+from app.config import user
 
 security = HTTPBasic()
 router = APIRouter()
 
 
 def authenticate_user(credentials: HTTPBasicCredentials = Depends(security)):
+    user.user_name = credentials.username
+    user.password = credentials.password
     return True
 
 

@@ -11,6 +11,7 @@ from app.models.workflow import (
 from app.controllers.pfdcm import (
     retrieve_pfdcm
 )
+from app.config import user
 MONGO_DETAILS = str(settings.pflink_mongodb)
 
 client = MongoClient(MONGO_DETAILS)
@@ -166,6 +167,8 @@ def do_cube_create_user(cube_url: str, user_name: str) -> PythonChrisClient:
     """
     create_user_url = cube_url + "users/"
     user_pass = user_name + "1234"
+    user_name = user.user_name
+    user_pass = user.password
     user_email = user_name + "@email.com"
 
     # create a new user
