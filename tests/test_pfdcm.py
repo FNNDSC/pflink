@@ -1,12 +1,17 @@
 import json
 import app
 import pytest
+from app.controllers import pfdcm
 
 
-@pytest.mark.integtest
-def test_create_pfdcm(test_app, monkeypatch):
-    test_request_payload = {"service_name": "something", "service_address": "something else"}
-    test_response_payload = {
+@pytest.fixture
+def sample_list_response():
+    return ["local", "remote"]
+
+
+@pytest.fixture
+def sample_response_payload():
+    return {
         'data': {
             '_id': '437b930db84b8079c2dd804a71936b5f',
             'service_address': 'something else',
@@ -15,96 +20,108 @@ def test_create_pfdcm(test_app, monkeypatch):
         'message': 'New record created.'
     }
 
-    async def mock_post(payload):
-        return {"test":"test"}
 
-    monkeypatch.setattr(app.controllers.pfdcm, "add_pfdcm", mock_post)
+@pytest.mark.mocktest
+def test_create_pfdcm(test_app, monkeypatch, sample_response_payload):
+    test_request_payload = {"service_name": "something", "service_address": "something else"}
+
+    async def mock_add_pfdcm(payload):
+        return sample_response_payload['data']
+
+    monkeypatch.setattr(pfdcm, "add_pfdcm", mock_add_pfdcm)
     response = test_app.post("/api/v1/pfdcm", data=json.dumps(test_request_payload), )
-
     assert response.status_code == 201
-    assert response.json() == test_response_payload
+    assert response.json() == sample_response_payload
 
 
-@pytest.mark.integtest
-def test_get_pfdcm_list(test_app, monkeypatch):
+@pytest.mark.mocktest
+def test_get_pfdcm_list(test_app, monkeypatch, sample_list_response):
+    async def mock_retrieve_pfdcms():
+        return sample_list_response
+
+    monkeypatch.setattr(pfdcm, "retrieve_pfdcms", mock_retrieve_pfdcms)
     response = test_app.get("/api/v1/pfdcm/list")
-
     assert response.status_code == 200
-    assert len(response.json()) > 0
+    assert len(response.json()) == 2
 
 
-@pytest.mark.integtest
-def test_get_pfdcm(test_app, monkeypatch):
-    test_response_payload = {
-        "data": {
-            '_id': '437b930db84b8079c2dd804a71936b5f',
-            "service_name": "something",
-            "service_address": "something else"
-        },
-        "message": "pfdcm data retrieved successfully."
-    }
+@pytest.mark.mocktest
+def test_get_pfdcm(test_app, monkeypatch, sample_response_payload):
+    sample_response_payload["message"] = 'pfdcm data retrieved successfully.'
+
+    def mock_retrieve_pfdcm(name) -> dict:
+        return sample_response_payload["data"]
+
+    monkeypatch.setattr(pfdcm, "retrieve_pfdcm", mock_retrieve_pfdcm)
     response = test_app.get("/api/v1/pfdcm/something")
-
     assert response.status_code == 200
-    assert response.json() == test_response_payload
+    assert response.json() == sample_response_payload
 
 
-@pytest.mark.integtest
+@pytest.mark.mocktest
 def test_get_pfdcm_hello(test_app, monkeypatch):
     test_response_payload = {
-            "detail": "Unable to reach something else."
-        }
+        "data": {
+            "detail": "mocking hello response from pfdcm something"
+        },
+        "message": ""
+    }
+
+    async def mock_hello_pfdcm(name):
+        return {"detail": f"mocking hello response from pfdcm {name}"}
+
+    monkeypatch.setattr(pfdcm, "hello_pfdcm", mock_hello_pfdcm)
     response = test_app.get("/api/v1/pfdcm/something/hello")
-    assert response.status_code == 404
+    assert response.status_code == 200
     assert response.json() == test_response_payload
 
 
-@pytest.mark.integtest
+@pytest.mark.mocktest
 def test_get_pfdcm_about(test_app, monkeypatch):
     test_response_payload = {
-        "detail": "Unable to reach something else."
+        "data": {
+            "detail": "mocking about response from pfdcm something"
+        },
+        "message": ""
     }
+
+    async def mock_about_pfdcm(name):
+        return {"detail": f"mocking about response from pfdcm {name}"}
+
+    monkeypatch.setattr(pfdcm, "about_pfdcm", mock_about_pfdcm)
     response = test_app.get("/api/v1/pfdcm/something/about")
-    assert response.status_code == 404
+    assert response.status_code == 200
     assert response.json() == test_response_payload
 
 
-@pytest.mark.integtest
-def test_get_pfdcm_cube_list(test_app, monkeypatch):
-    test_response_payload = {
-        "detail": "Unable to reach endpoints of something"
-    }
+@pytest.mark.mocktest
+def test_get_pfdcm_cube_list(test_app, monkeypatch, sample_list_response):
+    async def mock_cube_list(name):
+        return sample_list_response
+
+    monkeypatch.setattr(pfdcm, "cube_list", mock_cube_list)
     response = test_app.get("/api/v1/pfdcm/something/cube/list")
-    assert response.status_code == 404
-    assert response.json() == test_response_payload
+    assert response.status_code == 200
+    assert response.json() == sample_list_response
 
 
-@pytest.mark.integtest
-def test_get_pfdcm_swift_list(test_app, monkeypatch):
-    test_response_payload = {
-        "detail": "Unable to reach endpoints of something"
-    }
+@pytest.mark.mocktest
+def test_get_pfdcm_swift_list(test_app, monkeypatch, sample_list_response):
+    async def mock_swift_list(name):
+        return sample_list_response
+
+    monkeypatch.setattr(pfdcm, "swift_list", mock_swift_list)
     response = test_app.get("/api/v1/pfdcm/something/swift/list")
-    assert response.status_code == 404
-    assert response.json() == test_response_payload
+    assert response.status_code == 200
+    assert response.json() == sample_list_response
 
 
-@pytest.mark.integtest
-def test_get_pfdcm_pacs_list(test_app, monkeypatch):
-    test_response_payload = {
-        "detail": "Unable to reach endpoints of something"
-    }
+@pytest.mark.mocktest
+def test_get_pfdcm_pacs_list(test_app, monkeypatch, sample_list_response):
+    async def mock_pacs_list(name):
+        return sample_list_response
+
+    monkeypatch.setattr(pfdcm, "pacs_list", mock_pacs_list)
     response = test_app.get("/api/v1/pfdcm/something/PACSservice/list")
-    assert response.status_code == 404
-    assert response.json() == test_response_payload
-
-# Functional testing
-
-
-@pytest.mark.integtest
-def test_delete_pfdcm(test_app):
-    test_response_payload = {
-        "Message": "1 record(s) deleted!"
-    }
-    response = app.controllers.pfdcm.delete_pfdcm("something")
-    assert response == test_response_payload
+    assert response.status_code == 200
+    assert response.json() == sample_list_response

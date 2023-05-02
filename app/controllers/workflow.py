@@ -9,15 +9,7 @@ from app.models.workflow import (
     WorkflowDBSchema,
     Error,
 )
-
-from app.controllers.subprocesses.utils import (
-    workflow_retrieve_helper,
-    workflow_add_helper,
-    query_to_dict,
-    dict_to_hash,
-    retrieve_workflow
-
-)
+from app.controllers.subprocesses import utils
 from app.config import settings
 
 MONGO_DETAILS = str(settings.pflink_mongodb)
@@ -75,15 +67,15 @@ def validate_request(request: WorkflowRequestSchema) -> str:
 def retrieve_workflows():
     workflows = []
     for workflow in workflow_collection.find():
-        workflows.append(workflow_retrieve_helper(workflow))
+        workflows.append(utils.workflow_retrieve_helper(workflow))
     return workflows
 
 
 # Add new workflow in the DB
 def add_workflow(workflow_data: WorkflowDBSchema) -> WorkflowDBSchema:
-    new_workflow = workflow_collection.insert_one(workflow_add_helper(workflow_data))
+    new_workflow = workflow_collection.insert_one(utils.workflow_add_helper(workflow_data))
     workflow = workflow_collection.find_one({"_id": new_workflow.inserted_id})
-    return workflow_retrieve_helper(workflow)
+    return utils.workflow_retrieve_helper(workflow)
 
 
 def delete_workflow(request: dict):
@@ -91,7 +83,7 @@ def delete_workflow(request: dict):
     Delete a workflow record from DB
     """
     delete_count = 0
-    key = dict_to_hash(request)
+    key = utils.dict_to_hash(request)
     for workflow in workflow_collection.find():
         if workflow["_id"] == key:
             workflow_collection.delete_one({"_id": workflow["_id"]})
@@ -103,8 +95,8 @@ def request_to_hash(request: WorkflowRequestSchema) -> str:
     """
     Create a hash key using md5 hash function on a workflow request object
     """
-    d_data = query_to_dict(request)
-    key = dict_to_hash(d_data)
+    d_data = utils.query_to_dict(request)
+    key = utils.dict_to_hash(d_data)
     return key
 
 
@@ -122,7 +114,7 @@ async def post_workflow(
     """
     # create a hash key using the request
     db_key = request_to_hash(request)
-    workflow = retrieve_workflow(db_key)
+    workflow = utils.retrieve_workflow(db_key)
     if not workflow:
         # create a new workflow object
         response = WorkflowStatusResponseSchema()
@@ -211,6 +203,6 @@ def get_suproc_params(test: bool, request: WorkflowRequestSchema) -> (str, str):
     mode = ""
     if test:
         mode = "testing"
-    d_data = query_to_dict(request)
+    d_data = utils.query_to_dict(request)
     str_data = json.dumps(d_data)
     return mode, str_data

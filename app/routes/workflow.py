@@ -1,11 +1,6 @@
-from typing import Annotated
-
 from fastapi import APIRouter, Depends
 from fastapi.security import HTTPBasicCredentials, HTTPBearer
-
-from app.controllers.workflow import (
-    post_workflow,
-)
+from app.controllers import workflow
 from app.models.workflow import (
     WorkflowRequestSchema,
     WorkflowStatusResponseSchema,
@@ -26,6 +21,6 @@ async def create_workflow(data: WorkflowRequestSchema) -> WorkflowStatusResponse
     If it's the first time a client is POSTing a payload, this API creates a new
     entry in the DB and returns a default response.
     """  
-    response = await post_workflow(data)   
+    response = await workflow.post_workflow(data)
     return response
 

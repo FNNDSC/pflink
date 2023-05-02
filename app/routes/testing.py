@@ -3,11 +3,7 @@ from app.models.workflow import (
     WorkflowRequestSchema,
     WorkflowStatusResponseSchema,
 )
-from app.controllers.workflow import (
-    post_workflow,
-    retrieve_workflows,
-)
-
+from app.controllers import workflow
 router = APIRouter()
 
 
@@ -33,7 +29,7 @@ async def test_create_workflow(
      For an invalid error_type you get an error message as follows:
       * "Undefined error_type : Please pass values as pfdcm/study/feed/analysis/compute/cube as valid error_type"
     """
-    response = await post_workflow(data, test=True, error_type=error_type)
+    response = await workflow.post_workflow(data, test=True, error_type=error_type)
     return response
 
 
@@ -42,6 +38,6 @@ async def test_get_workflows():
     """
     Fetch all workflows currently present in the database
     """
-    workflows = retrieve_workflows()
+    workflows = workflow.retrieve_workflows()
     return workflows
 

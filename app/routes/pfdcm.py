@@ -1,16 +1,6 @@
 from fastapi import APIRouter, Body, HTTPException
 from fastapi.encoders import jsonable_encoder
-from app.controllers.pfdcm import (
-    add_pfdcm,
-    retrieve_pfdcm,
-    retrieve_pfdcms,
-    hello_pfdcm,
-    about_pfdcm,
-    pacs_list,
-    swift_list,
-    cube_list,
-    
-)
+from app.controllers import pfdcm
 from app.models.pfdcm import (
     PfdcmQuerySchema,
     PfdcmQueryResponseSchema,
@@ -25,15 +15,15 @@ router = APIRouter()
     response_description="pfdcm data added into the database.",
     summary="Add new `pfdcm` service details.",
 )
-async def add_pfdcm_data(pfdcm: PfdcmQuerySchema = Body(...)) -> PfdcmQueryResponseSchema:
+async def add_pfdcm_data(pfdcm_data: PfdcmQuerySchema = Body(...)) -> PfdcmQueryResponseSchema:
     """
     Add service details like name and address of a `pfdcm` instance.
     """
-    pfdcm = jsonable_encoder(pfdcm)
-    new_pfdcm = await add_pfdcm(pfdcm)
+    pfdcm_data = jsonable_encoder(pfdcm_data)
+    new_pfdcm = await pfdcm.add_pfdcm(pfdcm_data)
     if not new_pfdcm:
         return PfdcmQueryResponseSchema(data={}, message=f"service_name must be unique."
-                                                         f" {pfdcm['service_name']} already exists.")
+                                                         f" {pfdcm_data['service_name']} already exists.")
     return PfdcmQueryResponseSchema(data=new_pfdcm, message="New record created.")
 
 
@@ -46,7 +36,7 @@ async def get_pfdcms() -> list[str]:
     """
     Fetch all `pfdcm` service addresses from the DB.
     """
-    pfdcms = await retrieve_pfdcms()
+    pfdcms = await pfdcm.retrieve_pfdcms()
     return pfdcms
 
 
@@ -59,9 +49,9 @@ async def get_pfdcm_data(service_name: str) -> PfdcmQueryResponseSchema:
     """
     Fetch service address of a pfdcm instance from the DB for an existing service name.
     """
-    pfdcm = retrieve_pfdcm(service_name)
-    if pfdcm:
-        return PfdcmQueryResponseSchema(data=pfdcm, message="pfdcm data retrieved successfully.")
+    pfdcm_data = pfdcm.retrieve_pfdcm(service_name)
+    if pfdcm_data:
+        return PfdcmQueryResponseSchema(data=pfdcm_data, message="pfdcm data retrieved successfully.")
     return PfdcmQueryResponseSchema(data=[], message=f"No existing record found for {service_name}.")
 
 
@@ -74,8 +64,8 @@ async def get_hello_pfdcm(service_name: str) -> PfdcmQueryResponseSchema:
     """
     Get a hello response from a specific `pfdcm` instance by providing its service name
     """
-    response = await hello_pfdcm(service_name)
-    if response["error"]:
+    response = await pfdcm.hello_pfdcm(service_name)
+    if response.get("error"):
         raise HTTPException(status_code=404, detail=response["error"])
     return PfdcmQueryResponseSchema(data=response, message='')
     
@@ -89,8 +79,8 @@ async def get_about_pfdcm(service_name: str) -> PfdcmQueryResponseSchema:
     """
     Get details about a specific `pfdcm` instance by providing its service name
     """
-    response = await about_pfdcm(service_name)
-    if response["error"]:
+    response = await pfdcm.about_pfdcm(service_name)
+    if response.get("error"):
         raise HTTPException(status_code=404, detail=response["error"])
     return PfdcmQueryResponseSchema(data=response, message='')
 
@@ -104,7 +94,7 @@ async def cube_service_list(service_name: str) -> list[str]:
     """
     Get the list of PACS services registered to a `pfdcm` instance by providing its service name
     """
-    response = await cube_list(service_name)
+    response = await pfdcm.cube_list(service_name)
     if not response:
         raise HTTPException(status_code=404, detail=f"Unable to reach endpoints of {service_name}")
     return response
@@ -119,7 +109,7 @@ async def swift_service_list(service_name: str) -> list[str]:
     """
     Get the list of PACS services registered to a `pfdcm` instance by providing its service name
     """
-    response = await swift_list(service_name)
+    response = await pfdcm.swift_list(service_name)
     if not response:
         raise HTTPException(status_code=404, detail=f"Unable to reach endpoints of {service_name}")
     return response
@@ -134,7 +124,7 @@ async def pacs_service_list(service_name: str) -> list[str]:
     """
     Get the list of PACS services registered to a `pfdcm` instance by providing its service name
     """
-    response = await pacs_list(service_name)
+    response = await pfdcm.pacs_list(service_name)
     if not response:
         raise HTTPException(status_code=404, detail=f"Unable to reach endpoints of {service_name}")
     return response

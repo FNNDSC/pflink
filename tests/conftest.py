@@ -55,23 +55,16 @@ def sample_workflow_entry():
             }
         },
         "response": {
-            "status": False,
+            "status": True,
             "workflow_state": "initializing workflow",
             "state_progress": "0%",
             "feed_id": "",
             "feed_name": "",
-            "error": "PFDCM server is unavailable.  Service PFDCM not found in the DB for pfdcm_service PFDCM"
+            "error": ""
         },
         "stale": True,
         "started": False
     }
-
-
-@pytest.fixture
-def loop():
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
 
 
 @pytest.fixture
