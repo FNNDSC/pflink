@@ -138,7 +138,7 @@ async def post_workflow(
 
     # run status_update subprocess on the workflow
     sub_updt = update_workflow_status(mode, str_data)
-    # debug_process(sub_updt)
+    debug_process(sub_updt)
     return workflow.response
 
 
@@ -163,11 +163,8 @@ def manage_workflow(mode: str, str_data: str):
     Manage a workflow request in a separate subprocess
     """
     subproc = subprocess.Popen(
-        ['python',
-         'app/controllers/subprocesses/wf_manager.py',
-         "--data", str_data,
-         "--test", mode,
-         ], stdout=subprocess.PIPE,
+        ["python", "app/controllers/subprocesses/wf_manager.py", "--data", str_data],
+        stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         close_fds=True)
     return subproc
@@ -178,11 +175,8 @@ def update_workflow_status(mode: str, str_data: str):
     Update the current status of a workflow request in a separate process
     """
     subproc = subprocess.Popen(
-        ['python',
-         'app/controllers/subprocesses/status.py',
-         "--data", str_data,
-         "--test", mode,
-         ], stdout=subprocess.PIPE,
+        ["python", "app/controllers/subprocesses/status.py", "--data", str_data],
+        stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         close_fds=True)
     return subproc
@@ -200,9 +194,9 @@ def get_suproc_params(test: bool, request: WorkflowRequestSchema) -> (str, str):
     """
     Return mode, str_data
     """
-    mode = ""
+    mode = ''
     if test:
-        mode = "testing"
+        mode = "--test"
     d_data = utils.query_to_dict(request)
     str_data = json.dumps(d_data)
     return mode, str_data

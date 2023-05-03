@@ -166,10 +166,12 @@ def do_cube_create_user(cube_url: str, user_name: str) -> PythonChrisClient:
     Create a new user in `CUBE` if not already present
     """
     create_user_url = cube_url + "users/"
-    user_pass = user_name + "1234"
+    # user_pass = user_name + "1234"
     user_name = user.user_name
     user_pass = user.password
     user_email = user_name + "@email.com"
+
+    print(f"username:{user_name} and password:{user_pass}")
 
     # create a new user
     headers = {'Content-Type': 'application/json', 'accept': 'application/json'}

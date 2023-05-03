@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseSettings, MongoDsn
 
 
@@ -13,4 +15,3 @@ class User(BaseSettings):
 
 settings = Settings()
 user = User()
-

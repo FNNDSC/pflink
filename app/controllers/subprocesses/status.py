@@ -34,13 +34,13 @@ logging.basicConfig(
 )
 
 parser = argparse.ArgumentParser(description='Process arguments passed through CLI')
-parser.add_argument('--data', metavar='N', type=str)
-parser.add_argument('--test', metavar='N', type=str)
+parser.add_argument('--data', type=str)
+parser.add_argument('--test', default=False, action='store_true')
 
 args = parser.parse_args()
 
 
-def update_workflow_status(key: str, test: str):
+def update_workflow_status(key: str, test: bool):
     """
     Update the status of a workflow object in the DB
     """

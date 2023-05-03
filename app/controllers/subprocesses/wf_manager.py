@@ -32,12 +32,12 @@ logging.basicConfig(
 )
 
 parser = argparse.ArgumentParser(description='Process arguments')
-parser.add_argument('--data', metavar='N', type=str)
-parser.add_argument('--test', metavar='N', type=str)
+parser.add_argument('--data', type=str)
+parser.add_argument('--test', type=bool, optional=True, default=True, action='store_true')
 args = parser.parse_args()
 
 
-def manage_workflow(db_key: str, test: str):
+def manage_workflow(db_key: str, test: bool):
     """
     Manage workflow:
     Schedule task based on status from the DB
@@ -93,12 +93,12 @@ def manage_workflow(db_key: str, test: str):
                         workflow.response.status = False
                         update_workflow(key, workflow)
 
-        update_status(request, test)
+        update_status(request)
         time.sleep(10)
         workflow = retrieve_workflow(key)
 
 
-def update_status(request: WorkflowRequestSchema, test: str):
+def update_status(request: WorkflowRequestSchema):
     """
     Trigger an update status in 
     a separate python process
@@ -109,7 +109,6 @@ def update_status(request: WorkflowRequestSchema, test: str):
         ['python',
          'app/controllers/subprocesses/status.py',
          "--data", str_data,
-         "--test", test,
          ], stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         close_fds=True)
