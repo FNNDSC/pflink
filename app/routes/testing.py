@@ -4,7 +4,6 @@ from app.models.workflow import (
     WorkflowStatusResponseSchema,
 )
 from app.controllers import workflow
-from app.config import user
 router = APIRouter()
 
 
@@ -42,7 +41,4 @@ async def test_get_workflows():
     workflows = workflow.retrieve_workflows()
     return workflows
 
-@router.get("")
-async def get_user():
-    return {"user": user.user_name, "password": user.password}
 

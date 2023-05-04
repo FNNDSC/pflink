@@ -3,10 +3,8 @@ from fastapi.security import OAuth2PasswordRequestForm, HTTPBasic
 from app.config import user
 from fastapi.responses import RedirectResponse
 from app.controllers.auth import (
-    get_hashed_password,
     create_access_token,
     create_refresh_token,
-    verify_password
 )
 from uuid import uuid4
 router = APIRouter()

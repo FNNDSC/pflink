@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 from enum import Enum
+from app.models.auth import User
 
 str_description = """
     The data models/schemas for workflow operations.
@@ -108,7 +109,7 @@ class WorkflowRequestSchema(BaseModel):
             }
         }
 
-        
+
 class WorkflowStatusResponseSchema(BaseModel):
     """The Workflow status response model"""
     status: bool = True
@@ -126,4 +127,3 @@ class WorkflowDBSchema(BaseModel):
     response: WorkflowStatusResponseSchema
     stale: bool = True
     started: bool = False
-
