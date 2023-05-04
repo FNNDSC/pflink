@@ -13,5 +13,11 @@ class User(BaseSettings):
     password: str = 'chris1234'
 
 
+class Auth(BaseSettings):
+    JWT_SECRET_KEY = "secret"  # should be kept secret
+    JWT_REFRESH_SECRET_KEY = "secret"   # should be kept secret
+
+
 settings = Settings()
 user = User()
+auth = Auth()
