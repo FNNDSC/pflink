@@ -134,10 +134,10 @@ async def post_workflow(
 
     mode, str_data = get_suproc_params(test, request)
     # run workflow manager subprocess on the workflow
-    sub_mng = manage_workflow(mode, str_data)
+    sub_mng = manage_workflow(str_data)
 
     # run status_update subprocess on the workflow
-    sub_updt = update_workflow_status(mode, str_data)
+    sub_updt = update_workflow_status(str_data, mode)
     debug_process(sub_updt)
     return workflow.response
 
@@ -158,27 +158,23 @@ def create_response_with_error(
     return response
 
 
-def manage_workflow(mode: str, str_data: str):
+def manage_workflow(str_data: str):
     """
     Manage a workflow request in a separate subprocess
     """
     subproc = subprocess.Popen(
-        ["python", "app/controllers/subprocesses/wf_manager.py", "--data", str_data],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        close_fds=True)
+        ["python", "app/controllers/subprocesses/wf_manager.py", "--data", str_data])
     return subproc
 
 
-def update_workflow_status(mode: str, str_data: str):
+def update_workflow_status(str_data: str, mode: str):
     """
     Update the current status of a workflow request in a separate process
     """
-    subproc = subprocess.Popen(
-        ["python", "app/controllers/subprocesses/status.py", "--data", str_data],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        close_fds=True)
+    d_cmd = ["python", "app/controllers/subprocesses/status.py", "--data", str_data]
+    if mode:
+        d_cmd.append(mode)
+    subproc = subprocess.Popen(d_cmd)
     return subproc
 
 
@@ -194,7 +190,7 @@ def get_suproc_params(test: bool, request: WorkflowRequestSchema) -> (str, str):
     """
     Return mode, str_data
     """
-    mode = ''
+    mode = ""
     if test:
         mode = "--test"
     d_data = utils.query_to_dict(request)

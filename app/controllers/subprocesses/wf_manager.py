@@ -33,11 +33,10 @@ logging.basicConfig(
 
 parser = argparse.ArgumentParser(description='Process arguments')
 parser.add_argument('--data', type=str)
-parser.add_argument('--test', type=bool, optional=True, default=True, action='store_true')
 args = parser.parse_args()
 
 
-def manage_workflow(db_key: str, test: bool):
+def manage_workflow(db_key: str):
     """
     Manage workflow:
     Schedule task based on status from the DB
@@ -45,7 +44,7 @@ def manage_workflow(db_key: str, test: bool):
     MAX_RETRIES = 50
     pl_inst_id = 0
     workflow = retrieve_workflow(db_key)
-    if workflow.started or not workflow.response.status or test:
+    if workflow.started or not workflow.response.status:
         # Do nothing and return
         return
 
@@ -256,5 +255,5 @@ if __name__ == "__main__":
     """
     d_data = json.loads(args.data)
     key = dict_to_hash(d_data)
-    manage_workflow(key, args.test)
+    manage_workflow(key)
 
