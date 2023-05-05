@@ -87,6 +87,7 @@ class WorkflowRequestSchema(BaseModel):
     pfdcm_info: PFDCMInfoSchema
     PACS_directive: PACSqueryCore
     workflow_info: WorkflowInfoSchema
+    cube_user_info: User
 
     class Config:
         schema_extra = {
@@ -105,6 +106,10 @@ class WorkflowRequestSchema(BaseModel):
                     "plugin_name": "pl-dircopy",
                     "plugin_version": "1.1.0",
                     "plugin_params": "--args ARGS"
+                },
+                "cube_user_info": {
+                    "username": "chris",
+                    "password": "chris1234"
                 }
             }
         }

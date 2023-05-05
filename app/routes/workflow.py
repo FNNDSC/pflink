@@ -1,6 +1,5 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from app.controllers import workflow
-from app.controllers.auth import get_current_user
 from app.models.workflow import (
     WorkflowRequestSchema,
     WorkflowStatusResponseSchema,
@@ -12,7 +11,6 @@ router = APIRouter()
     "",
     response_description="Workflow response retrieved",
     summary="Create a workflow",
-    dependencies=[Depends(get_current_user)]
 )
 async def create_workflow(data: WorkflowRequestSchema) -> WorkflowStatusResponseSchema:
     """
