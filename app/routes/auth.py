@@ -4,7 +4,6 @@ from app.config import user
 from fastapi.responses import RedirectResponse
 from app.controllers.auth import (
     create_access_token,
-    create_refresh_token,
 )
 from uuid import uuid4
 router = APIRouter()
@@ -27,5 +26,5 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
 
     return {
         "access_token": create_access_token(user.user_name),
-        "refresh_token": create_refresh_token(user.user_name),
+        "token_type": "bearer",
     }

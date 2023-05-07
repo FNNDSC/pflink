@@ -14,8 +14,7 @@ class User(BaseSettings):
 
 
 class Auth(BaseSettings):
-    JWT_SECRET_KEY = "secret"  # should be kept secret
-    JWT_REFRESH_SECRET_KEY = "secret"   # should be kept secret
+    JWT_SECRET_KEY = "aad10a452df3f4451c975a0a2982b159c5088eb0f5da816a1fb129f473c0ddc7"  # should be kept secret
 
 
 settings = Settings()
