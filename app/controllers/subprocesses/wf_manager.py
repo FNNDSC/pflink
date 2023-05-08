@@ -32,12 +32,11 @@ logging.basicConfig(
 )
 
 parser = argparse.ArgumentParser(description='Process arguments')
-parser.add_argument('--data', metavar='N', type=str)
-parser.add_argument('--test', metavar='N', type=str)
+parser.add_argument('--data', type=str)
 args = parser.parse_args()
 
 
-def manage_workflow(db_key: str, test: str):
+def manage_workflow(db_key: str):
     """
     Manage workflow:
     Schedule task based on status from the DB
@@ -45,7 +44,7 @@ def manage_workflow(db_key: str, test: str):
     MAX_RETRIES = 50
     pl_inst_id = 0
     workflow = retrieve_workflow(db_key)
-    if workflow.started or not workflow.response.status or test:
+    if workflow.started or not workflow.response.status:
         # Do nothing and return
         return
 
@@ -81,24 +80,23 @@ def manage_workflow(db_key: str, test: str):
                         workflow.response.error = Error.feed.value + str(ex)
                         workflow.response.status = False
                         update_workflow(key, workflow)
-                        break
 
             case State.FEED_CREATED:
                 if workflow.stale:
                     try:
-                        do_cube_start_analysis(pl_inst_id, request.workflow_info, cube_url)
+                        do_cube_start_analysis(pl_inst_id, request, cube_url)
                     except Exception as ex:
                         logging.info(Error.analysis.value)
                         workflow.response.error = Error.analysis.value + str(ex)
                         workflow.response.status = False
                         update_workflow(key, workflow)
 
-        update_status(request, test)
+        update_status(request)
         time.sleep(10)
         workflow = retrieve_workflow(key)
 
 
-def update_status(request: WorkflowRequestSchema, test: str):
+def update_status(request: WorkflowRequestSchema):
     """
     Trigger an update status in 
     a separate python process
@@ -109,7 +107,6 @@ def update_status(request: WorkflowRequestSchema, test: str):
         ['python',
          'app/controllers/subprocesses/status.py',
          "--data", str_data,
-         "--test", test,
          ], stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         close_fds=True)
@@ -203,7 +200,7 @@ def do_cube_create_feed(request: WorkflowRequestSchema, cube_url: str) -> str:
     """
     Create a new feed in `CUBE` if not already present
     """
-    client = do_cube_create_user(cube_url, request.workflow_info.user_name)
+    client = do_cube_create_user(cube_url, request.cube_user_info.username, request.cube_user_info.password)
     pacs_details = client.getPACSdetails(request.PACS_directive.__dict__)
     feed_name = substitute_dicom_tags(request.workflow_info.feed_name, pacs_details)
     data_path = client.getSwiftPath(pacs_details)
@@ -218,17 +215,17 @@ def do_cube_create_feed(request: WorkflowRequestSchema, cube_url: str) -> str:
     return feed_response['id']
 
 
-def do_cube_start_analysis(previous_id: str, workflow_info: WorkflowInfoSchema, cube_url: str):
+def do_cube_start_analysis(previous_id: str, request: WorkflowRequestSchema, cube_url: str):
     """
     Create a new node (plugin instance) on an existing feed in `CUBE`
     """
-    client = do_cube_create_user(cube_url, workflow_info.user_name)
+    client = do_cube_create_user(cube_url, request.cube_user_info.username, request.cube_user_info.password)
     # search for plugin
-    plugin_search_params = {"name": workflow_info.plugin_name, "version": workflow_info.plugin_version}
+    plugin_search_params = {"name": request.workflow_info.plugin_name, "version": request.workflow_info.plugin_version}
     plugin_id = client.getPluginId(plugin_search_params)
 
     # convert CLI params from string to a JSON dictionary
-    feed_params = str_to_param_dict(workflow_info.plugin_params)
+    feed_params = str_to_param_dict(request.workflow_info.plugin_params)
     feed_params["previous_id"] = previous_id
     feed_resp = client.createFeed(plugin_id, feed_params)
 
@@ -257,5 +254,5 @@ if __name__ == "__main__":
     """
     d_data = json.loads(args.data)
     key = dict_to_hash(d_data)
-    manage_workflow(key, args.test)
+    manage_workflow(key)
 

@@ -52,6 +52,10 @@ def sample_workflow_entry():
                 "plugin_version": "1.1.0",
                 "plugin_params": "--args ARGS",
                 "pipeline_name": ""
+            },
+            "cube_user_info": {
+                "username": "chris",
+                "password": "chris1234"
             }
         },
         "response": {
@@ -70,42 +74,46 @@ def sample_workflow_entry():
 @pytest.fixture
 def sample_workflow_request():
     return {
-            "pfdcm_info": {
-                "pfdcm_service": "PFDCM",
-                "PACS_service": "orthanc",
-                "cube_service": "local",
-                "swift_service": "local",
-                "dicom_file_extension": "dcm",
-                "db_log_path": "/home/dicom/log"
-            },
-            "PACS_directive": {
-                "AccessionNumber": "",
-                "PatientID": "",
-                "PatientName": "",
-                "PatientBirthDate": "",
-                "PatientAge": "",
-                "PatientSex": "",
-                "StudyDate": "",
-                "StudyDescription": "",
-                "StudyInstanceUID": "12365548",
-                "Modality": "",
-                "ModalitiesInStudy": "",
-                "PerformedStationAETitle": "",
-                "NumberOfSeriesRelatedInstances": "",
-                "InstanceNumber": "",
-                "SeriesDate": "",
-                "SeriesDescription": "",
-                "SeriesInstanceUID": "66498598",
-                "ProtocolName": "",
-                "AcquisitionProtocolDescription": "",
-                "AcquisitionProtocolName": ""
-            },
-            "workflow_info": {
-                "feed_name": "test-%SeriesInstanceUID",
-                "user_name": "clinical_user",
-                "plugin_name": "pl-dircopy",
-                "plugin_version": "1.1.0",
-                "plugin_params": "--args ARGS",
-                "pipeline_name": ""
-            }
+        "pfdcm_info": {
+            "pfdcm_service": "PFDCM",
+            "PACS_service": "orthanc",
+            "cube_service": "local",
+            "swift_service": "local",
+            "dicom_file_extension": "dcm",
+            "db_log_path": "/home/dicom/log"
+        },
+        "PACS_directive": {
+            "AccessionNumber": "",
+            "PatientID": "",
+            "PatientName": "",
+            "PatientBirthDate": "",
+            "PatientAge": "",
+            "PatientSex": "",
+            "StudyDate": "",
+            "StudyDescription": "",
+            "StudyInstanceUID": "12365548",
+            "Modality": "",
+            "ModalitiesInStudy": "",
+            "PerformedStationAETitle": "",
+            "NumberOfSeriesRelatedInstances": "",
+            "InstanceNumber": "",
+            "SeriesDate": "",
+            "SeriesDescription": "",
+            "SeriesInstanceUID": "66498598",
+            "ProtocolName": "",
+            "AcquisitionProtocolDescription": "",
+            "AcquisitionProtocolName": ""
+        },
+        "workflow_info": {
+            "feed_name": "test-%SeriesInstanceUID",
+            "user_name": "clinical_user",
+            "plugin_name": "pl-dircopy",
+            "plugin_version": "1.1.0",
+            "plugin_params": "--args ARGS",
+            "pipeline_name": ""
+        },
+        "cube_user_info": {
+            "username": "chris",
+            "password": "chris1234"
         }
+    }
