@@ -38,7 +38,7 @@ You will be able to:
 
 ## Basic Auth
 
-Create access and refresh tokens for user 
+Create access tokens for user 
 
 """
 

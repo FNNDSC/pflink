@@ -138,7 +138,7 @@ async def post_workflow(
 
     # run status_update subprocess on the workflow
     sub_updt = update_workflow_status(str_data, mode)
-    # debug_process(sub_updt)
+    debug_process(sub_updt)
     return workflow.response
 
 

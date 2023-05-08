@@ -2,12 +2,12 @@ from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from typing import Union, Any
 from jose import jwt
-from app.config import auth, user
+from app.config import auth
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import ValidationError
 
-ACCESS_TOKEN_EXPIRE_MINUTES = 2  # 30 minutes
+ACCESS_TOKEN_EXPIRE_MINUTES = 600  # 600 minutes
 ALGORITHM = "HS256"
 JWT_SECRET_KEY = auth.JWT_SECRET_KEY
 
@@ -55,7 +55,7 @@ async def get_current_user(token: str = Depends(reusable_oauth)):
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    if user.user_name != payload['sub']:
+    if auth.user_name != payload['sub']:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Could not find user",

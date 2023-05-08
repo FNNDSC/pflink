@@ -166,7 +166,7 @@ def _get_feed_status(request: WorkflowRequestSchema) -> dict:
         cube_url = get_cube_url_from_pfdcm(pfdcm_url, request.pfdcm_info.cube_service)
 
         # create a client using the username
-        cl = do_cube_create_user(cube_url, request.workflow_info.user_name)
+        cl = do_cube_create_user(cube_url, request.cube_user_info.username, request.cube_user_info.password)
 
         # substitute dicom values for dicom tags present in feed name
         requested_feed_name = request.workflow_info.feed_name
@@ -360,4 +360,3 @@ if __name__ == "__main__":
     dict_data = json.loads(args.data)
     wf_key = dict_to_hash(dict_data)
     update_workflow_status(wf_key, args.test)
-

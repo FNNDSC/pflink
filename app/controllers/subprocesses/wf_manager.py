@@ -80,12 +80,11 @@ def manage_workflow(db_key: str):
                         workflow.response.error = Error.feed.value + str(ex)
                         workflow.response.status = False
                         update_workflow(key, workflow)
-                        break
 
             case State.FEED_CREATED:
                 if workflow.stale:
                     try:
-                        do_cube_start_analysis(pl_inst_id, request.workflow_info, cube_url)
+                        do_cube_start_analysis(pl_inst_id, request, cube_url)
                     except Exception as ex:
                         logging.info(Error.analysis.value)
                         workflow.response.error = Error.analysis.value + str(ex)
@@ -201,7 +200,7 @@ def do_cube_create_feed(request: WorkflowRequestSchema, cube_url: str) -> str:
     """
     Create a new feed in `CUBE` if not already present
     """
-    client = do_cube_create_user(cube_url, request.workflow_info.user_name)
+    client = do_cube_create_user(cube_url, request.cube_user_info.username, request.cube_user_info.password)
     pacs_details = client.getPACSdetails(request.PACS_directive.__dict__)
     feed_name = substitute_dicom_tags(request.workflow_info.feed_name, pacs_details)
     data_path = client.getSwiftPath(pacs_details)
@@ -216,17 +215,17 @@ def do_cube_create_feed(request: WorkflowRequestSchema, cube_url: str) -> str:
     return feed_response['id']
 
 
-def do_cube_start_analysis(previous_id: str, workflow_info: WorkflowInfoSchema, cube_url: str):
+def do_cube_start_analysis(previous_id: str, request: WorkflowRequestSchema, cube_url: str):
     """
     Create a new node (plugin instance) on an existing feed in `CUBE`
     """
-    client = do_cube_create_user(cube_url, workflow_info.user_name)
+    client = do_cube_create_user(cube_url, request.cube_user_info.username, request.cube_user_info.password)
     # search for plugin
-    plugin_search_params = {"name": workflow_info.plugin_name, "version": workflow_info.plugin_version}
+    plugin_search_params = {"name": request.workflow_info.plugin_name, "version": request.workflow_info.plugin_version}
     plugin_id = client.getPluginId(plugin_search_params)
 
     # convert CLI params from string to a JSON dictionary
-    feed_params = str_to_param_dict(workflow_info.plugin_params)
+    feed_params = str_to_param_dict(request.workflow_info.plugin_params)
     feed_params["previous_id"] = previous_id
     feed_resp = client.createFeed(plugin_id, feed_params)
 

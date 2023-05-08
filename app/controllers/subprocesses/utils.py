@@ -11,7 +11,6 @@ from app.models.workflow import (
 from app.controllers.pfdcm import (
     retrieve_pfdcm
 )
-from app.config import user
 MONGO_DETAILS = str(settings.pflink_mongodb)
 
 client = MongoClient(MONGO_DETAILS)
