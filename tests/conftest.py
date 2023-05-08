@@ -1,6 +1,6 @@
 import pytest
 from starlette.testclient import TestClient
-import asyncio
+from app.controllers.auth import create_access_token
 from app.main import app
 
 
@@ -8,6 +8,11 @@ from app.main import app
 def test_app():
     client = TestClient(app)
     yield client
+
+
+@pytest.fixture
+def auth_token():
+    return create_access_token("pflink")
 
 
 @pytest.fixture
@@ -47,7 +52,6 @@ def sample_workflow_entry():
             },
             "workflow_info": {
                 "feed_name": "test-%SeriesInstanceUID",
-                "user_name": "clinical_user",
                 "plugin_name": "pl-dircopy",
                 "plugin_version": "1.1.0",
                 "plugin_params": "--args ARGS",
@@ -106,7 +110,6 @@ def sample_workflow_request():
         },
         "workflow_info": {
             "feed_name": "test-%SeriesInstanceUID",
-            "user_name": "clinical_user",
             "plugin_name": "pl-dircopy",
             "plugin_version": "1.1.0",
             "plugin_params": "--args ARGS",

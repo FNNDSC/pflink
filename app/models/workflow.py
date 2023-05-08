@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError, validator
 from enum import Enum
 from app.models.auth import User
 
@@ -29,12 +29,8 @@ class Error(str, Enum):
     status = "Error while updating workflow status. "
     user = "Error while creating a user. "
     PACS = "Error while connecting to PACS server. "
-    required_pfdcm = "Please provide a pfdcm service name."
-    required_PACS = "Please provide a PACS service name."
     required_directive = "Please enter at least one value in PACS_directive."
-    required_feed = "Please provide a feed name."
-    required_user = "Please provide a user name."
-    required_plugin = "Please provide a plugin name."
+    required_field = "Empty strings not allowed."
     undefined = "Please enter a valid error type."
 
 
@@ -47,15 +43,24 @@ class PFDCMInfoSchema(BaseModel):
     dicom_file_extension: str = "dcm"
     db_log_path: str = "/home/dicom/log"
 
+    @validator('*')
+    def check_for_empty_string(cls, v):
+        assert v != '', Error.required_field.value
+        return v
+
 
 class WorkflowInfoSchema(BaseModel):
     """This schema includes all the information to create a new workflow in CUBE"""
     feed_name: str = Field(...)
-    user_name: str = Field(...)
     plugin_name: str = Field(...)
     plugin_version: str = Field(...)
     plugin_params: str = ""
     pipeline_name: str = ""
+
+    @validator('feed_name', 'plugin_name')
+    def check_for_empty_string(cls, v):
+        assert v != '', Error.required_field.value
+        return v
 
 
 class PACSqueryCore(BaseModel):
@@ -89,6 +94,15 @@ class WorkflowRequestSchema(BaseModel):
     workflow_info: WorkflowInfoSchema
     cube_user_info: User
 
+    @validator('PACS_directive')
+    def check_if_one_present(cls, value):
+        count = 0
+        for k, v in value:
+            if v:
+                count += 1
+        assert count != 0, Error.required_directive.value
+        return value
+
     class Config:
         schema_extra = {
             "example": {
@@ -102,7 +116,6 @@ class WorkflowRequestSchema(BaseModel):
                 },
                 "workflow_info": {
                     "feed_name": "test-%SeriesInstanceUID",
-                    "user_name": "clinical_user",
                     "plugin_name": "pl-dircopy",
                     "plugin_version": "1.1.0",
                     "plugin_params": "--args ARGS"
