@@ -78,7 +78,6 @@ def query_to_dict(request: WorkflowRequestSchema) -> dict:
         "pfdcm_info": request.pfdcm_info.__dict__,
         "PACS_directive": request.PACS_directive.__dict__,
         "workflow_info": request.workflow_info.__dict__,
-        "cube_user_info": request.cube_user_info.__dict__,
     }
 
 

@@ -59,7 +59,7 @@ def update_workflow_status(key: str, test: bool):
     if test:
         updated_status = get_simulated_status(workflow)
     else:
-        updated_status = get_current_status(workflow.request)
+        updated_status = get_current_status(workflow.request, workflow.response)
 
     workflow.response = updated_status
     update_status_flag(key, workflow, True)
@@ -86,6 +86,7 @@ def update_status_flag(key: str, workflow: WorkflowDBSchema, flag: bool):
 
 def get_current_status(
         request: WorkflowRequestSchema,
+        status: WorkflowStatusResponseSchema,
 ) -> WorkflowStatusResponseSchema:
     """
     Return the status of a workflow in `pflink` by asking `pfdcm` & `cube`. The sequence is as follows:
@@ -96,7 +97,7 @@ def get_current_status(
     """
     pfdcm_resp = _get_pfdcm_status(request)
     cube_resp = _get_feed_status(request)
-    status = _parse_response(pfdcm_resp, cube_resp)
+    status = _parse_response(pfdcm_resp, cube_resp, status)
     return status
 
 
@@ -215,11 +216,12 @@ def get_analysis_status(response: dict) -> dict:
 def _parse_response(
         pfdcm_response: dict,
         cube_response: dict,
+        status: WorkflowStatusResponseSchema,
 ) -> WorkflowStatusResponseSchema:
     """
     Parse JSON object for workflow status response
     """
-    status = WorkflowStatusResponseSchema()
+    # status = WorkflowStatusResponseSchema()
     pfdcm_has_error = pfdcm_response.get("error")
     cube_has_error = cube_response.get("error")
     if pfdcm_has_error:
