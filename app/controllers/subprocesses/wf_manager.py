@@ -74,7 +74,9 @@ def manage_workflow(db_key: str):
             case State.REGISTERING:
                 if workflow.response.state_progress == "100%" and workflow.stale:
                     try:
-                        pl_inst_id = do_cube_create_feed(request, cube_url)
+                        feed_id = pl_inst_id = do_cube_create_feed(request, cube_url)
+                        workflow.response.feed_id = feed_id
+                        update_workflow(key, workflow)
                     except Exception as ex:
                         logging.info(Error.feed.value)
                         workflow.response.error = Error.feed.value + str(ex)

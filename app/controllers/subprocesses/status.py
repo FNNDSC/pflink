@@ -46,11 +46,8 @@ def update_workflow_status(key: str, test: bool):
     """
     workflow = retrieve_workflow(key)
     # If the status of the workflow is currently being updated by another process
-    # or the workflow is in `Completed` state
-    # or some error occurred and the workflow status is already marked as false, then do nothing
-    if is_status_subprocess_running(workflow) or workflow.response.workflow_state == State.COMPLETED\
-            or not workflow.response.status:
-        # Do nothing and exit
+    # Do nothing and exit
+    if is_status_subprocess_running(workflow):
         return
 
     logging.info(f"WORKING on updating the status for {key}, locking--")

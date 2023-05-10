@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, ValidationError, validator
+from pydantic import BaseModel, Field, validator
 
 
 class User(BaseModel):
@@ -7,5 +7,5 @@ class User(BaseModel):
 
     @validator('username', 'password')
     def check_for_empty_string(cls, v):
-        assert v != '', 'Empty strings not allowed'
+        assert v != '', 'Empty strings are not allowed.'
         return v
