@@ -66,7 +66,7 @@ def update_workflow_status(key: str, test: bool):
 def is_status_subprocess_running(workflow: WorkflowDBSchema):
     proc_count = get_process_count("status", args.data)
 
-    if not workflow.stale and proc_count > 0:
+    if not workflow.stale:
         return True
     return False
 
@@ -93,7 +93,7 @@ def get_current_status(
         4) Return the response
     """
     pfdcm_resp = _get_pfdcm_status(request)
-    cube_resp = _get_feed_status(request)
+    cube_resp = _get_feed_status(request, status.feed_id)
     status = _parse_response(pfdcm_resp, cube_resp, status)
     return status
 
@@ -151,7 +151,7 @@ def _get_pfdcm_status(request: WorkflowRequestSchema):
         return {"error": Error.pfdcm.value + f" {str(ex)} for pfdcm_service {request.pfdcm_info.pfdcm_service}"}
 
 
-def _get_feed_status(request: WorkflowRequestSchema) -> dict:
+def _get_feed_status(request: WorkflowRequestSchema, feed_id: str) -> dict:
     """
     Get the status of a feed inside `CUBE`
     1) Create/get a cube client using user_name
@@ -159,6 +159,8 @@ def _get_feed_status(request: WorkflowRequestSchema) -> dict:
     3) Serialize for information
     4) Return a suitable response
     """
+    if feed_id == "":
+        return {}
     try:
         pfdcm_url = retrieve_pfdcm_url(request.pfdcm_info.pfdcm_service)
         cube_url = get_cube_url_from_pfdcm(pfdcm_url, request.pfdcm_info.cube_service)
@@ -172,7 +174,7 @@ def _get_feed_status(request: WorkflowRequestSchema) -> dict:
         feed_name = substitute_dicom_tags(requested_feed_name, pacs_details)
 
         # search for feed
-        resp = cl.getFeed({"name_exact": feed_name})
+        resp = cl.getFeed({"id": feed_id, "name_exact": feed_name})
         return resp
     except Exception as ex:
         return {"error": Error.cube.value + str(ex)}

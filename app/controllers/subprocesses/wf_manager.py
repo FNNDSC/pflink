@@ -33,10 +33,11 @@ logging.basicConfig(
 
 parser = argparse.ArgumentParser(description='Process arguments')
 parser.add_argument('--data', type=str)
+parser.add_argument('--test', default=False, action='store_true')
 args = parser.parse_args()
 
 
-def manage_workflow(db_key: str):
+def manage_workflow(db_key: str, test: bool):
     """
     Manage workflow:
     Schedule task based on status from the DB
@@ -44,7 +45,7 @@ def manage_workflow(db_key: str):
     MAX_RETRIES = 50
     pl_inst_id = 0
     workflow = retrieve_workflow(db_key)
-    if workflow.started or not workflow.response.status:
+    if workflow.started or not workflow.response.status or test:
         # Do nothing and return
         return
 
@@ -74,7 +75,9 @@ def manage_workflow(db_key: str):
             case State.REGISTERING:
                 if workflow.response.state_progress == "100%" and workflow.stale:
                     try:
-                        feed_id = pl_inst_id = do_cube_create_feed(request, cube_url)
+                        resp = do_cube_create_feed(request, cube_url)
+                        pl_inst_id = resp["pl_inst_id"]
+                        feed_id = resp["feed_id"]
                         workflow.response.feed_id = feed_id
                         update_workflow(key, workflow)
                     except Exception as ex:
@@ -108,10 +111,7 @@ def update_status(request: WorkflowRequestSchema):
     process = subprocess.Popen(
         ['python',
          'app/controllers/subprocesses/status.py',
-         "--data", str_data,
-         ], stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        close_fds=True)
+         "--data", str_data])
 
 
 def pfdcm_do(verb: str, then_args: dict, request: WorkflowRequestSchema, url: str):
@@ -198,7 +198,7 @@ def do_pfdcm_register(request: WorkflowRequestSchema, pfdcm_url: str):
     pfdcm_do("register", register_args, request, pfdcm_url)
 
 
-def do_cube_create_feed(request: WorkflowRequestSchema, cube_url: str) -> str:
+def do_cube_create_feed(request: WorkflowRequestSchema, cube_url: str) -> dict:
     """
     Create a new feed in `CUBE` if not already present
     """
@@ -214,7 +214,7 @@ def do_cube_create_feed(request: WorkflowRequestSchema, cube_url: str) -> str:
     # create a feed
     feed_params = {'title': feed_name, 'dir': data_path}
     feed_response = client.createFeed(plugin_id, feed_params)
-    return feed_response['id']
+    return {"feed_id": feed_response["feed_id"], "pl_inst_id": feed_response["id"]}
 
 
 def do_cube_start_analysis(previous_id: str, request: WorkflowRequestSchema, cube_url: str):
@@ -256,5 +256,5 @@ if __name__ == "__main__":
     """
     d_data = json.loads(args.data)
     key = dict_to_hash(d_data)
-    manage_workflow(key)
+    manage_workflow(key, args.test)
 
