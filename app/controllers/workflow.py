@@ -25,41 +25,6 @@ logging.basicConfig(
 )
 
 
-# helpers
-
-
-def validate_request(request: WorkflowRequestSchema) -> str:
-    """
-    A helper method validate all required fields in a request payload
-    """
-    error = ""
-    attr_count = 0
-
-    if not request.pfdcm_info.pfdcm_service:
-        error += f"\n{Error.required_pfdcm}"
-
-    if not request.pfdcm_info.PACS_service:
-        error += f"\n{Error.required_PACS}"
-
-    for k, v in request.PACS_directive:
-        if v:
-            attr_count += 1
-
-    if attr_count == 0:
-        error += f"\n{Error.required_directive}"
-
-    if not request.workflow_info.user_name:
-        error += f"\n{Error.required_user}"
-
-    if not request.workflow_info.feed_name:
-        error += f"\n{Error.required_feed}"
-
-    if not request.workflow_info.plugin_name:
-        error += f"\n{Error.required_plugin}"
-
-    return error
-
-
 # DB methods
 
 
@@ -116,16 +81,7 @@ async def post_workflow(
     db_key = request_to_hash(request)
     workflow = utils.retrieve_workflow(db_key)
     if not workflow:
-        # create a new workflow object
-        response = WorkflowStatusResponseSchema()
-        # validate request for errors
-        error = validate_request(request)
-        if error:
-            response.status = False
-            response.error = error
-            return response
-        new_workflow = WorkflowDBSchema(key=db_key, request=request, response=response)
-        workflow = add_workflow(new_workflow)
+        workflow = create_new_workflow(db_key, request)
 
     # 'error_type' is an optional test-only parameter that forces the workflow to error out
     # at a given error state
@@ -134,12 +90,19 @@ async def post_workflow(
 
     mode, str_data = get_suproc_params(test, request)
     # run workflow manager subprocess on the workflow
-    sub_mng = manage_workflow(mode, str_data)
+    sub_mng = manage_workflow(str_data, mode)
 
     # run status_update subprocess on the workflow
-    sub_updt = update_workflow_status(mode, str_data)
+    sub_updt = update_workflow_status(str_data, mode)
     # debug_process(sub_updt)
     return workflow.response
+
+
+def create_new_workflow(key: str, request: WorkflowRequestSchema, response=WorkflowStatusResponseSchema()):
+    """Create a new workflow object and add it to the database"""
+    new_workflow = WorkflowDBSchema(key=key, request=request, response=response)
+    workflow = add_workflow(new_workflow)
+    return workflow
 
 
 def create_response_with_error(
@@ -158,33 +121,25 @@ def create_response_with_error(
     return response
 
 
-def manage_workflow(mode: str, str_data: str):
+def manage_workflow(str_data: str, mode: str):
     """
     Manage a workflow request in a separate subprocess
     """
-    subproc = subprocess.Popen(
-        ['python',
-         'app/controllers/subprocesses/wf_manager.py',
-         "--data", str_data,
-         "--test", mode,
-         ], stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        close_fds=True)
+    d_cmd = ["python", "app/controllers/subprocesses/wf_manager.py", "--data", str_data]
+    if mode:
+        d_cmd.append(mode)
+    subproc = subprocess.Popen(d_cmd)
     return subproc
 
 
-def update_workflow_status(mode: str, str_data: str):
+def update_workflow_status(str_data: str, mode: str):
     """
     Update the current status of a workflow request in a separate process
     """
-    subproc = subprocess.Popen(
-        ['python',
-         'app/controllers/subprocesses/status.py',
-         "--data", str_data,
-         "--test", mode,
-         ], stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        close_fds=True)
+    d_cmd = ["python", "app/controllers/subprocesses/status.py", "--data", str_data]
+    if mode:
+        d_cmd.append(mode)
+    subproc = subprocess.Popen(d_cmd)
     return subproc
 
 
@@ -202,7 +157,7 @@ def get_suproc_params(test: bool, request: WorkflowRequestSchema) -> (str, str):
     """
     mode = ""
     if test:
-        mode = "testing"
+        mode = "--test"
     d_data = utils.query_to_dict(request)
     str_data = json.dumps(d_data)
     return mode, str_data

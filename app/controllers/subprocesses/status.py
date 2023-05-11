@@ -34,23 +34,20 @@ logging.basicConfig(
 )
 
 parser = argparse.ArgumentParser(description='Process arguments passed through CLI')
-parser.add_argument('--data', metavar='N', type=str)
-parser.add_argument('--test', metavar='N', type=str)
+parser.add_argument('--data', type=str)
+parser.add_argument('--test', default=False, action='store_true')
 
 args = parser.parse_args()
 
 
-def update_workflow_status(key: str, test: str):
+def update_workflow_status(key: str, test: bool):
     """
     Update the status of a workflow object in the DB
     """
     workflow = retrieve_workflow(key)
     # If the status of the workflow is currently being updated by another process
-    # or the workflow is in `Completed` state
-    # or some error occurred and the workflow status is already marked as false, then do nothing
-    if is_status_subprocess_running(workflow) or workflow.response.workflow_state == State.COMPLETED\
-            or not workflow.response.status:
-        # Do nothing and exit
+    # Do nothing and exit
+    if is_status_subprocess_running(workflow):
         return
 
     logging.info(f"WORKING on updating the status for {key}, locking--")
@@ -59,7 +56,7 @@ def update_workflow_status(key: str, test: str):
     if test:
         updated_status = get_simulated_status(workflow)
     else:
-        updated_status = get_current_status(workflow.request)
+        updated_status = get_current_status(workflow.request, workflow.response)
 
     workflow.response = updated_status
     update_status_flag(key, workflow, True)
@@ -69,7 +66,7 @@ def update_workflow_status(key: str, test: str):
 def is_status_subprocess_running(workflow: WorkflowDBSchema):
     proc_count = get_process_count("status", args.data)
 
-    if not workflow.stale and proc_count > 0:
+    if not workflow.stale:
         return True
     return False
 
@@ -86,6 +83,7 @@ def update_status_flag(key: str, workflow: WorkflowDBSchema, flag: bool):
 
 def get_current_status(
         request: WorkflowRequestSchema,
+        status: WorkflowStatusResponseSchema,
 ) -> WorkflowStatusResponseSchema:
     """
     Return the status of a workflow in `pflink` by asking `pfdcm` & `cube`. The sequence is as follows:
@@ -95,8 +93,8 @@ def get_current_status(
         4) Return the response
     """
     pfdcm_resp = _get_pfdcm_status(request)
-    cube_resp = _get_feed_status(request)
-    status = _parse_response(pfdcm_resp, cube_resp)
+    cube_resp = _get_feed_status(request, status.feed_id)
+    status = _parse_response(pfdcm_resp, cube_resp, status)
     return status
 
 
@@ -153,7 +151,7 @@ def _get_pfdcm_status(request: WorkflowRequestSchema):
         return {"error": Error.pfdcm.value + f" {str(ex)} for pfdcm_service {request.pfdcm_info.pfdcm_service}"}
 
 
-def _get_feed_status(request: WorkflowRequestSchema) -> dict:
+def _get_feed_status(request: WorkflowRequestSchema, feed_id: str) -> dict:
     """
     Get the status of a feed inside `CUBE`
     1) Create/get a cube client using user_name
@@ -161,12 +159,14 @@ def _get_feed_status(request: WorkflowRequestSchema) -> dict:
     3) Serialize for information
     4) Return a suitable response
     """
+    if feed_id == "":
+        return {}
     try:
         pfdcm_url = retrieve_pfdcm_url(request.pfdcm_info.pfdcm_service)
         cube_url = get_cube_url_from_pfdcm(pfdcm_url, request.pfdcm_info.cube_service)
 
         # create a client using the username
-        cl = do_cube_create_user(cube_url, request.workflow_info.user_name)
+        cl = do_cube_create_user(cube_url, request.cube_user_info.username, request.cube_user_info.password)
 
         # substitute dicom values for dicom tags present in feed name
         requested_feed_name = request.workflow_info.feed_name
@@ -174,7 +174,7 @@ def _get_feed_status(request: WorkflowRequestSchema) -> dict:
         feed_name = substitute_dicom_tags(requested_feed_name, pacs_details)
 
         # search for feed
-        resp = cl.getFeed({"name_exact": feed_name})
+        resp = cl.getFeed({"id": feed_id, "name_exact": feed_name})
         return resp
     except Exception as ex:
         return {"error": Error.cube.value + str(ex)}
@@ -215,11 +215,12 @@ def get_analysis_status(response: dict) -> dict:
 def _parse_response(
         pfdcm_response: dict,
         cube_response: dict,
+        status: WorkflowStatusResponseSchema,
 ) -> WorkflowStatusResponseSchema:
     """
     Parse JSON object for workflow status response
     """
-    status = WorkflowStatusResponseSchema()
+    # status = WorkflowStatusResponseSchema()
     pfdcm_has_error = pfdcm_response.get("error")
     cube_has_error = cube_response.get("error")
     if pfdcm_has_error:
@@ -360,4 +361,3 @@ if __name__ == "__main__":
     dict_data = json.loads(args.data)
     wf_key = dict_to_hash(dict_data)
     update_workflow_status(wf_key, args.test)
-
