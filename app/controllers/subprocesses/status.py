@@ -284,6 +284,12 @@ def _parse_response(
                 status.status = False
                 return status
 
+    else:
+        if status.feed_name:
+            status.workflow_state = State.FEED_DELETED
+            status.status = False
+            status.error = Error.feed_deleted.value
+
     return status
 
 
@@ -342,6 +348,7 @@ def get_simulated_status(workflow: WorkflowDBSchema) -> WorkflowStatusResponseSc
             else:
                 progress += PROGRESS_JUMP
                 current_status.state_progress = str(progress) + '%'
+
 
     return current_status
 
