@@ -126,7 +126,7 @@ async def pacs_list(service_name: str) -> list[str]:
     if not pfdcm_server:
         return d_results
     pfdcm_url = pfdcm_server['service_address']
-    pfdcm_pacs_list_api = f'{pfdcm_url}/api/v1/PACSservice/list'
+    pfdcm_pacs_list_api = f'{pfdcm_url}/api/v1/PACSservice/list/'
     async with httpx.AsyncClient() as client:
         try:
             response = await client.get(pfdcm_pacs_list_api)
