@@ -79,7 +79,6 @@ app.add_middleware(
 app.include_router(BasicRouter, tags=["Basic Info"], prefix="/api/v1")
 app.include_router(PfdcmRouter, tags=["Pfdcm Service Info"], prefix="/api/v1/pfdcm",
                    dependencies=[Depends(auth.get_current_user)])
-app.include_router(WorkflowRouter, tags=["Workflow Services"], prefix="/api/v1/workflow",
-                   dependencies=[Depends(auth.get_current_user)])
+app.include_router(WorkflowRouter, tags=["Workflow Services"], prefix="/api/v1/workflow")
 app.include_router(WorkflowTestRouter, tags=["Test Workflow Services"], prefix="/api/v1/testing")
 app.include_router(AuthRouter, tags=["Basic Auth"], prefix="/api/v1/auth-token")
