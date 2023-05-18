@@ -3,7 +3,7 @@ from pydantic import BaseSettings, MongoDsn
 
 class Settings(BaseSettings):
     pflink_mongodb: MongoDsn = 'mongodb://localhost:27017'
-    version: str = "3.1.0"
+    version: str = "3.1.3"
 
 
 class Auth(BaseSettings):
