@@ -16,6 +16,7 @@ class State(str, Enum):
     FEED_CREATED = "feed created"
     ANALYZING = "analyzing study"
     COMPLETED = "completed"
+    FEED_DELETED = "feed deleted from CUBE"
 
 
 class Error(str, Enum):
@@ -32,6 +33,7 @@ class Error(str, Enum):
     required_directive = "Please enter at least one value in PACS_directive."
     required_field = "Empty strings not allowed."
     undefined = "Please enter a valid error type."
+    feed_deleted = "Feed deleted from CUBE. Please change the feed name and re-submit the request."
 
 
 class PFDCMInfoSchema(BaseModel):
