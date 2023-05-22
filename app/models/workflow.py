@@ -17,6 +17,7 @@ class State(str, Enum):
     ANALYZING = "analyzing study"
     COMPLETED = "completed"
     FEED_DELETED = "feed deleted from CUBE"
+    DUPLICATE_REQUEST = "duplicate request found"
 
 
 class Error(str, Enum):
@@ -91,6 +92,7 @@ class PACSqueryCore(BaseModel):
 
 class WorkflowRequestSchema(BaseModel):
     """The Workflow Request model"""
+    ignore_duplicate: bool = True
     pfdcm_info: PFDCMInfoSchema
     PACS_directive: PACSqueryCore
     workflow_info: WorkflowInfoSchema
@@ -143,6 +145,7 @@ class WorkflowStatusResponseSchema(BaseModel):
 class WorkflowDBSchema(BaseModel):
     """The DB model of a workflow object"""
     key: str = ""
+    footprint: str = ""
     request: WorkflowRequestSchema
     response: WorkflowStatusResponseSchema
     stale: bool = True

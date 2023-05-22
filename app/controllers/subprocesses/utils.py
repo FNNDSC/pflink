@@ -40,6 +40,7 @@ def workflow_retrieve_helper(workflow: dict) -> WorkflowDBSchema:
                )
     return WorkflowDBSchema(
         key=workflow["_id"],
+        footprint=workflow["footprint"],
         request=request,
         response=workflow["response"],
         stale=workflow["stale"],
@@ -57,6 +58,7 @@ def workflow_add_helper(workflow: WorkflowDBSchema) -> dict:
     
     return {
         "_id": workflow.key,
+        "footprint": workflow.footprint,
         "request": d_request,
         "response": workflow.response.__dict__,
         "stale": workflow.stale,

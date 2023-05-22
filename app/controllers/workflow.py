@@ -78,9 +78,13 @@ async def post_workflow(
     Finally, return the current status of the workflow from the database
     """
     # create a hash key using the request
-    db_key = request_to_hash(request)
+    request_hash = request_to_hash(request)
+    db_key = request_hash+request.cube_user_info.username
     workflow = utils.retrieve_workflow(db_key)
     if not workflow:
+        duplicates = check_for_duplicates(request_hash)
+        if duplicates and not request.ignore_duplicate:
+            return duplicates[0].response
         workflow = create_new_workflow(db_key, request)
 
     # 'error_type' is an optional test-only parameter that forces the workflow to error out
@@ -149,6 +153,16 @@ def debug_process(bgprocess):
     """
     stderr, stdout = bgprocess.communicate()
     print(stderr, stdout)
+
+
+def check_for_duplicates(request_hash: str) -> list[WorkflowDBSchema]:
+    """
+    Check for duplicate workflow request made by a user
+      A workflow request is a duplicate request if there exists one or more entries in the DB of similar
+      footprint.
+    """
+    workflows = [workflow for workflow in workflow_collection.find({"footprint": request_hash})]
+    return workflows
 
 
 def get_suproc_params(test: bool, request: WorkflowRequestSchema) -> (str, str):
