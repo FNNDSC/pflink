@@ -110,6 +110,7 @@ class WorkflowRequestSchema(BaseModel):
     class Config:
         schema_extra = {
             "example": {
+                "ignore_duplicate": True,
                 "pfdcm_info": {
                     "pfdcm_service": "PFDCM",
                     "PACS_service": "orthanc"

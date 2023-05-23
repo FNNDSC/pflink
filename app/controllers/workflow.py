@@ -78,14 +78,14 @@ async def post_workflow(
     Finally, return the current status of the workflow from the database
     """
     # create a hash key using the request
-    footprint = get_footprint(request)
     db_key = request_to_hash(request)
     workflow = utils.retrieve_workflow(db_key)
     if not workflow:
-        duplicates = check_for_duplicates(footprint)
-        if duplicates and not request.ignore_duplicate:
-            return duplicates[0].response
-        workflow = create_new_workflow(db_key, request)
+        footprint = get_footprint(request)
+        duplicate = check_for_duplicates(footprint)
+        if duplicate and not request.ignore_duplicate:
+            return duplicate.response
+        workflow = create_new_workflow(db_key, footprint, request)
 
     # 'error_type' is an optional test-only parameter that forces the workflow to error out
     # at a given error state
@@ -102,9 +102,9 @@ async def post_workflow(
     return workflow.response
 
 
-def create_new_workflow(key: str, request: WorkflowRequestSchema, response=WorkflowStatusResponseSchema()):
+def create_new_workflow(key: str, footprint: str, request: WorkflowRequestSchema, response=WorkflowStatusResponseSchema()):
     """Create a new workflow object and add it to the database"""
-    new_workflow = WorkflowDBSchema(key=key, request=request, response=response)
+    new_workflow = WorkflowDBSchema(key=key, footprint=footprint, request=request, response=response)
     workflow = add_workflow(new_workflow)
     return workflow
 
@@ -155,19 +155,22 @@ def debug_process(bgprocess):
     print(stderr, stdout)
 
 
-def check_for_duplicates(request_hash: str) -> list[WorkflowDBSchema]:
+def check_for_duplicates(request_hash: str) -> WorkflowDBSchema:
     """
     Check for duplicate workflow request made by a user
       A workflow request is a duplicate request if there exists one or more entries in the DB of similar
       footprint.
     """
-    workflows = [workflow for workflow in workflow_collection.find({"footprint": request_hash})]
-    return workflows
+    workflow = workflow_collection.find_one({"footprint": request_hash})
+    return utils.workflow_retrieve_helper(workflow)
 
 
 def get_footprint(request: WorkflowRequestSchema) -> str:
     """
-
+    Create a unique has on a request footprint.
+      A request footprint is a users request payload stripped down to
+      include only essential information such as pfdcm_info, workflow_info
+      and PACS directive.
     """
     d_data = utils.query_to_dict(request)
     key = utils.dict_to_hash(d_data)
