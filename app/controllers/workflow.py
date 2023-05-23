@@ -162,7 +162,8 @@ def check_for_duplicates(request_hash: str) -> WorkflowDBSchema:
       footprint.
     """
     workflow = workflow_collection.find_one({"footprint": request_hash})
-    return utils.workflow_retrieve_helper(workflow)
+    if workflow:
+        return utils.workflow_retrieve_helper(workflow)
 
 
 def get_footprint(request: WorkflowRequestSchema) -> str:
