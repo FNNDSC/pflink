@@ -83,6 +83,15 @@ def query_to_dict(request: WorkflowRequestSchema) -> dict:
     }
 
 
+def request_to_dict(request: WorkflowRequestSchema) -> dict:
+    return {
+        "pfdcm_info": request.pfdcm_info.__dict__,
+        "PACS_directive": request.PACS_directive.__dict__,
+        "workflow_info": request.workflow_info.__dict__,
+        "username": request.cube_user_info.username,
+    }
+
+
 def dict_to_hash(data: dict) -> str:
     # convert to string and encode
     str_data = json.dumps(data)

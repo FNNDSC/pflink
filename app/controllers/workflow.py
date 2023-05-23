@@ -60,7 +60,7 @@ def request_to_hash(request: WorkflowRequestSchema) -> str:
     """
     Create a hash key using md5 hash function on a workflow request object
     """
-    d_data = utils.query_to_dict(request)
+    d_data = utils.request_to_dict(request)
     key = utils.dict_to_hash(d_data)
     return key
 
@@ -78,11 +78,11 @@ async def post_workflow(
     Finally, return the current status of the workflow from the database
     """
     # create a hash key using the request
-    request_hash = request_to_hash(request)
-    db_key = request_hash+request.cube_user_info.username
+    footprint = get_footprint(request)
+    db_key = request_to_hash(request)
     workflow = utils.retrieve_workflow(db_key)
     if not workflow:
-        duplicates = check_for_duplicates(request_hash)
+        duplicates = check_for_duplicates(footprint)
         if duplicates and not request.ignore_duplicate:
             return duplicates[0].response
         workflow = create_new_workflow(db_key, request)
@@ -165,6 +165,15 @@ def check_for_duplicates(request_hash: str) -> list[WorkflowDBSchema]:
     return workflows
 
 
+def get_footprint(request: WorkflowRequestSchema) -> str:
+    """
+
+    """
+    d_data = utils.query_to_dict(request)
+    key = utils.dict_to_hash(d_data)
+    return key
+
+
 def get_suproc_params(test: bool, request: WorkflowRequestSchema) -> (str, str):
     """
     Return mode, str_data
@@ -172,6 +181,6 @@ def get_suproc_params(test: bool, request: WorkflowRequestSchema) -> (str, str):
     mode = ""
     if test:
         mode = "--test"
-    d_data = utils.query_to_dict(request)
+    d_data = utils.request_to_dict(request)
     str_data = json.dumps(d_data)
     return mode, str_data
