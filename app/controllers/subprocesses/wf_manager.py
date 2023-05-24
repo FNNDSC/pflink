@@ -14,7 +14,7 @@ from app.models.workflow import (
     WorkflowInfoSchema,
 )
 from app.controllers.subprocesses.utils import (
-    query_to_dict,
+    request_to_dict,
     dict_to_hash,
     update_workflow,
     retrieve_workflow,
@@ -106,7 +106,7 @@ def update_status(request: WorkflowRequestSchema):
     Trigger an update status in 
     a separate python process
     """
-    d_data = query_to_dict(request)
+    d_data = request_to_dict(request)
     str_data = json.dumps(d_data)
     process = subprocess.Popen(
         ['python',
