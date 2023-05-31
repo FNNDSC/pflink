@@ -8,6 +8,7 @@ from app.models.workflow import (
     WorkflowStatusResponseSchema,
     WorkflowDBSchema,
     Error,
+    UserResponseSchema,
 )
 from app.controllers.subprocesses import utils
 from app.config import settings
@@ -82,10 +83,12 @@ async def post_workflow(
     workflow = utils.retrieve_workflow(db_key)
     if not workflow:
         fingerprint = get_fingerprint(request)
-        duplicate = check_for_duplicates(fingerprint)
-        if duplicate and not request.ignore_duplicate:
-            duplicate.response.message = f"A duplicate request already exists with the CUBE username: {duplicate.request.cube_user_info.username}"
-            return duplicate.response
+        duplicates = check_for_duplicates(fingerprint)
+        if duplicates and not request.ignore_duplicate:
+            response = WorkflowStatusResponseSchema()
+            response.message = "Duplicate request already exists and the following are their response(s)."
+            response.duplicates = duplicates
+            return response
         workflow = create_new_workflow(db_key, fingerprint, request)
 
     # 'error_type' is an optional test-only parameter that forces the workflow to error out
@@ -161,15 +164,20 @@ def debug_process(bgprocess):
     print(stderr, stdout)
 
 
-def check_for_duplicates(request_hash: str) -> WorkflowDBSchema:
+def check_for_duplicates(request_hash: str):
     """
     Check for duplicate workflow request made by a user
       A workflow request is a duplicate request if there exists one or more entries in the DB of similar
       footprint.
     """
-    workflow = workflow_collection.find_one({"fingerprint": request_hash})
-    if workflow:
-        return utils.workflow_retrieve_helper(workflow)
+    user_responses = []
+    workflows = workflow_collection.find({"fingerprint": request_hash})
+    if workflows:
+        for workflow in workflows:
+            record = utils.workflow_retrieve_helper(workflow)
+            user_response = UserResponseSchema(username=record.request.cube_user_info.username, response=record.response.__dict__)
+            user_responses.append(user_response)
+        return user_responses
 
 
 def get_fingerprint(request: WorkflowRequestSchema) -> str:

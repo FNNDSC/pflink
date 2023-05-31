@@ -133,6 +133,12 @@ class WorkflowRequestSchema(BaseModel):
         }
 
 
+class UserResponseSchema(BaseModel):
+    """A model to display username along with a response for its workflow request"""
+    username: str = ""
+    response: dict
+
+
 class WorkflowStatusResponseSchema(BaseModel):
     """The Workflow status response model"""
     status: bool = True
@@ -141,6 +147,7 @@ class WorkflowStatusResponseSchema(BaseModel):
     feed_id: str = ""
     feed_name: str = ""
     message: str = ""
+    duplicates: list[UserResponseSchema] = None
     error: str = ""
 
 
