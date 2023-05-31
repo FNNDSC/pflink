@@ -81,11 +81,12 @@ async def post_workflow(
     db_key = request_to_hash(request)
     workflow = utils.retrieve_workflow(db_key)
     if not workflow:
-        footprint = get_footprint(request)
-        duplicate = check_for_duplicates(footprint)
+        fingerprint = get_fingerprint(request)
+        duplicate = check_for_duplicates(fingerprint)
         if duplicate and not request.ignore_duplicate:
+            duplicate.response.message = f"A duplicate request already exists with the CUBE username: {duplicate.request.cube_user_info.username}"
             return duplicate.response
-        workflow = create_new_workflow(db_key, footprint, request)
+        workflow = create_new_workflow(db_key, fingerprint, request)
 
     # 'error_type' is an optional test-only parameter that forces the workflow to error out
     # at a given error state
@@ -102,9 +103,14 @@ async def post_workflow(
     return workflow.response
 
 
-def create_new_workflow(key: str, footprint: str, request: WorkflowRequestSchema, response=WorkflowStatusResponseSchema()):
+def create_new_workflow(
+        key: str,
+        fingerprint: str,
+        request: WorkflowRequestSchema,
+        response=WorkflowStatusResponseSchema()
+) -> WorkflowDBSchema:
     """Create a new workflow object and add it to the database"""
-    new_workflow = WorkflowDBSchema(key=key, footprint=footprint, request=request, response=response)
+    new_workflow = WorkflowDBSchema(key=key, fingerprint=fingerprint, request=request, response=response)
     workflow = add_workflow(new_workflow)
     return workflow
 
@@ -161,12 +167,12 @@ def check_for_duplicates(request_hash: str) -> WorkflowDBSchema:
       A workflow request is a duplicate request if there exists one or more entries in the DB of similar
       footprint.
     """
-    workflow = workflow_collection.find_one({"footprint": request_hash})
+    workflow = workflow_collection.find_one({"fingerprint": request_hash})
     if workflow:
         return utils.workflow_retrieve_helper(workflow)
 
 
-def get_footprint(request: WorkflowRequestSchema) -> str:
+def get_fingerprint(request: WorkflowRequestSchema) -> str:
     """
     Create a unique has on a request footprint.
       A request footprint is a users request payload stripped down to

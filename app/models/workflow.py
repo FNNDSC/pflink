@@ -140,13 +140,14 @@ class WorkflowStatusResponseSchema(BaseModel):
     state_progress: str = "0%"
     feed_id: str = ""
     feed_name: str = ""
+    message: str = ""
     error: str = ""
 
 
 class WorkflowDBSchema(BaseModel):
     """The DB model of a workflow object"""
     key: str = ""
-    footprint: str = ""
+    fingerprint: str = ""
     request: WorkflowRequestSchema
     response: WorkflowStatusResponseSchema
     stale: bool = True
