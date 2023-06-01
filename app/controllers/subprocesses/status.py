@@ -58,9 +58,30 @@ def update_workflow_status(key: str, test: bool):
     else:
         updated_status = get_current_status(workflow.request, workflow.response)
 
-    workflow.response = updated_status
+    workflow.response = update_workflow_progress(updated_status)
     update_status_flag(key, workflow, True)
     logging.info(f"UPDATED status for {key}, releasing lock")
+
+
+def update_workflow_progress(response: WorkflowStatusResponseSchema):
+    """
+
+    """
+    MAX_STATE = 6
+    index = 0
+    for elem in State:
+        if response.workflow_state == elem:
+            response.workflow_progress = f"{__progress_percent(index,MAX_STATE)}%"
+        index += 1
+    return response
+
+
+def __progress_percent(curr_state: int, total_states: int) -> str:
+    """
+
+    """
+    progress_percent = round((curr_state/total_states) * 100)
+    return  str(progress_percent)
 
 
 def is_status_subprocess_running(workflow: WorkflowDBSchema):
@@ -348,7 +369,6 @@ def get_simulated_status(workflow: WorkflowDBSchema) -> WorkflowStatusResponseSc
             else:
                 progress += PROGRESS_JUMP
                 current_status.state_progress = str(progress) + '%'
-
 
     return current_status
 

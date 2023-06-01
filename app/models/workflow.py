@@ -17,7 +17,6 @@ class State(str, Enum):
     ANALYZING = "analyzing study"
     COMPLETED = "completed"
     FEED_DELETED = "feed deleted from CUBE"
-    DUPLICATE_REQUEST = "duplicate request found"
 
 
 class Error(str, Enum):
@@ -149,6 +148,7 @@ class WorkflowStatusResponseSchema(BaseModel):
     message: str = ""
     duplicates: list[UserResponseSchema] = None
     error: str = ""
+    workflow_progress: str = "0%"
 
 
 class WorkflowDBSchema(BaseModel):
