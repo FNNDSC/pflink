@@ -6,7 +6,7 @@ from pymongo import MongoClient
 
 MONGO_DETAILS = str(settings.pflink_mongodb)
 client = MongoClient(MONGO_DETAILS)
-database = client.pfdcms
+database = client.database
 pfdcm_collection = database.get_collection("pfdcms_collection")
 
 
@@ -136,7 +136,7 @@ async def pacs_list(service_name: str) -> list[str]:
             return d_results
 
 
-def delete_pfdcm(service_name: str):
+async def delete_pfdcm(service_name: str):
     """
     Delete a pfdcm record from the DB
     """

@@ -15,8 +15,9 @@ from app.config import settings
 
 MONGO_DETAILS = str(settings.pflink_mongodb)
 client = MongoClient(MONGO_DETAILS)
-database = client.workflows
+database = client.database
 workflow_collection = database.get_collection("workflows_collection")
+test_collection = database.get_collection("tests_collection")
 
 log_format = "%(asctime)s: %(message)s"
 logging.basicConfig(
@@ -30,30 +31,31 @@ logging.basicConfig(
 
 
 # Retrieve all workflows present in the DB
-def retrieve_workflows():
+def retrieve_workflows(test: bool = False):
+    collection = test_collection if test else workflow_collection
     workflows = []
-    for workflow in workflow_collection.find():
+    for workflow in collection.find():
         workflows.append(utils.workflow_retrieve_helper(workflow))
     return workflows
 
 
 # Add new workflow in the DB
-def add_workflow(workflow_data: WorkflowDBSchema) -> WorkflowDBSchema:
-    new_workflow = workflow_collection.insert_one(utils.workflow_add_helper(workflow_data))
-    workflow = workflow_collection.find_one({"_id": new_workflow.inserted_id})
+def add_workflow(workflow_data: WorkflowDBSchema, test: bool = False) -> WorkflowDBSchema:
+    collection = test_collection if test else workflow_collection
+    new_workflow = collection.insert_one(utils.workflow_add_helper(workflow_data))
+    workflow = collection.find_one({"_id": new_workflow.inserted_id})
     return utils.workflow_retrieve_helper(workflow)
 
 
-def delete_workflow(request: dict):
+async def delete_workflows(test: bool = False):
     """
     Delete a workflow record from DB
     """
+    collection = test_collection if test else workflow_collection
     delete_count = 0
-    key = utils.dict_to_hash(request)
-    for workflow in workflow_collection.find():
-        if workflow["_id"] == key:
-            workflow_collection.delete_one({"_id": workflow["_id"]})
-            delete_count += 1
+    for workflow in collection.find():
+        collection.delete_one({"_id": workflow["_id"]})
+        delete_count += 1
     return {"Message": f"{delete_count} record(s) deleted!"}
 
 
@@ -80,16 +82,16 @@ async def post_workflow(
     """
     # create a hash key using the request
     db_key = request_to_hash(request)
-    workflow = utils.retrieve_workflow(db_key)
+    workflow = utils.retrieve_workflow(db_key, test)
     if not workflow:
         fingerprint = get_fingerprint(request)
-        duplicates = check_for_duplicates(fingerprint)
+        duplicates = check_for_duplicates(fingerprint, test)
         if duplicates and not request.ignore_duplicate:
             response = WorkflowStatusResponseSchema()
             response.message = "Duplicate request already exists and the following are their response(s)."
             response.duplicates = duplicates
             return response
-        workflow = create_new_workflow(db_key, fingerprint, request)
+        workflow = create_new_workflow(db_key, fingerprint, request, test)
 
     # 'error_type' is an optional test-only parameter that forces the workflow to error out
     # at a given error state
@@ -110,11 +112,12 @@ def create_new_workflow(
         key: str,
         fingerprint: str,
         request: WorkflowRequestSchema,
-        response=WorkflowStatusResponseSchema()
+        test: bool = False,
 ) -> WorkflowDBSchema:
     """Create a new workflow object and add it to the database"""
+    response = WorkflowStatusResponseSchema()
     new_workflow = WorkflowDBSchema(key=key, fingerprint=fingerprint, request=request, response=response)
-    workflow = add_workflow(new_workflow)
+    workflow = add_workflow(new_workflow, test)
     return workflow
 
 
@@ -164,14 +167,15 @@ def debug_process(bgprocess):
     print(stderr, stdout)
 
 
-def check_for_duplicates(request_hash: str):
+def check_for_duplicates(request_hash: str, test: bool = False):
     """
     Check for duplicate workflow request made by a user
       A workflow request is a duplicate request if there exists one or more entries in the DB of similar
       footprint.
     """
+    collection = test_collection if test else workflow_collection
     user_responses = []
-    workflows = workflow_collection.find({"fingerprint": request_hash})
+    workflows = collection.find({"fingerprint": request_hash})
     if workflows:
         for workflow in workflows:
             record = utils.workflow_retrieve_helper(workflow)

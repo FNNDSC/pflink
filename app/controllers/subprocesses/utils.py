@@ -15,11 +15,11 @@ MONGO_DETAILS = str(settings.pflink_mongodb)
 
 client = MongoClient(MONGO_DETAILS)
 
-database = client.workflows
-pfdcm_database = client.pfdcms
+database = client.database
 
 workflow_collection = database.get_collection("workflows_collection")
-pfdcm_collection = pfdcm_database.get_collection("pfdcms_collection")
+pfdcm_collection = database.get_collection("pfdcms_collection")
+test_collection = database.get_collection("tests_collection")
 
 
 # helpers
@@ -103,13 +103,14 @@ def dict_to_hash(data: dict) -> str:
 # DB queries
 
                    
-def update_workflow(key: str, data: WorkflowDBSchema) -> bool:
+def update_workflow(key: str, data: WorkflowDBSchema, test: bool = False) -> bool:
     """
     Update an existing workflow in the DB
     """
-    workflow = workflow_collection.find_one({"_id": key})
+    collection = test_collection if test else workflow_collection
+    workflow = collection.find_one({"_id": key})
     if workflow:
-        updated_workflow = workflow_collection.update_one(
+        updated_workflow = collection.update_one(
             {"_id": key}, {"$set": workflow_add_helper(data)}
         )
         if updated_workflow:
@@ -117,12 +118,13 @@ def update_workflow(key: str, data: WorkflowDBSchema) -> bool:
         return False
 
 
-def retrieve_workflow(key: str) -> WorkflowDBSchema:
+def retrieve_workflow(key: str, test: bool = False) -> WorkflowDBSchema:
     """
     Retrieve a single workflow from DB
     Given: key
     """
-    workflow = workflow_collection.find_one({"_id": key})
+    collection = test_collection if test else workflow_collection
+    workflow = collection.find_one({"_id": key})
     if workflow:
         return workflow_retrieve_helper(workflow)
 
