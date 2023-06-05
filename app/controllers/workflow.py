@@ -9,6 +9,7 @@ from app.models.workflow import (
     WorkflowDBSchema,
     Error,
     UserResponseSchema,
+    State,
 )
 from app.controllers.subprocesses import utils
 from app.config import settings
@@ -88,7 +89,8 @@ async def post_workflow(
         duplicates = check_for_duplicates(fingerprint, test)
         if duplicates and not request.ignore_duplicate:
             response = WorkflowStatusResponseSchema()
-            response.message = "Duplicate request already exists and the following are their response(s)."
+            response.message = "Duplicate request(s) already exist in the DB."
+            response.workflow_state = State.DUPLICATE_REQUEST
             response.duplicates = duplicates
             return response
         workflow = create_new_workflow(db_key, fingerprint, request, test)

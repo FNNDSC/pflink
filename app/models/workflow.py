@@ -17,6 +17,7 @@ class State(str, Enum):
     ANALYZING = "analyzing study"
     COMPLETED = "completed"
     FEED_DELETED = "feed deleted from CUBE"
+    DUPLICATE_REQUEST = "duplicate workflow exists"
 
 
 class Error(str, Enum):
