@@ -128,3 +128,12 @@ async def pacs_service_list(service_name: str) -> list[str]:
     if not response:
         raise HTTPException(status_code=404, detail=f"Unable to reach endpoints of {service_name}")
     return response
+
+
+@router.delete("", response_description="pfdcm record deleted")
+async def delete_pfdcm(service_name: str):
+    """
+    Delete a pfdcm record from the DB
+    """
+    response = await pfdcm.delete_pfdcm(service_name)
+    return response

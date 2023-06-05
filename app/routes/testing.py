@@ -38,7 +38,16 @@ async def test_get_workflows():
     """
     Fetch all workflows currently present in the database
     """
-    workflows = workflow.retrieve_workflows()
+    workflows = workflow.retrieve_workflows(test=True)
     return workflows
+
+
+@router.delete("", response_description="All workflows deleted")
+async def test_delete_workflows():
+    """
+    Delete all workflow records from the test database table
+    """
+    response = await workflow.delete_workflows(test=True)
+    return response
 
 

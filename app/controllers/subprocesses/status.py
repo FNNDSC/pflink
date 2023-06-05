@@ -44,23 +44,47 @@ def update_workflow_status(key: str, test: bool):
     """
     Update the status of a workflow object in the DB
     """
-    workflow = retrieve_workflow(key)
+    workflow = retrieve_workflow(key, test)
     # If the status of the workflow is currently being updated by another process
     # Do nothing and exit
     if is_status_subprocess_running(workflow):
         return
 
     logging.info(f"WORKING on updating the status for {key}, locking--")
-    update_status_flag(key, workflow, False)
+    update_status_flag(key, workflow, False, test)
 
     if test:
         updated_status = get_simulated_status(workflow)
     else:
         updated_status = get_current_status(workflow.request, workflow.response)
 
-    workflow.response = updated_status
-    update_status_flag(key, workflow, True)
+    workflow.response = update_workflow_progress(updated_status)
+    update_status_flag(key, workflow, True, test)
     logging.info(f"UPDATED status for {key}, releasing lock")
+
+
+def update_workflow_progress(response: WorkflowStatusResponseSchema):
+    """
+    Update the overall workflow progress of a workflow from its current
+    workflow state.
+    """
+    MAX_STATE = 6
+    index = 0
+    for elem in State:
+        if response.workflow_state == elem:
+            response.workflow_progress = f"{__progress_percent(index,MAX_STATE)}%"
+        index += 1
+    return response
+
+
+def __progress_percent(curr_state: int, total_states: int) -> str:
+    """
+    Return the percentage of states completed when the total no. of states and
+    current state is given.
+
+    """
+    progress_percent = round((curr_state/total_states) * 100)
+    return  str(progress_percent)
 
 
 def is_status_subprocess_running(workflow: WorkflowDBSchema):
@@ -71,14 +95,14 @@ def is_status_subprocess_running(workflow: WorkflowDBSchema):
     return False
 
 
-def update_status_flag(key: str, workflow: WorkflowDBSchema, flag: bool):
+def update_status_flag(key: str, workflow: WorkflowDBSchema, flag: bool, test: bool):
     """
     Change the flag `stale` of a workflow response in the DB
     `stale` essentially means the current status information of a workflow is outdated and a new
     `status-update` process can update the information in the DB
     """
     workflow.stale = flag
-    update_workflow(key, workflow)
+    update_workflow(key, workflow, test)
 
 
 def get_current_status(
@@ -348,7 +372,6 @@ def get_simulated_status(workflow: WorkflowDBSchema) -> WorkflowStatusResponseSc
             else:
                 progress += PROGRESS_JUMP
                 current_status.state_progress = str(progress) + '%'
-
 
     return current_status
 

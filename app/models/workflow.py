@@ -17,6 +17,7 @@ class State(str, Enum):
     ANALYZING = "analyzing study"
     COMPLETED = "completed"
     FEED_DELETED = "feed deleted from CUBE"
+    DUPLICATE_REQUEST = "duplicate workflow exists"
 
 
 class Error(str, Enum):
@@ -91,6 +92,7 @@ class PACSqueryCore(BaseModel):
 
 class WorkflowRequestSchema(BaseModel):
     """The Workflow Request model"""
+    ignore_duplicate: bool = True
     pfdcm_info: PFDCMInfoSchema
     PACS_directive: PACSqueryCore
     workflow_info: WorkflowInfoSchema
@@ -108,6 +110,7 @@ class WorkflowRequestSchema(BaseModel):
     class Config:
         schema_extra = {
             "example": {
+                "ignore_duplicate": True,
                 "pfdcm_info": {
                     "pfdcm_service": "PFDCM",
                     "PACS_service": "orthanc"
@@ -130,6 +133,12 @@ class WorkflowRequestSchema(BaseModel):
         }
 
 
+class UserResponseSchema(BaseModel):
+    """A model to display username along with a response for its workflow request"""
+    username: str = ""
+    response: dict
+
+
 class WorkflowStatusResponseSchema(BaseModel):
     """The Workflow status response model"""
     status: bool = True
@@ -137,12 +146,16 @@ class WorkflowStatusResponseSchema(BaseModel):
     state_progress: str = "0%"
     feed_id: str = ""
     feed_name: str = ""
+    message: str = ""
+    duplicates: list[UserResponseSchema] = None
     error: str = ""
+    workflow_progress: str = "0%"
 
 
 class WorkflowDBSchema(BaseModel):
     """The DB model of a workflow object"""
     key: str = ""
+    fingerprint: str = ""
     request: WorkflowRequestSchema
     response: WorkflowStatusResponseSchema
     stale: bool = True

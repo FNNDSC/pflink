@@ -15,11 +15,11 @@ MONGO_DETAILS = str(settings.pflink_mongodb)
 
 client = MongoClient(MONGO_DETAILS)
 
-database = client.workflows
-pfdcm_database = client.pfdcms
+database = client.database
 
 workflow_collection = database.get_collection("workflows_collection")
-pfdcm_collection = pfdcm_database.get_collection("pfdcms_collection")
+pfdcm_collection = database.get_collection("pfdcms_collection")
+test_collection = database.get_collection("tests_collection")
 
 
 # helpers
@@ -40,6 +40,7 @@ def workflow_retrieve_helper(workflow: dict) -> WorkflowDBSchema:
                )
     return WorkflowDBSchema(
         key=workflow["_id"],
+        fingerprint=workflow["fingerprint"],
         request=request,
         response=workflow["response"],
         stale=workflow["stale"],
@@ -57,6 +58,7 @@ def workflow_add_helper(workflow: WorkflowDBSchema) -> dict:
     
     return {
         "_id": workflow.key,
+        "fingerprint": workflow.fingerprint,
         "request": d_request,
         "response": workflow.response.__dict__,
         "stale": workflow.stale,
@@ -81,6 +83,15 @@ def query_to_dict(request: WorkflowRequestSchema) -> dict:
     }
 
 
+def request_to_dict(request: WorkflowRequestSchema) -> dict:
+    return {
+        "pfdcm_info": request.pfdcm_info.__dict__,
+        "PACS_directive": request.PACS_directive.__dict__,
+        "workflow_info": request.workflow_info.__dict__,
+        "username": request.cube_user_info.username,
+    }
+
+
 def dict_to_hash(data: dict) -> str:
     # convert to string and encode
     str_data = json.dumps(data)
@@ -92,13 +103,14 @@ def dict_to_hash(data: dict) -> str:
 # DB queries
 
                    
-def update_workflow(key: str, data: WorkflowDBSchema) -> bool:
+def update_workflow(key: str, data: WorkflowDBSchema, test: bool = False) -> bool:
     """
     Update an existing workflow in the DB
     """
-    workflow = workflow_collection.find_one({"_id": key})
+    collection = test_collection if test else workflow_collection
+    workflow = collection.find_one({"_id": key})
     if workflow:
-        updated_workflow = workflow_collection.update_one(
+        updated_workflow = collection.update_one(
             {"_id": key}, {"$set": workflow_add_helper(data)}
         )
         if updated_workflow:
@@ -106,12 +118,13 @@ def update_workflow(key: str, data: WorkflowDBSchema) -> bool:
         return False
 
 
-def retrieve_workflow(key: str) -> WorkflowDBSchema:
+def retrieve_workflow(key: str, test: bool = False) -> WorkflowDBSchema:
     """
     Retrieve a single workflow from DB
     Given: key
     """
-    workflow = workflow_collection.find_one({"_id": key})
+    collection = test_collection if test else workflow_collection
+    workflow = collection.find_one({"_id": key})
     if workflow:
         return workflow_retrieve_helper(workflow)
 

@@ -22,3 +22,10 @@ async def create_workflow(data: WorkflowRequestSchema) -> WorkflowStatusResponse
     return response
 
 
+@router.delete("", response_description="All workflows deleted")
+async def delete_workflows():
+    """
+    Delete all workflow records from the prod database table
+    """
+    response = await workflow.delete_workflows()
+    return response

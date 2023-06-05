@@ -19,6 +19,7 @@ def auth_token():
 def sample_workflow_entry():
     return {
         "_id": "e3bcafc90fd53d82bf409f4c7f3f7a73",
+        "fingerprint": "hashedtext",
         "request": {
             "pfdcm_info": {
                 "pfdcm_service": "PFDCM",
@@ -68,6 +69,7 @@ def sample_workflow_entry():
             "state_progress": "0%",
             "feed_id": "",
             "feed_name": "",
+            "message": "",
             "error": ""
         },
         "stale": True,
