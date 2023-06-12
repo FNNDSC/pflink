@@ -68,22 +68,23 @@ def update_workflow_progress(response: WorkflowStatusResponseSchema):
     Update the overall workflow progress of a workflow from its current
     workflow state.
     """
-    MAX_STATE = 6
+    MAX_STATE = 7
     index = 0
     for elem in State:
         if response.workflow_state == elem:
-            response.workflow_progress = f"{__progress_percent(index,MAX_STATE)}%"
+            state_progress = int(response.state_progress.replace('%',''))
+            response.workflow_progress = f"{__progress_percent(index,MAX_STATE,state_progress)}%"
         index += 1
     return response
 
 
-def __progress_percent(curr_state: int, total_states: int) -> str:
+def __progress_percent(curr_state: int, total_states: int, state_progress: int) -> str:
     """
     Return the percentage of states completed when the total no. of states and
     current state is given.
 
     """
-    progress_percent = round((curr_state/total_states) * 100)
+    progress_percent = round((curr_state/total_states) * 100 + (state_progress/total_states))
     return  str(progress_percent)
 
 
