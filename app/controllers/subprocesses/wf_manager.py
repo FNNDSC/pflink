@@ -7,6 +7,7 @@ import logging
 import subprocess
 import time
 import requests
+from app.controllers.subprocesses.python_chris_client import PythonChrisClient
 from app.models.workflow import (
     Error,
     State,
@@ -222,6 +223,16 @@ def do_cube_start_analysis(previous_id: str, request: WorkflowRequestSchema, cub
     Create a new node (plugin instance) on an existing feed in `CUBE`
     """
     client = do_cube_create_user(cube_url, request.cube_user_info.username, request.cube_user_info.password)
+    if request.workflow_info.plugin_name:
+        __run_plugin_instance(previous_id, request, client)
+    if request.workflow_info.pipeline_name:
+        __run_pipeline_instance(previous_id,request, client)
+
+
+def __run_plugin_instance(previous_id: str, request: WorkflowRequestSchema, client: PythonChrisClient):
+    """
+    Run a plugin instance on an existing (previous) plugin instance ID in CUBE
+    """
     # search for plugin
     plugin_search_params = {"name": request.workflow_info.plugin_name, "version": request.workflow_info.plugin_version}
     plugin_id = client.getPluginId(plugin_search_params)
@@ -230,6 +241,17 @@ def do_cube_start_analysis(previous_id: str, request: WorkflowRequestSchema, cub
     feed_params = str_to_param_dict(request.workflow_info.plugin_params)
     feed_params["previous_id"] = previous_id
     feed_resp = client.createFeed(plugin_id, feed_params)
+
+
+def __run_pipeline_instance(previous_id: str, request: WorkflowRequestSchema, client: PythonChrisClient):
+    """
+    Run a workflow instance on an existing (previous) plugin instance ID in CUBE
+    """
+    # search for pipeline
+    pipeline_search_params = {"name": request.workflow_info.pipeline_name}
+    pipeline_id = client.getPipelineId(pipeline_search_params)
+    pipeline_params = {"previous_plugin_inst_id": previous_id, "name": request.workflow_info.pipeline_name}
+    feed_resp = client.createWorkflow(str(pipeline_id), pipeline_params)
 
 
 def str_to_param_dict(params: str) -> dict:

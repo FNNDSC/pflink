@@ -42,7 +42,7 @@ class PythonChrisClient():
         pipeline_res = self.cl.get_pipelines(searchParams)['data']
         if pipeline_res:
             return pipeline_res[0]['id']
-        return -1        
+        raise Exception(f"No pipeline found with matching search criteria {searchParams}")
 
     def createWorkflow(self, pipeline_id: str,params: dict):
         response = self.cl.create_workflow(pipeline_id,params)
