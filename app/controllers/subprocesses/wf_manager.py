@@ -121,7 +121,7 @@ def pfdcm_do(verb: str, then_args: dict, request: WorkflowRequestSchema, url: st
     by running the threaded API of `pfdcm`
     """
     then_args = json.dumps(then_args, separators=(',', ':'))
-    pfdcm_dicom_api = f'{url}/api/v1/PACS/thread/pypx/'
+    pfdcm_dicom_api = f'{url}/PACS/thread/pypx/'
     headers = {'Content-Type': 'application/json', 'accept': 'application/json'}
     body = {
         "PACSservice": {

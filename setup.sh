@@ -1,6 +1,23 @@
 #!/usr/bin/env bash
 # =========================================================
-SYNOPSIS=""
+SYNOPSIS="
+NAME
+    setup.sh
+
+SYNOPSIS
+    setup.sh [-h]                          \\
+             [-U <pflinkUsername>]         \\
+             [-P <pflinkPassword>]         \\
+             [-S <pfdcmServiceName>]       \\
+             [-A <pfdcmServiceAddress>]    \\
+
+EXAMPLES
+    $ ./setup.sh -U pflink                         \\
+                 -P pflink1234                     \\
+                 -S PFDCM                          \\
+                 -A http://localhost:4005
+
+"
 # =========================================================
 # STEP 0:  CONFIGURATION
 # =========================================================

@@ -130,7 +130,7 @@ def _get_pfdcm_status(request: WorkflowRequestSchema):
     """
     try:
         pfdcm_url = retrieve_pfdcm_url(request.pfdcm_info.pfdcm_service)
-        pfdcm_status_url = f'{pfdcm_url}/api/v1/PACS/sync/pypx/'
+        pfdcm_status_url = f'{pfdcm_url}/PACS/sync/pypx/'
         headers = {'Content-Type': 'application/json', 'accept': 'application/json'}
 
         pfdcm_body = {
