@@ -33,18 +33,20 @@ ARGS
     Default value is 'pflink1234'.
 
     [-S <pfdcmServiceName>]
-    If specified, use this string to set CUBE username.
-    Default value is 'chris'.
+    If specified, use this string to add a new pfdcm instance.
+    Default value is 'PFDCM'.
 
     [-A <pfdcmServiceAddress>]
-    If specified, use this string to set CUBE password.
-    Default value is 'chris1234'.
+    If specified, use this string as the service address of
+    a new pfdcm instance.
+    Default value is http://localhost:4005/api/v1.
 
 EXAMPLES
-    $ ./setup.sh -U pflink                         \\
+    $ ./setup.sh -L http://localhost:8050/api/v1   \\
+                 -U pflink                         \\
                  -P pflink1234                     \\
                  -S PFDCM                          \\
-                 -A http://localhost:4005
+                 -A http://localhost:4005/api/v1
 
 "
 # =========================================================
@@ -86,7 +88,7 @@ RESP=$(curl -X 'POST' \
 token=$(echo $RESP | awk '{print $3}' | sed 's/[=",]//g')
 
 # =========================================================
-# STEP : CURL request to add a new `pfdcm` service instance
+# STEP1: CURL request to add a new `pfdcm` service instance
 # =========================================================  
 curl -X 'POST' \
   "$URL/pfdcm" \
