@@ -73,19 +73,19 @@ def update_workflow_progress(response: WorkflowStatusResponseSchema):
     for elem in State:
         if response.workflow_state == elem:
             state_progress = int(response.state_progress.replace('%',''))
-            response.workflow_progress = f"{__progress_percent(index,MAX_STATE,state_progress)}%"
+            response.workflow_progress_perc = __progress_percent(index,MAX_STATE,state_progress)
         index += 1
     return response
 
 
-def __progress_percent(curr_state: int, total_states: int, state_progress: int) -> str:
+def __progress_percent(curr_state: int, total_states: int, state_progress: int) -> int:
     """
     Return the percentage of states completed when the total no. of states and
     current state is given.
 
     """
     progress_percent = round((curr_state/total_states) * 100 + (state_progress/total_states))
-    return  str(progress_percent)
+    return  progress_percent
 
 
 def is_status_subprocess_running(workflow: WorkflowDBSchema):
@@ -130,7 +130,7 @@ def _get_pfdcm_status(request: WorkflowRequestSchema):
     """
     try:
         pfdcm_url = retrieve_pfdcm_url(request.pfdcm_info.pfdcm_service)
-        pfdcm_status_url = f'{pfdcm_url}/api/v1/PACS/sync/pypx/'
+        pfdcm_status_url = f'{pfdcm_url}/PACS/sync/pypx/'
         headers = {'Content-Type': 'application/json', 'accept': 'application/json'}
 
         pfdcm_body = {

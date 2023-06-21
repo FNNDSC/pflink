@@ -142,7 +142,7 @@ def retrieve_pfdcm_url(service_name: str) -> str:
 
 
 def get_cube_url_from_pfdcm(pfdcm_url: str, cube_name: str) -> str:
-    pfdcm_smdb_cube_api = f'{pfdcm_url}/api/v1/SMDB/CUBE/{cube_name}/'
+    pfdcm_smdb_cube_api = f'{pfdcm_url}/SMDB/CUBE/{cube_name}/'
     response = requests.get(pfdcm_smdb_cube_api)
     d_results = json.loads(response.text)
     cube_url = d_results['cubeInfo']['url']

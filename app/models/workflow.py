@@ -149,7 +149,7 @@ class WorkflowStatusResponseSchema(BaseModel):
     message: str = ""
     duplicates: list[UserResponseSchema] = None
     error: str = ""
-    workflow_progress: str = "0%"
+    workflow_progress_perc: int = 0
 
 
 class WorkflowDBSchema(BaseModel):

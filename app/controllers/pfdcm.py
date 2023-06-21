@@ -60,7 +60,7 @@ async def hello_pfdcm(pfdcm_name: str) -> dict:
     if not pfdcm_server:
         return {"Error": f"Service {pfdcm_name} not found in the DB"}
     pfdcm_url = pfdcm_server['service_address']
-    pfdcm_hello_api = f'{pfdcm_url}/api/v1/hello/'
+    pfdcm_hello_api = f'{pfdcm_url}/hello/'
     async with httpx.AsyncClient() as client:
         try:
             response = await client.get(pfdcm_hello_api)
@@ -75,7 +75,7 @@ async def about_pfdcm(service_name: str) -> dict:
     if not pfdcm_server:
         return {"error": f"{service_name} does not exist."}
     pfdcm_url = pfdcm_server['service_address']
-    pfdcm_about_api = f'{pfdcm_url}/api/v1/about/'
+    pfdcm_about_api = f'{pfdcm_url}/about/'
     async with httpx.AsyncClient() as client:
         try:
             response = await client.get(pfdcm_about_api)
@@ -92,7 +92,7 @@ async def cube_list(service_name: str) -> list[str]:
     if not pfdcm_server:
         return d_results
     pfdcm_url = pfdcm_server['service_address']
-    pfdcm_cube_list_api = f'{pfdcm_url}/api/v1/SMDB/CUBE/list/'
+    pfdcm_cube_list_api = f'{pfdcm_url}/SMDB/CUBE/list/'
     async with httpx.AsyncClient() as client:
         try:
             response = await client.get(pfdcm_cube_list_api)
@@ -109,7 +109,7 @@ async def swift_list(service_name: str) -> list[str]:
     if not pfdcm_server:
         return d_results
     pfdcm_url = pfdcm_server['service_address']
-    pfdcm_swift_list_api = f'{pfdcm_url}/api/v1/SMDB/swift/list/'
+    pfdcm_swift_list_api = f'{pfdcm_url}/SMDB/swift/list/'
     async with httpx.AsyncClient() as client:
         try:
             response = await client.get(pfdcm_swift_list_api)
@@ -126,7 +126,7 @@ async def pacs_list(service_name: str) -> list[str]:
     if not pfdcm_server:
         return d_results
     pfdcm_url = pfdcm_server['service_address']
-    pfdcm_pacs_list_api = f'{pfdcm_url}/api/v1/PACSservice/list/'
+    pfdcm_pacs_list_api = f'{pfdcm_url}/PACSservice/list/'
     async with httpx.AsyncClient() as client:
         try:
             response = await client.get(pfdcm_pacs_list_api)
