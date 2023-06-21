@@ -55,12 +55,12 @@ class PFDCMInfoSchema(BaseModel):
 class WorkflowInfoSchema(BaseModel):
     """This schema includes all the information to create a new workflow in CUBE"""
     feed_name: str = Field(...)
-    plugin_name: str = Field(...)
-    plugin_version: str = Field(...)
+    plugin_name: str = ""
+    plugin_version: str = ""
     plugin_params: str = ""
     pipeline_name: str = ""
 
-    @validator('feed_name', 'plugin_name')
+    @validator('feed_name')
     def check_for_empty_string(cls, v):
         assert v != '', Error.required_field.value
         return v
@@ -121,8 +121,8 @@ class WorkflowRequestSchema(BaseModel):
                 },
                 "workflow_info": {
                     "feed_name": "test-%SeriesInstanceUID",
-                    "plugin_name": "pl-dircopy",
-                    "plugin_version": "1.1.0",
+                    "plugin_name": "pl-simpledsapp",
+                    "plugin_version": "2.1.0",
                     "plugin_params": "--args ARGS"
                 },
                 "cube_user_info": {
