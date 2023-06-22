@@ -11,7 +11,7 @@ def get_plugins(pfdcm: str, cube_name: str):
     resp = client.getPlugins()
     plugins = []
     for item in resp["data"]:
-        plugins.append(item["name"])
+        plugins.append(f"{item['name']} : {item['version']}")
     return plugins
 
 def get_pipelines(pfdcm: str, cube_name: str):
