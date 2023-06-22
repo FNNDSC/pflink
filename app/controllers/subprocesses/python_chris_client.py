@@ -72,7 +72,7 @@ class PythonChrisClient():
         response = self.cl.get_plugins()
         return response
 
-    def getPipelines(self)
+    def getPipelines(self):
         response = self.cl.get_pipelines()
         return response
 

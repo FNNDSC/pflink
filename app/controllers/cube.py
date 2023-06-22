@@ -9,12 +9,19 @@ import json
 def get_plugins(pfdcm: str, cube_name: str):
     client = get_cube_client(pfdcm, cube_name)
     resp = client.getPlugins()
-    return resp
+    plugins = []
+    for item in resp["data"]:
+        plugins.append(item["name"])
+    return plugins
 
 def get_pipelines(pfdcm: str, cube_name: str):
     client = get_cube_client(pfdcm, cube_name)
     resp = client.getPipelines()
-    return resp
+    pipelines = []
+    for item in resp["data"]:
+        pipelines.append(item["name"])
+    return pipelines
+
 
 def get_cube_client(pfdcm: str, cube_name: str):
     pfdcm_url = retrieve_pfdcm_url(pfdcm)
