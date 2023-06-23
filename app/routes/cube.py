@@ -4,7 +4,7 @@ from app.controllers import cube
 router = APIRouter()
 
 
-@router.post(
+@router.get(
     "/plugin/list",
     status_code=200,
     response_description="pfdcm data added into the database.",
@@ -18,7 +18,7 @@ async def get_plugins(pfdcm_name: str, cube_name: str) -> list:
     return resp
 
 
-@router.post(
+@router.get(
     "/pipeline/list",
     status_code=200,
     response_description="pfdcm data added into the database.",
