@@ -3,8 +3,10 @@ from app.controllers.subprocesses.utils import (
     do_cube_create_user,
     retrieve_pfdcm_url,
 )
+from app.models import cube
 import requests
 import json
+
 
 def get_plugins(pfdcm: str, cube_name: str):
     try:
@@ -12,10 +14,17 @@ def get_plugins(pfdcm: str, cube_name: str):
         resp = client.getPlugins()
         plugins = []
         for item in resp["data"]:
-            plugins.append(f"{item['name']} : {item['version']}")
+            paramList = client.getPluginParams(item['id'])
+            params = []
+            for param in paramList["data"]:
+                parameter = cube.PluginParam(name=param["name"], default=param["default"])
+                params.append(parameter)
+            plugin = cube.Plugin(name=item['name'], version=item['version'], params=params)
+            plugins.append(plugin)
         return plugins
     except Exception as ex:
         return {"error": str(ex)}
+
 
 def get_pipelines(pfdcm: str, cube_name: str):
     try:

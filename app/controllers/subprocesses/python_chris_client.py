@@ -11,13 +11,11 @@ class PythonChrisClient():
     def getClient(self, params:dict):
         return self.cl
 
-
     def getPluginId(self, searchParams:dict):
         response = self.cl.get_plugins(searchParams)
         if response['total'] > 0:
             return response['data'][0]['id']
         raise Exception(f"No plugin found with matching search criteria {searchParams}")
-        
 
     def getSwiftPath(self, searchParams:dict):
         files = self.cl.get_pacs_files(searchParams)
@@ -31,12 +29,10 @@ class PythonChrisClient():
         if response['data']:
             return response['data'][0]
         return {}
-        
 
     def createFeed(self, plugin_id: str,params: dict):
         response = self.cl.create_plugin_instance(plugin_id,params)
         return response
-        
 
     def getPipelineId(self, searchParams:dict) -> int:
         pipeline_res = self.cl.get_pipelines(searchParams)['data']
@@ -58,12 +54,11 @@ class PythonChrisClient():
     def getWorkflow(self, searchParams: dict):
         response = self.cl.get_workflows(searchParams)
         return response
-
         
     def getWorkflowDetails(self, workflow_id : str):
         response = self.cl.get_workflow_plugin_instances(workflow_id)
         return response
-        
+
     def getPluginInstances(self, searchParams : dict):
         response = self.cl.get_plugin_instances(searchParams)
         return response
@@ -74,6 +69,10 @@ class PythonChrisClient():
 
     def getPipelines(self):
         response = self.cl.get_pipelines()
+        return response
+
+    def getPluginParams(self,pluginId: str):
+        response = self.cl.get_plugin_parameters(pluginId)
         return response
 
 
