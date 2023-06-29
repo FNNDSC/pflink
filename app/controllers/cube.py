@@ -14,12 +14,7 @@ def get_plugins(pfdcm: str, cube_name: str):
         resp = client.getPlugins()
         plugins = []
         for item in resp["data"]:
-            paramList = client.getPluginParams(item['id'])
-            params = []
-            for param in paramList["data"]:
-                parameter = cube.PluginParam(name=param["name"], default=param["default"])
-                params.append(parameter)
-            plugin = cube.Plugin(name=item['name'], version=item['version'], params=params)
+            plugin = cube.Plugin(name=item['name'], version=item['version'])
             plugins.append(plugin)
         return plugins
     except Exception as ex:
