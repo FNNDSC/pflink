@@ -5,6 +5,7 @@ from app.routes.pfdcm import router as PfdcmRouter
 from app.routes.workflow import router as WorkflowRouter
 from app.routes.testing import router as WorkflowTestRouter
 from app.routes.auth import router as AuthRouter
+from app.routes.cube import router as CubeRouter
 from app.config import settings
 from app.controllers import auth
 
@@ -83,3 +84,4 @@ app.include_router(WorkflowRouter, tags=["Workflow Services"], prefix="/api/v1/w
                    dependencies=[Depends(auth.get_current_user)])
 app.include_router(WorkflowTestRouter, tags=["Test Workflow Services"], prefix="/api/v1/testing")
 app.include_router(AuthRouter, tags=["Basic Auth"], prefix="/api/v1/auth-token")
+app.include_router(CubeRouter, tags=["Cube services"], prefix="/api/v1/cube")
