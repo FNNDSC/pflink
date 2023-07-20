@@ -224,7 +224,7 @@ def get_analysis_status(response: dict) -> dict:
     total = created + waiting + scheduled + started + registering + finished + errored + cancelled
 
     if total > 1:
-        feed_progress = round((finished / MAX_JOBS) * 100)
+        feed_progress = round((finished / total) * 100)
         analysis_details['progress'] = str(feed_progress) + "%"
 
         if errored > 0 or cancelled > 0:

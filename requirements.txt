@@ -1,5 +1,5 @@
 motor==2.5.1
-pydantic[email]
+pydantic==1.10.11
 requests
 python-chrisclient
 asyncio

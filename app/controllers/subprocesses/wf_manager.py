@@ -247,6 +247,7 @@ def __run_pipeline_instance(previous_id: str, request: WorkflowRequestSchema, cl
     """
     Run a workflow instance on an existing (previous) plugin instance ID in CUBE
     """
+    print(previous_id)
     # search for pipeline
     pipeline_search_params = {"name": request.workflow_info.pipeline_name}
     pipeline_id = client.getPipelineId(pipeline_search_params)
@@ -266,7 +267,7 @@ def str_to_param_dict(params: str) -> dict:
         if param == "":
             continue
         param = param.strip()
-        items = param.split(' ')
+        items = param.split(' ',1)
         d_params[items[0]] = items[1]
 
     return d_params
