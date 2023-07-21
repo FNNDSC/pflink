@@ -73,7 +73,9 @@ def update_workflow_progress(response: WorkflowStatusResponseSchema):
     for elem in State:
         if response.workflow_state == elem:
             state_progress = int(response.state_progress.replace('%',''))
-            response.workflow_progress_perc = __progress_percent(index,MAX_STATE,state_progress)
+
+            response.workflow_progress_perc = max(response.workflow_progress_perc,
+                                                  __progress_percent(index,MAX_STATE,state_progress))
         index += 1
     return response
 
