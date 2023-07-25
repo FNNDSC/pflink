@@ -266,7 +266,7 @@ def str_to_param_dict(params: str) -> dict:
         if param == "":
             continue
         param = param.strip()
-        items = param.split(' ')
+        items = param.split(' ',1)
         d_params[items[0]] = items[1]
 
     return d_params
