@@ -240,6 +240,7 @@ def __run_plugin_instance(previous_id: str, request: WorkflowRequestSchema, clie
     # convert CLI params from string to a JSON dictionary
     feed_params = str_to_param_dict(request.workflow_info.plugin_params)
     feed_params["previous_id"] = previous_id
+    logging.info(f"Creating new analysis with parameters: {feed_params}")
     feed_resp = client.createFeed(plugin_id, feed_params)
 
 
@@ -267,7 +268,11 @@ def str_to_param_dict(params: str) -> dict:
             continue
         param = param.strip()
         items = param.split(' ',1)
-        d_params[items[0]] = items[1]
+        if len(items)==1:
+            d_params[items[0]] = True
+        else:
+            d_params[items[0]] = items[1]
+
 
     return d_params
 
