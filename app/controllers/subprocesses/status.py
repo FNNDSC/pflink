@@ -202,6 +202,10 @@ def _get_feed_status(request: WorkflowRequestSchema, feed_id: str) -> dict:
 
         # search for feed
         resp = cl.getFeed({"id": feed_id, "name_exact": feed_name})
+        if resp["errored_jobs"] or resp["cancelled_jobs"]:
+            l_inst_resp = cl.getPluginInstances({"feed_id": feed_id})
+            l_error = [d_instance['plugin_name'] for d_instance in l_inst_resp['data'] if d_instance['status']=='finishedWithError']
+            resp["errored_plugins"] = str(l_error)
         return resp
     except Exception as ex:
         return {"error": Error.cube.value + str(ex)}
@@ -230,7 +234,7 @@ def get_analysis_status(response: dict) -> dict:
         analysis_details['progress'] = str(feed_progress) + "%"
 
         if errored > 0 or cancelled > 0:
-            analysis_details["error"] = str(errored + cancelled) + " job(s) failed"
+            analysis_details["error"] = f"{(errored + cancelled)} job(s) failed : {response['errored_plugins']}"
         if feed_progress == 100:
             analysis_details["state"] = State.COMPLETED
         else:

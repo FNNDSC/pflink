@@ -92,7 +92,7 @@ def manage_workflow(db_key: str, test: bool):
                     try:
                         do_cube_start_analysis(pl_inst_id, request, cube_url)
                     except Exception as ex:
-                        logging.info(Error.analysis.value)
+                        logging.info(Error.analysis.value + str(ex))
                         workflow.response.error = Error.analysis.value + str(ex)
                         workflow.response.status = False
                         update_workflow(key, workflow)
