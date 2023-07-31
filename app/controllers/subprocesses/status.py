@@ -204,7 +204,7 @@ def _get_feed_status(request: WorkflowRequestSchema, feed_id: str) -> dict:
         resp = cl.getFeed({"id": feed_id, "name_exact": feed_name})
         if resp["errored_jobs"] or resp["cancelled_jobs"]:
             l_inst_resp = cl.getPluginInstances({"feed_id": feed_id})
-            l_error = [d_instance['plugin_name'] for d_instance in l_inst_resp['data'] if d_instance['status']=='finishedWithError']
+            l_error = [d_instance['plugin_name'] for d_instance in l_inst_resp['data'] if d_instance['status']=='finishedWithError' or d_instance['status'] == 'cancelled']
             resp["errored_plugins"] = str(l_error)
         return resp
     except Exception as ex:
