@@ -102,17 +102,17 @@ async def cube_list(service_name: str) -> list[str]:
             return d_results
 
 
-# Get the list of `swift` servers available in a pfdcm instance
-async def swift_list(service_name: str) -> list[str]:
+# Get the list of `storage` services available in a pfdcm instance
+async def storage_list(service_name: str) -> list[str]:
     d_results = []
     pfdcm_server = retrieve_pfdcm(service_name)
     if not pfdcm_server:
         return d_results
     pfdcm_url = pfdcm_server['service_address']
-    pfdcm_swift_list_api = f'{pfdcm_url}/SMDB/swift/list/'
+    pfdcm_storage_list_api = f'{pfdcm_url}/SMDB/storage/list/'
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.get(pfdcm_swift_list_api)
+            response = await client.get(pfdcm_storage_list_api)
             d_results = json.loads(response.text)
             return d_results
         except:
