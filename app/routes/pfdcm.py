@@ -92,7 +92,7 @@ async def get_about_pfdcm(service_name: str) -> PfdcmQueryResponseSchema:
 )
 async def cube_service_list(service_name: str) -> list[str]:
     """
-    Get the list of PACS services registered to a `pfdcm` instance by providing its service name
+    Get the list of CUBE services registered to a `pfdcm` instance by providing its service name
     """
     response = await pfdcm.cube_list(service_name)
     if not response:
@@ -101,15 +101,15 @@ async def cube_service_list(service_name: str) -> list[str]:
 
 
 @router.get(
-    "/{service_name}/swift/list",
+    "/{service_name}/storage/list",
     response_description="About PFDCM",
-    summary="Get the list of swift services registered to a `pfdcm` instance"
+    summary="Get the list of storage services registered to a `pfdcm` instance"
 )
-async def swift_service_list(service_name: str) -> list[str]:
+async def storage_service_list(service_name: str) -> list[str]:
     """
-    Get the list of PACS services registered to a `pfdcm` instance by providing its service name
+    Get the list of storage services registered to a `pfdcm` instance by providing its service name
     """
-    response = await pfdcm.swift_list(service_name)
+    response = await pfdcm.storage_list(service_name)
     if not response:
         raise HTTPException(status_code=404, detail=f"Unable to reach endpoints of {service_name}")
     return response

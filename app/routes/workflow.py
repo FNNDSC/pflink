@@ -22,6 +22,15 @@ async def create_workflow(data: WorkflowRequestSchema) -> WorkflowStatusResponse
     return response
 
 
+@router.get("/list", response_description="All workflows retrieved")
+async def get_workflows():
+    """
+    Fetch all workflows currently present in the database
+    """
+    workflows = workflow.retrieve_workflows()
+    return workflows
+
+
 @router.delete("", response_description="All workflows deleted")
 async def delete_workflows():
     """

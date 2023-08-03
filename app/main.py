@@ -22,9 +22,9 @@ Additionally you can:
 
 * **Get a `hello` response from a pfdcm instance.**
 * **Know `about` a pfdcm instance.**
-* **Get the list of the names of all `cube` instances available in a pfdcm instance.**
-* **Get the list of the names of all `swift` instances available in a pfdcm instance.**
-* **Get the list of the names of all `PACS` instances available in a pfdcm instance.**
+* **Get the list of the names of all `cube` services available in a pfdcm instance.**
+* **Get the list of the names of all `storage` services available in a pfdcm instance.**
+* **Get the list of the names of all `PACS` services available in a pfdcm instance.**
 
 ## Workflow
 

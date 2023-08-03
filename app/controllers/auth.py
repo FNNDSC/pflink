@@ -7,7 +7,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import ValidationError
 
-ACCESS_TOKEN_EXPIRE_MINUTES = 600  # 600 minutes
+ACCESS_TOKEN_EXPIRE_MINUTES = 600 # minutes to expire
 ALGORITHM = "HS256"
 JWT_SECRET_KEY = auth.JWT_SECRET_KEY
 
