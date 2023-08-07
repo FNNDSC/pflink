@@ -4,6 +4,7 @@ from app.models.workflow import (
     WorkflowRequestSchema,
     WorkflowStatusResponseSchema,
 )
+from app.controllers.subprocesses import utils
 router = APIRouter()
 
 
@@ -23,12 +24,21 @@ async def create_workflow(data: WorkflowRequestSchema) -> WorkflowStatusResponse
 
 
 @router.get("/list", response_description="All workflows retrieved")
-async def get_workflows():
+async def get_workflows(search_params: dict):
     """
     Fetch all workflows currently present in the database
     """
-    workflows = workflow.retrieve_workflows()
+    workflows = workflow.retrieve_workflows(search_params)
     return workflows
+    
+    
+@router.get("", response_description="Workflow retrieved successfully")
+async def get_workflows(workflow_key: str):
+    """
+    Fetch workflow recorded by using hash of a request.
+    """
+    workflow = utils.retrieve_workflow(workflow_key)
+    return workflow
 
 
 @router.delete("/list", response_description="All workflows deleted")
