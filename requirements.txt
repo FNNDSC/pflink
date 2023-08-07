@@ -4,6 +4,7 @@ requests
 python-chrisclient
 asyncio
 psutil
+pytz
 
 # dev
 pytest==7.2.0

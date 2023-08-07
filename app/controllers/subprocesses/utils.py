@@ -1,3 +1,4 @@
+import datetime
 import hashlib
 import json
 import requests
@@ -41,6 +42,7 @@ def workflow_retrieve_helper(workflow: dict) -> WorkflowDBSchema:
     return WorkflowDBSchema(
         key=workflow["_id"],
         fingerprint=workflow["fingerprint"],
+        creation_time=datetime.datetime.min if not workflow.get("creation_time") else workflow["creation_time"],
         request=request,
         response=workflow["response"],
         stale=workflow["stale"],
@@ -59,6 +61,7 @@ def workflow_add_helper(workflow: WorkflowDBSchema) -> dict:
     return {
         "_id": workflow.key,
         "fingerprint": workflow.fingerprint,
+        "creation_time": workflow.creation_time,
         "request": d_request,
         "response": workflow.response.__dict__,
         "stale": workflow.stale,

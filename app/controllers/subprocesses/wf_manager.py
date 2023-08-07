@@ -8,11 +8,12 @@ import subprocess
 import time
 import requests
 from app.controllers.subprocesses.python_chris_client import PythonChrisClient
+from app.controllers.subprocesses.subprocess_helper import get_process_count
 from app.models.workflow import (
     Error,
     State,
     WorkflowRequestSchema,
-    WorkflowInfoSchema,
+    WorkflowDBSchema,
 )
 from app.controllers.subprocesses.utils import (
     request_to_dict,
@@ -51,6 +52,7 @@ def manage_workflow(db_key: str, test: bool):
         return
 
     request = workflow.request
+
     pfdcm_url = retrieve_pfdcm_url(request.pfdcm_info.pfdcm_service)
     cube_url = get_cube_url_from_pfdcm(pfdcm_url, request.pfdcm_info.cube_service)
 
@@ -58,6 +60,7 @@ def manage_workflow(db_key: str, test: bool):
         workflow.started = True
         update_workflow(key, workflow)
         MAX_RETRIES -= 1
+        logging.info(f"RETRY#{MAX_RETRIES}")
 
         match workflow.response.workflow_state:
 
@@ -97,9 +100,15 @@ def manage_workflow(db_key: str, test: bool):
                         workflow.response.status = False
                         update_workflow(key, workflow)
 
+
         update_status(request)
         time.sleep(10)
         workflow = retrieve_workflow(key)
+
+        # Reset workflow if pflink reached MAX no. of retries
+        if MAX_RETRIES==0:
+            workflow.started = False
+            update_workflow(key, workflow)
 
 
 def update_status(request: WorkflowRequestSchema):
@@ -212,6 +221,7 @@ def do_cube_create_feed(request: WorkflowRequestSchema, cube_url: str) -> dict:
     plugin_search_params = {"name": "pl-dircopy"}
     plugin_id = client.getPluginId(plugin_search_params)
 
+    logging.info(f"Creating a new feed with feed name: {feed_name}")
     # create a feed
     feed_params = {'title': feed_name, 'dir': data_path}
     feed_response = client.createFeed(plugin_id, feed_params)

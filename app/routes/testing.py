@@ -42,12 +42,21 @@ async def test_get_workflows():
     return workflows
 
 
-@router.delete("", response_description="All workflows deleted")
+@router.delete("/list", response_description="All workflows deleted")
 async def test_delete_workflows():
     """
     Delete all workflow records from the test database table
     """
     response = await workflow.delete_workflows(test=True)
+    return response
+
+
+@router.delete("", response_description="Selected workflow deleted successfully")
+async def test_delete_workflow(workflow_key: str):
+    """
+    Delete a single workflow record from the test database table
+    """
+    response = await workflow.delete_workflow(workflow_key, test=True)
     return response
 
 

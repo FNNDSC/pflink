@@ -31,10 +31,18 @@ async def get_workflows():
     return workflows
 
 
-@router.delete("", response_description="All workflows deleted")
+@router.delete("/list", response_description="All workflows deleted")
 async def delete_workflows():
     """
     Delete all workflow records from the prod database table
     """
     response = await workflow.delete_workflows()
+    return response
+
+@router.delete("", response_description="Selected workflow deleted successfully")
+async def delete_workflow(workflow_key: str):
+    """
+    Delete a single workflow record from the prod database table
+    """
+    response = await workflow.delete_workflow(workflow_key)
     return response

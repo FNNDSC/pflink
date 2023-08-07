@@ -11,6 +11,7 @@ from app.models.workflow import (
     UserResponseSchema,
     State,
 )
+from app.controllers.subprocesses.subprocess_helper import get_process_count
 from app.controllers.subprocesses import utils
 from app.config import settings
 
@@ -59,6 +60,17 @@ async def delete_workflows(test: bool = False):
         delete_count += 1
     return {"Message": f"{delete_count} record(s) deleted!"}
 
+
+async def delete_workflow(workflow_key: str, test: bool = False):
+    """
+    Delete a workflow record from DB
+    """
+    collection = test_collection if test else workflow_collection
+    delete_count = 0
+    for workflow in collection.find():
+        collection.delete_one({"_id": workflow_key})
+        delete_count += 1
+    return {"Message": f"{delete_count} record(s) deleted!"}
 
 def request_to_hash(request: WorkflowRequestSchema) -> str:
     """
@@ -143,6 +155,9 @@ def manage_workflow(str_data: str, mode: str):
     """
     Manage a workflow request in a separate subprocess
     """
+    proc_count = get_process_count("wf_manager", str_data)
+    logging.info(f"{proc_count} subprocess of workflow manager running on the system.")
+    if proc_count > 0: return
     d_cmd = ["python", "app/controllers/subprocesses/wf_manager.py", "--data", str_data]
     if mode:
         d_cmd.append(mode)
@@ -154,6 +169,9 @@ def update_workflow_status(str_data: str, mode: str):
     """
     Update the current status of a workflow request in a separate process
     """
+    proc_count = get_process_count("status", str_data)
+    logging.info(f"{proc_count} subprocess of status manager running on the system.")
+    if proc_count>0: return
     d_cmd = ["python", "app/controllers/subprocesses/status.py", "--data", str_data]
     if mode:
         d_cmd.append(mode)
