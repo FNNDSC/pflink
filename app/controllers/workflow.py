@@ -1,3 +1,5 @@
+import datetime
+
 from pymongo import MongoClient
 import json
 import logging
@@ -10,6 +12,10 @@ from app.models.workflow import (
     Error,
     UserResponseSchema,
     State,
+    WorkflowSearchSchema,
+    PFDCMInfoSchema,
+    PACSqueryCore,
+    WorkflowInfoSchema,
 )
 from app.controllers.subprocesses.subprocess_helper import get_process_count
 from app.controllers.subprocesses import utils
@@ -33,12 +39,25 @@ logging.basicConfig(
 
 
 # Retrieve all workflows present in the DB
-def retrieve_workflows(test: bool = False):
+def retrieve_workflows(search_params: WorkflowSearchSchema, test: bool = False):
     collection = test_collection if test else workflow_collection
     workflows = []
-    for workflow in collection.find():
-        workflows.append(utils.workflow_retrieve_helper(workflow))
-    return workflows
+    if search_params.cube_username:
+        workflows = collection.find({"request.cube_user_info.username": search_params.cube_username})
+    elif search_params.pipeline_name:
+        workflows = collection.find({"request.workflow_info.pipeline_name": search_params.pipeline_name})
+    elif search_params.plugin_name:
+        workflows = collection.find({"request.workflow_info.plugin_name": search_params.plugin_name})
+    elif search_params.plugin_version:
+        workflows = collection.find({"request.workflow_info.plugin_version": search_params.plugin_version})
+    elif search_params.plugin_params:
+        workflows = collection.find({"request.workflow_info.plugin_params": search_params.plugin_params})
+    elif search_params.date:
+        workflows = collection.find({"date": search_params.date})
+    search_results = []
+    for wrkflo in workflows: search_results.append(wrkflo['_id'])
+
+    return search_results
 
 
 # Add new workflow in the DB
@@ -67,9 +86,8 @@ async def delete_workflow(workflow_key: str, test: bool = False):
     """
     collection = test_collection if test else workflow_collection
     delete_count = 0
-    for workflow in collection.find():
-        collection.delete_one({"_id": workflow_key})
-        delete_count += 1
+    collection.delete_one({"_id": workflow_key})
+    delete_count += 1
     return {"Message": f"{delete_count} record(s) deleted!"}
 
 def request_to_hash(request: WorkflowRequestSchema) -> str:

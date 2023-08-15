@@ -163,3 +163,33 @@ class WorkflowDBSchema(BaseModel):
     response: WorkflowStatusResponseSchema
     stale: bool = True
     started: bool = False
+
+
+class WorkflowSearchSchema(BaseModel):
+    """A schema to search Workflow DB records"""
+    AccessionNumber: str = ""
+    PatientID: str = ""
+    PatientName: str = ""
+    PatientBirthDate: str = ""
+    PatientAge: str = ""
+    PatientSex: str = ""
+    StudyDate: str = ""
+    StudyDescription: str = ""
+    StudyInstanceUID: str = ""
+    Modality: str = ""
+    ModalitiesInStudy: str = ""
+    PerformedStationAETitle: str = ""
+    NumberOfSeriesRelatedInstances: str = ""
+    InstanceNumber: str = ""
+    SeriesDate: str = ""
+    SeriesDescription: str = ""
+    SeriesInstanceUID: str = ""
+    ProtocolName: str = ""
+    AcquisitionProtocolDescription: str = ""
+    AcquisitionProtocolName: str = ""
+    plugin_name: str = ""
+    plugin_version: str = ""
+    plugin_params: str = ""
+    pipeline_name: str = ""
+    cube_username: str = ""
+    date: str = ""

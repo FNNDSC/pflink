@@ -2,6 +2,7 @@ from fastapi import APIRouter
 from app.models.workflow import (
     WorkflowRequestSchema,
     WorkflowStatusResponseSchema,
+    WorkflowSearchSchema,
 )
 from app.controllers import workflow
 router = APIRouter()
@@ -34,11 +35,11 @@ async def test_create_workflow(
 
 
 @router.get("/list", response_description="All workflows retrieved")
-async def test_get_workflows():
+async def test_get_workflows(search_params: WorkflowSearchSchema):
     """
     Fetch all workflows currently present in the database
     """
-    workflows = workflow.retrieve_workflows(test=True)
+    workflows = workflow.retrieve_workflows(search_params, test=True)
     return workflows
 
 

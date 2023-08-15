@@ -3,6 +3,7 @@ from app.controllers import workflow
 from app.models.workflow import (
     WorkflowRequestSchema,
     WorkflowStatusResponseSchema,
+    WorkflowSearchSchema,
 )
 router = APIRouter()
 
@@ -22,12 +23,67 @@ async def create_workflow(data: WorkflowRequestSchema) -> WorkflowStatusResponse
     return response
 
 
-@router.get("/list", response_description="All workflows retrieved")
-async def get_workflows():
+@router.get("/search", response_description="All workflows retrieved")
+async def get_workflows(
+    AccessionNumber: str = "",
+    PatientID: str = "",
+    PatientName: str = "",
+    PatientBirthDate: str = "",
+    PatientAge: str = "",
+    PatientSex: str = "",
+    StudyDate: str = "",
+    StudyDescription: str = "",
+    StudyInstanceUID: str = "",
+    Modality: str = "",
+    ModalitiesInStudy: str = "",
+    PerformedStationAETitle: str = "",
+    NumberOfSeriesRelatedInstances: str = "",
+    InstanceNumber: str = "",
+    SeriesDate: str = "",
+    SeriesDescription: str = "",
+    SeriesInstanceUID: str = "",
+    ProtocolName: str = "",
+    AcquisitionProtocolDescription: str = "",
+    AcquisitionProtocolName: str = "",
+    plugin_name: str = "",
+    plugin_version: str = "",
+    plugin_params: str = "",
+    pipeline_name: str = "",
+    cube_username: str = "",
+    date: str = "",
+):
     """
     Fetch all workflows currently present in the database
     """
-    workflows = workflow.retrieve_workflows()
+    search_params = WorkflowSearchSchema(
+    AccessionNumber = AccessionNumber,
+    PatientID = PatientID,
+    PatientName = PatientName,
+    PatientBirthDate = PatientBirthDate,
+    PatientAge = PatientAge,
+    PatientSex = PatientSex,
+    StudyDate = StudyDate,
+    StudyDescription = StudyDescription,
+    StudyInstanceUID = StudyInstanceUID,
+    Modality = Modality,
+    ModalitiesInStudy = ModalitiesInStudy,
+    PerformedStationAETitle = PerformedStationAETitle,
+    NumberOfSeriesRelatedInstances = NumberOfSeriesRelatedInstances,
+    InstanceNumber = InstanceNumber,
+    SeriesDate = SeriesDate,
+    SeriesDescription = SeriesDescription,
+    SeriesInstanceUID = SeriesInstanceUID,
+    ProtocolName = ProtocolName,
+    AcquisitionProtocolDescription = AcquisitionProtocolDescription,
+    AcquisitionProtocolName = AcquisitionProtocolName,
+    plugin_name = plugin_name,
+    plugin_version = plugin_version,
+    plugin_params = plugin_params,
+    pipeline_name = pipeline_name,
+    cube_username = cube_username,
+    date = date,
+    )
+    workflows = workflow.retrieve_workflows(search_params)
     return workflows
 
 
