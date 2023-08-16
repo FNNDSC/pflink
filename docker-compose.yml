@@ -16,7 +16,7 @@ services:
       pflink:
 
   pflink-db:
-    image: mongo
+    image: mongo:4.4.6
     environment:
       - PUID=1000
       - PGID=1000

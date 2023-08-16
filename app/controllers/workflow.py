@@ -1,6 +1,6 @@
 import datetime
 
-from pymongo import MongoClient
+from pymongo import MongoClient, TEXT
 import json
 import logging
 import subprocess
@@ -17,6 +17,7 @@ from app.models.workflow import (
     PACSqueryCore,
     WorkflowInfoSchema,
 )
+from app.controllers import search
 from app.controllers.subprocesses.subprocess_helper import get_process_count
 from app.controllers.subprocesses import utils
 from app.config import settings
@@ -39,7 +40,7 @@ logging.basicConfig(
 
 
 # Retrieve all workflows present in the DB
-def retrieve_workflows(search_params: WorkflowSearchSchema, test: bool = False):
+def retrieve_workflows_by(search_params: WorkflowSearchSchema, test: bool = False):
     collection = test_collection if test else workflow_collection
     workflows = []
     if search_params.cube_username:
@@ -56,6 +57,18 @@ def retrieve_workflows(search_params: WorkflowSearchSchema, test: bool = False):
         workflows = collection.find({"date": search_params.date})
     search_results = []
     for wrkflo in workflows: search_results.append(wrkflo['_id'])
+
+    return search_results
+
+def retrieve_workflows(search_params: WorkflowSearchSchema, test: bool = False):
+    collection = test_collection if test else workflow_collection
+    index = collection.create_index([('request.cube_user_info.username',TEXT)], name='search_index',  default_language='english')
+    collection.create_index("some_index")
+    workflows = []
+    query, response = search.compound_queries(search_params)
+    workflows = collection.aggregate([query, response])
+    search_results = []
+    for wrkflo in workflows: search_results.append(str(wrkflo))
 
     return search_results
 

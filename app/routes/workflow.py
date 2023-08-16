@@ -89,7 +89,7 @@ async def get_workflows(
     
     
 @router.get("", response_description="Workflow retrieved successfully")
-async def get_workflows(workflow_key: str):
+async def get_workflow(workflow_key: str):
     """
     Fetch workflow recorded by using hash of a request.
     """
@@ -97,13 +97,14 @@ async def get_workflows(workflow_key: str):
     return workflow
 
 
-@router.delete("/list", response_description="All workflows deleted")
-async def delete_workflows():
+
+# @router.delete("/list", response_description="All workflows deleted")
+# async def delete_workflows():
     """
     Delete all workflow records from the prod database table
     """
-    response = await workflow.delete_workflows()
-    return response
+#    response = await workflow.delete_workflows()
+#    return response
 
 @router.delete("", response_description="Selected workflow deleted successfully")
 async def delete_workflow(workflow_key: str):

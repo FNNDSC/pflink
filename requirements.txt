@@ -1,10 +1,10 @@
-motor==2.5.1
 pydantic==1.10.11
 requests
 python-chrisclient
 asyncio
 psutil
 pytz
+pymongo
 
 # dev
 pytest==7.2.0
