@@ -62,13 +62,20 @@ def retrieve_workflows_by(search_params: WorkflowSearchSchema, test: bool = Fals
 
 def retrieve_workflows(search_params: WorkflowSearchSchema, test: bool = False):
     collection = test_collection if test else workflow_collection
-    index = collection.create_index([('request.cube_user_info.username',TEXT)], name='search_index',  default_language='english')
-    collection.create_index("some_index")
+    index = collection.create_index([('$**',TEXT)],
+                                    name='search_index',  default_language='english')
     workflows = []
-    query, response = search.compound_queries(search_params)
-    workflows = collection.aggregate([query, response])
+    query, rank, response = search.compound_queries(search_params)
+    workflows = collection.aggregate(
+   [
+    { "$match": {"$text": { "$search": search_params.keywords } } },
+    { "$project": { "_id": 1 , "score": { "$meta": "textScore" }} },
+    {"$sort": {"score": -1}},
+   ]
+)
     search_results = []
-    for wrkflo in workflows: search_results.append(str(wrkflo))
+    for wrkflo in workflows:
+        search_results.append(str(wrkflo))
 
     return search_results
 
