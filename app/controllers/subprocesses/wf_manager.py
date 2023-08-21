@@ -105,6 +105,15 @@ def manage_workflow(db_key: str, test: bool):
         time.sleep(10)
         workflow = retrieve_workflow(key)
 
+        # Reset workflow status if max service_retry is not reached
+        if workflow.service_retry > 0 and not workflow.response.status:
+            logging.info(f"ERROR: {workflow.response.error} . {workflow.service_retry} retries left.")
+            workflow.service_retry -= 1
+            workflow.response.error = ""
+            workflow.response.status = True
+            update_workflow(key, workflow)
+
+
         # Reset workflow if pflink reached MAX no. of retries
         if MAX_RETRIES==0:
             workflow.started = False

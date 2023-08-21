@@ -161,6 +161,7 @@ class WorkflowDBSchema(BaseModel):
     creation_time: datetime.datetime = datetime.datetime.now(datetime.timezone.utc)
     request: WorkflowRequestSchema
     response: WorkflowStatusResponseSchema
+    service_retry: int = 5
     stale: bool = True
     started: bool = False
 
