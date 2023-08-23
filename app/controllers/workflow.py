@@ -28,13 +28,7 @@ database = client.database
 workflow_collection = database.get_collection("workflows_collection")
 test_collection = database.get_collection("tests_collection")
 
-log_format = "%(asctime)s: %(message)s"
-logging.basicConfig(
-    format=log_format,
-    level=logging.INFO,
-    datefmt="%H:%M:%S"
-)
-
+logger = logging.getLogger('pflink-logger')
 
 # DB methods
 
@@ -69,7 +63,7 @@ def retrieve_workflows(search_params: WorkflowSearchSchema, test: bool = False):
     workflows = collection.aggregate(
    [
     { "$match": {"$text": { "$search": search_params.keywords } } },
-    { "$project": { "_id": 1 , "score": { "$meta": "textScore" }} },
+    { "$project": {"_id": 1 , "score": { "$meta": "textScore" }} },
     {"$sort": {"score": -1}},
    ]
 )
@@ -109,6 +103,7 @@ async def delete_workflow(workflow_key: str, test: bool = False):
     collection.delete_one({"_id": workflow_key})
     delete_count += 1
     return {"Message": f"{delete_count} record(s) deleted!"}
+
 
 def request_to_hash(request: WorkflowRequestSchema) -> str:
     """
@@ -194,7 +189,7 @@ def manage_workflow(str_data: str, mode: str):
     Manage a workflow request in a separate subprocess
     """
     proc_count = get_process_count("wf_manager", str_data)
-    logging.info(f"{proc_count} subprocess of workflow manager running on the system.")
+    logger.debug(f"{proc_count} subprocess of workflow manager running on the system.")
     if proc_count > 0: return
     d_cmd = ["python", "app/controllers/subprocesses/wf_manager.py", "--data", str_data]
     if mode:
@@ -208,7 +203,7 @@ def update_workflow_status(str_data: str, mode: str):
     Update the current status of a workflow request in a separate process
     """
     proc_count = get_process_count("status", str_data)
-    logging.info(f"{proc_count} subprocess of status manager running on the system.")
+    logger.debug(f"{proc_count} subprocess of status manager running on the system.")
     if proc_count>0: return
     d_cmd = ["python", "app/controllers/subprocesses/status.py", "--data", str_data]
     if mode:

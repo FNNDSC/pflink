@@ -6,7 +6,9 @@ import json
 import logging
 import random
 import requests
-
+from logging.config import dictConfig
+from app.models.log import LogConfig
+from app.log_config import log_config
 from app.models.workflow import (
     State,
     WorkflowRequestSchema,
@@ -26,12 +28,8 @@ from app.controllers.subprocesses.utils import (
 )
 
 from app.controllers.subprocesses.subprocess_helper import get_process_count
-log_format = "%(asctime)s: %(message)s"
-logging.basicConfig(
-    format=log_format,
-    level=logging.INFO,
-    datefmt="%H:%M:%S"
-)
+dictConfig(log_config)
+logger = logging.getLogger('pflink-logger')
 
 parser = argparse.ArgumentParser(description='Process arguments passed through CLI')
 parser.add_argument('--data', type=str)
@@ -50,7 +48,7 @@ def update_workflow_status(key: str, test: bool):
     if is_status_subprocess_running(workflow):
         return
 
-    logging.info(f"WORKING on updating the status for {key}, locking--")
+    logger.info(f"WORKING on updating the status for {key}, locking DB flag")
     update_status_flag(key, workflow, False, test)
 
     if test:
@@ -60,7 +58,7 @@ def update_workflow_status(key: str, test: bool):
 
     workflow.response = update_workflow_progress(updated_status)
     update_status_flag(key, workflow, True, test)
-    logging.info(f"UPDATED status for {key}, releasing lock")
+    logger.info(f"UPDATED status for {key}, releasing lock")
 
 
 def update_workflow_progress(response: WorkflowStatusResponseSchema):
@@ -175,6 +173,7 @@ def _get_pfdcm_status(request: WorkflowRequestSchema):
         d_response["service_name"] = request.pfdcm_info.pfdcm_service
         return d_response
     except Exception as ex:
+        logger.error(f"{Error.pfdcm.value}  {str(ex)} for pfdcm_service {request.pfdcm_info.pfdcm_service}")
         return {"error": Error.pfdcm.value + f" {str(ex)} for pfdcm_service {request.pfdcm_info.pfdcm_service}"}
 
 
@@ -208,6 +207,7 @@ def _get_feed_status(request: WorkflowRequestSchema, feed_id: str) -> dict:
             resp["errored_plugins"] = str(l_error)
         return resp
     except Exception as ex:
+        logger.error(f"{Error.cube.value} {str(ex)}")
         return {"error": Error.cube.value + str(ex)}
 
 

@@ -9,6 +9,9 @@ import time
 import requests
 from app.controllers.subprocesses.python_chris_client import PythonChrisClient
 from app.controllers.subprocesses.subprocess_helper import get_process_count
+from logging.config import dictConfig
+from app.models.log import LogConfig
+from app.log_config import log_config
 from app.models.workflow import (
     Error,
     State,
@@ -25,13 +28,8 @@ from app.controllers.subprocesses.utils import (
     do_cube_create_user,
     retrieve_pfdcm_url,
 )
-
-log_format = "%(asctime)s: %(message)s"
-logging.basicConfig(
-    format=log_format,
-    level=logging.INFO,
-    datefmt="%H:%M:%S"
-)
+dictConfig(log_config)
+logger = logging.getLogger('pflink-logger')
 
 parser = argparse.ArgumentParser(description='Process arguments')
 parser.add_argument('--data', type=str)
@@ -60,20 +58,23 @@ def manage_workflow(db_key: str, test: bool):
         workflow.started = True
         update_workflow(key, workflow)
         MAX_RETRIES -= 1
-        logging.info(f"RETRY#{MAX_RETRIES}")
+        logger.info(f"RETRY#{MAX_RETRIES}")
 
         match workflow.response.workflow_state:
 
             case State.INITIALIZING:
                 if workflow.stale:
+                    logger.info("Requesting PACS retrieve.")
                     do_pfdcm_retrieve(request, pfdcm_url)
 
             case State.RETRIEVING:
                 if workflow.response.state_progress == "100%" and workflow.stale:
+                    logger.info("Requesting PACS push.")
                     do_pfdcm_push(request, pfdcm_url)
 
             case State.PUSHING:
                 if workflow.response.state_progress == "100%" and workflow.stale:
+                    logger.info("Requesting PACS register.")
                     do_pfdcm_register(request, pfdcm_url)
 
             case State.REGISTERING:
@@ -85,7 +86,7 @@ def manage_workflow(db_key: str, test: bool):
                         workflow.response.feed_id = feed_id
                         update_workflow(key, workflow)
                     except Exception as ex:
-                        logging.info(Error.feed.value)
+                        logger.error(Error.feed.value)
                         workflow.response.error = Error.feed.value + str(ex)
                         workflow.response.status = False
                         update_workflow(key, workflow)
@@ -95,7 +96,7 @@ def manage_workflow(db_key: str, test: bool):
                     try:
                         do_cube_start_analysis(pl_inst_id, request, cube_url)
                     except Exception as ex:
-                        logging.info(Error.analysis.value + str(ex))
+                        logger.error(Error.analysis.value + str(ex))
                         workflow.response.error = Error.analysis.value + str(ex)
                         workflow.response.status = False
                         update_workflow(key, workflow)
@@ -107,7 +108,7 @@ def manage_workflow(db_key: str, test: bool):
 
         # Reset workflow status if max service_retry is not reached
         if workflow.service_retry > 0 and not workflow.response.status:
-            logging.info(f"ERROR: {workflow.response.error} . {workflow.service_retry} retries left.")
+            logger.error(f"{workflow.response.error} . {workflow.service_retry} retries left.")
             workflow.service_retry -= 1
             workflow.response.error = ""
             workflow.response.status = True
@@ -180,7 +181,7 @@ def pfdcm_do(verb: str, then_args: dict, request: WorkflowRequestSchema, url: st
     response = requests.post(pfdcm_dicom_api, json=body, headers=headers)
     et = time.time()
     elapsed_time = et - st
-    logging.info(f'Execution time to {verb}:{elapsed_time} seconds')
+    logger.debug(f'Execution time to {verb}:{elapsed_time} seconds')
 
 
 def do_pfdcm_retrieve(dicom: WorkflowRequestSchema, pfdcm_url: str):
@@ -230,7 +231,7 @@ def do_cube_create_feed(request: WorkflowRequestSchema, cube_url: str) -> dict:
     plugin_search_params = {"name": "pl-dircopy"}
     plugin_id = client.getPluginId(plugin_search_params)
 
-    logging.info(f"Creating a new feed with feed name: {feed_name}")
+    logger.info(f"Creating a new feed with feed name: {feed_name}")
     # create a feed
     feed_params = {'title': feed_name, 'dir': data_path}
     feed_response = client.createFeed(plugin_id, feed_params)
@@ -259,7 +260,7 @@ def __run_plugin_instance(previous_id: str, request: WorkflowRequestSchema, clie
     # convert CLI params from string to a JSON dictionary
     feed_params = str_to_param_dict(request.workflow_info.plugin_params)
     feed_params["previous_id"] = previous_id
-    logging.info(f"Creating new analysis with parameters: {feed_params}")
+    logger.debug(f"Creating new analysis with parameters: {feed_params}")
     feed_resp = client.createFeed(plugin_id, feed_params)
 
 
