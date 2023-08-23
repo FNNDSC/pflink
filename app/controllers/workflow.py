@@ -4,6 +4,7 @@ from pymongo import MongoClient, TEXT
 import json
 import logging
 import subprocess
+import pprint
 
 from app.models.workflow import (
     WorkflowRequestSchema,
@@ -29,6 +30,7 @@ workflow_collection = database.get_collection("workflows_collection")
 test_collection = database.get_collection("tests_collection")
 
 logger = logging.getLogger('pflink-logger')
+d = {'workername': 'PFLINK', 'log_color': '\33[%dm', 'key': ""}
 
 # DB methods
 
@@ -128,6 +130,7 @@ async def post_workflow(
     """
     # create a hash key using the request
     db_key = request_to_hash(request)
+    d['key'] = db_key
     workflow = utils.retrieve_workflow(db_key, test)
     if not workflow:
         fingerprint = get_fingerprint(request)
@@ -189,9 +192,14 @@ def manage_workflow(str_data: str, mode: str):
     Manage a workflow request in a separate subprocess
     """
     proc_count = get_process_count("wf_manager", str_data)
-    logger.debug(f"{proc_count} subprocess of workflow manager running on the system.")
-    if proc_count > 0: return
+    logger.debug(f"{proc_count} subprocess of workflow manager running on the system.", extra=d)
+    if proc_count > 0:
+        logger.info(f"No new manager subprocess started.", extra=d)
+        return
+
     d_cmd = ["python", "app/controllers/subprocesses/wf_manager.py", "--data", str_data]
+    pretty_cmd = pprint.pformat(d_cmd)
+    logger.debug(f"New manager subprocess started with command: {pretty_cmd}", extra=d)
     if mode:
         d_cmd.append(mode)
     subproc = subprocess.Popen(d_cmd)
@@ -203,9 +211,14 @@ def update_workflow_status(str_data: str, mode: str):
     Update the current status of a workflow request in a separate process
     """
     proc_count = get_process_count("status", str_data)
-    logger.debug(f"{proc_count} subprocess of status manager running on the system.")
-    if proc_count>0: return
+    logger.debug(f"{proc_count} subprocess of status manager running on the system.", extra=d)
+    if proc_count>0:
+        logger.info(f"No new status subprocess started.", extra=d)
+        return
+
     d_cmd = ["python", "app/controllers/subprocesses/status.py", "--data", str_data]
+    pretty_cmd = pprint.pformat(d_cmd)
+    logger.debug(f"New status subprocess started with command: {pretty_cmd}", extra=d)
     if mode:
         d_cmd.append(mode)
     subproc = subprocess.Popen(d_cmd)

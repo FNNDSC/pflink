@@ -45,6 +45,7 @@ def workflow_retrieve_helper(workflow: dict) -> WorkflowDBSchema:
         creation_time=datetime.datetime.min if not workflow.get("creation_time") else workflow["creation_time"],
         request=request,
         response=workflow["response"],
+        service_retry=workflow["service_retry"],
         stale=workflow["stale"],
         started=workflow["started"],
     )
@@ -64,6 +65,7 @@ def workflow_add_helper(workflow: WorkflowDBSchema) -> dict:
         "creation_time": workflow.creation_time,
         "request": d_request,
         "response": workflow.response.__dict__,
+        "service_retry": workflow.service_retry,
         "stale": workflow.stale,
         "started": workflow.started,
     }

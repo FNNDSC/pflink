@@ -1,11 +1,10 @@
-
 log_config = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
         "default": {
             "()": "uvicorn.logging.DefaultFormatter",
-            "fmt": "%(levelprefix)s %(asctime)s %(message)s",
+            "fmt": "%(levelprefix)s | %(workername)s | %(asctime)s | key: %(key)s | %(message)s",
             "datefmt": "%Y-%m-%d %H:%M:%S",
 
         },
