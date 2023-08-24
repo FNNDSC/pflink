@@ -4,7 +4,7 @@ log_config = {
     "formatters": {
         "default": {
             "()": "uvicorn.logging.DefaultFormatter",
-            "fmt": "%(levelprefix)s | %(workername)s | %(asctime)s | key: %(key)s | %(message)s",
+            "fmt": "%(log_color)s%(levelprefix)s | %(workername)s | %(asctime)s | key: %(key)s | %(message)s\33[0m",
             "datefmt": "%Y-%m-%d %H:%M:%S",
 
         },

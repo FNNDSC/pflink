@@ -32,7 +32,7 @@ from app.controllers.subprocesses.utils import (
 from app.controllers.subprocesses.subprocess_helper import get_process_count
 dictConfig(log_config)
 logger = logging.getLogger('pflink-logger')
-d = {'workername': 'STATUS_MGR', 'log_color': "\33[%dm", 'key': ""}
+d = {'workername': 'STATUS_MGR', 'log_color': "\33[36m", 'key': ""}
 
 
 parser = argparse.ArgumentParser(description='Process arguments passed through CLI')
@@ -52,7 +52,7 @@ def update_workflow_status(key: str, test: bool):
     if is_status_subprocess_running(workflow):
         return
 
-    logger.info(f"UPDATING the status for {key}, locking DB flag", extra=d)
+    logger.info(f"Working on fetching the current status, locking DB flag", extra=d)
     update_status_flag(key, workflow, False, test)
 
     if test:
@@ -61,8 +61,10 @@ def update_workflow_status(key: str, test: bool):
         updated_status = get_current_status(workflow.request, workflow.response)
 
     workflow.response = update_workflow_progress(updated_status)
+    pretty_response = pprint.pformat(workflow.response.__dict__)
+    logger.debug(f"Updated response: {pretty_response}", extra=d)
     update_status_flag(key, workflow, True, test)
-    logger.info(f"UPDATED status for {key}, releasing lock", extra=d)
+    logger.info(f"Finished writing updated status to the DB, releasing lock", extra=d)
 
 
 def update_workflow_progress(response: WorkflowStatusResponseSchema):
@@ -213,7 +215,8 @@ def _get_feed_status(request: WorkflowRequestSchema, feed_id: str) -> dict:
         # search for feed
         logger.debug(f"Request CUBE at {cube_url} for feed id: {feed_id} and feed name: {feed_name}", extra=d)
         resp = cl.getFeed({"id": feed_id, "name_exact": feed_name})
-        logger.debug(f"Response from CUBE : {resp}", extra=d)
+        pretty_response = pprint.pformat(resp)
+        logger.debug(f"Response from CUBE : {pretty_response}", extra=d)
         if resp["errored_jobs"] or resp["cancelled_jobs"]:
             l_inst_resp = cl.getPluginInstances({"feed_id": feed_id})
             l_error = [d_instance['plugin_name'] for d_instance in l_inst_resp['data'] if d_instance['status']=='finishedWithError' or d_instance['status'] == 'cancelled']

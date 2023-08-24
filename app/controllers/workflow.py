@@ -30,7 +30,7 @@ workflow_collection = database.get_collection("workflows_collection")
 test_collection = database.get_collection("tests_collection")
 
 logger = logging.getLogger('pflink-logger')
-d = {'workername': 'PFLINK', 'log_color': '\33[%dm', 'key': ""}
+d = {'workername': 'PFLINK' ,'log_color': "\33[32m", 'key': ""}
 
 # DB methods
 
@@ -168,6 +168,8 @@ def create_new_workflow(
     response = WorkflowStatusResponseSchema()
     new_workflow = WorkflowDBSchema(key=key, fingerprint=fingerprint, request=request, response=response)
     workflow = add_workflow(new_workflow, test)
+    pretty_response = pprint.pformat(workflow.response.__dict__)
+    logger.info(f"New workflow record created. Initial workflow response: {pretty_response}", extra=d)
     return workflow
 
 

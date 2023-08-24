@@ -31,7 +31,7 @@ from app.controllers.subprocesses.utils import (
 )
 dictConfig(log_config)
 logger = logging.getLogger('pflink-logger')
-d = {'workername': 'WORKFLOW_MGR', 'key' : ""}
+d = {'workername': 'WORKFLOW_MGR', 'key' : "",'log_color': "\33[33m"}
 
 parser = argparse.ArgumentParser(description='Process arguments')
 parser.add_argument('--data', type=str)
@@ -44,6 +44,7 @@ def manage_workflow(db_key: str, test: bool):
     Manage workflow:
     Schedule task based on status from the DB
     """
+    SLEEP_TIME = 10
     MAX_RETRIES = 50
     pl_inst_id = 0
     workflow = retrieve_workflow(db_key)
@@ -52,7 +53,7 @@ def manage_workflow(db_key: str, test: bool):
         reason = f"Workflow request failed. Error: {workflow.response.error}" if not workflow.response.status \
                  else f"Workflow already started. The current status is: {workflow.response.workflow_state}"
         logger.warning(f"Cannot restart this workflow request. : {reason}"
-                       f". Kindly delete this request to restart using the delete API end point: {key}", extra=d)
+                       f". Kindly delete this request to restart using the delete API end point", extra=d)
         return
 
     request = workflow.request
@@ -61,7 +62,7 @@ def manage_workflow(db_key: str, test: bool):
     cube_url = get_cube_url_from_pfdcm(pfdcm_url, request.pfdcm_info.cube_service)
 
     while not workflow.response.workflow_state == State.ANALYZING and MAX_RETRIES > 0 and workflow.response.status:
-        logger.debug(f"Fetching request status from DB. Current status is {workflow.response.workflow_state}", extra=d)
+
         workflow.started = True
         update_workflow(key, workflow)
         MAX_RETRIES -= 1
@@ -108,10 +109,13 @@ def manage_workflow(db_key: str, test: bool):
                         workflow.response.status = False
                         update_workflow(key, workflow)
 
-        logger.info(f"Calling status update subprocess for request# {key}", extra=d)
+        logger.info(f"Calling status update subprocess.", extra=d)
         update_status(request)
-        time.sleep(10)
+        logger.info(f"Sleeping for {SLEEP_TIME} seconds", extra=d)
+        time.sleep(SLEEP_TIME)
+
         workflow = retrieve_workflow(key)
+        logger.debug(f"Fetching request status from DB. Current status is {workflow.response.workflow_state}", extra=d)
 
         # Reset workflow status if max service_retry is not reached
         if workflow.service_retry > 0 and not workflow.response.status:
@@ -128,6 +132,8 @@ def manage_workflow(db_key: str, test: bool):
             workflow.started = False
             update_workflow(key, workflow)
             logger.info("Exiting manager subprocess", extra=d)
+
+    logger.info(f"Exiting while loop. End of workflow_manager.", extra=d)
 
 
 def update_status(request: WorkflowRequestSchema):
