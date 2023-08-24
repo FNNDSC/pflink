@@ -9,7 +9,6 @@ from app.routes.cube import router as CubeRouter
 from app.config import settings
 from app.controllers import auth
 from logging.config import dictConfig
-from app.models.log import LogConfig
 from app.log_config import log_config
 
 description = """
@@ -66,7 +65,6 @@ tags_metadata = [
     }
 ]
 
-#dictConfig(LogConfig().dict())
 dictConfig(log_config)
 
 app = FastAPI(

@@ -9,7 +9,6 @@ import requests
 import time
 import pprint
 from logging.config import dictConfig
-from app.models.log import LogConfig
 from app.log_config import log_config
 from app.models.workflow import (
     State,

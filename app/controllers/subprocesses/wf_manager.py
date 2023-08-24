@@ -11,7 +11,6 @@ import pprint
 from app.controllers.subprocesses.python_chris_client import PythonChrisClient
 from app.controllers.subprocesses.subprocess_helper import get_process_count
 from logging.config import dictConfig
-from app.models.log import LogConfig
 from app.log_config import log_config
 from app.models.workflow import (
     Error,
@@ -203,7 +202,7 @@ def pfdcm_do(verb: str, then_args: dict, request: WorkflowRequestSchema, url: st
     response = requests.post(pfdcm_dicom_api, json=body, headers=headers)
     et = time.time()
     elapsed_time = et - st
-    logger.debug(f'Execution time to {verb}:{elapsed_time} seconds', extra=d)
+    logger.debug(f'Execution time to request {verb}:{elapsed_time} seconds', extra=d)
 
 
 def do_pfdcm_retrieve(dicom: WorkflowRequestSchema, pfdcm_url: str):
