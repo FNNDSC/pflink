@@ -36,25 +36,6 @@ d = {'workername': 'PFLINK' ,'log_color': "\33[32m", 'key': ""}
 
 
 # Retrieve all workflows present in the DB
-def retrieve_workflows_by(search_params: WorkflowSearchSchema, test: bool = False):
-    collection = test_collection if test else workflow_collection
-    workflows = []
-    if search_params.cube_username:
-        workflows = collection.find({"request.cube_user_info.username": search_params.cube_username})
-    elif search_params.pipeline_name:
-        workflows = collection.find({"request.workflow_info.pipeline_name": search_params.pipeline_name})
-    elif search_params.plugin_name:
-        workflows = collection.find({"request.workflow_info.plugin_name": search_params.plugin_name})
-    elif search_params.plugin_version:
-        workflows = collection.find({"request.workflow_info.plugin_version": search_params.plugin_version})
-    elif search_params.plugin_params:
-        workflows = collection.find({"request.workflow_info.plugin_params": search_params.plugin_params})
-    elif search_params.date:
-        workflows = collection.find({"date": search_params.date})
-    search_results = []
-    for wrkflo in workflows: search_results.append(wrkflo['_id'])
-
-    return search_results
 
 def retrieve_workflows(search_params: WorkflowSearchSchema, test: bool = False):
     collection = test_collection if test else workflow_collection
@@ -149,12 +130,12 @@ async def post_workflow(
         return create_response_with_error(error_type, workflow.response)
 
     mode, str_data = get_suproc_params(test, request)
-    # run workflow manager subprocess on the workflow
-    sub_mng = manage_workflow(str_data, mode)
-
     # run status_update subprocess on the workflow
     sub_updt = update_workflow_status(str_data, mode)
     # debug_process(sub_updt)
+
+    # run workflow manager subprocess on the workflow
+    sub_mng = manage_workflow(str_data, mode)
     return workflow.response
 
 
@@ -247,7 +228,8 @@ def check_for_duplicates(request_hash: str, test: bool = False):
     if workflows:
         for workflow in workflows:
             record = utils.workflow_retrieve_helper(workflow)
-            user_response = UserResponseSchema(username=record.request.cube_user_info.username, response=record.response.__dict__)
+            user_response = UserResponseSchema(username=record.request.cube_user_info.username,
+                                               response=record.response.__dict__)
             user_responses.append(user_response)
         return user_responses
 

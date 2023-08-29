@@ -185,7 +185,8 @@ def _get_pfdcm_status(request: WorkflowRequestSchema):
         d_response["service_name"] = request.pfdcm_info.pfdcm_service
         return d_response
     except Exception as ex:
-        logger.error(f"{Error.pfdcm.value}  {str(ex)} for pfdcm_service {request.pfdcm_info.pfdcm_service}", extra=d)
+        logger.error(f"{Error.pfdcm.value}  {str(ex)} for pfdcm_service {request.pfdcm_info.pfdcm_service}",
+                     extra=d)
         return {"error": Error.pfdcm.value + f" {str(ex)} for pfdcm_service {request.pfdcm_info.pfdcm_service}"}
 
 
@@ -216,9 +217,10 @@ def _get_feed_status(request: WorkflowRequestSchema, feed_id: str) -> dict:
         resp = cl.getFeed({"id": feed_id, "name_exact": feed_name})
         pretty_response = pprint.pformat(resp)
         logger.debug(f"Response from CUBE : {pretty_response}", extra=d)
-        if resp["errored_jobs"] or resp["cancelled_jobs"]:
+        if resp.get("errored_jobs") or resp.get("cancelled_jobs"):
             l_inst_resp = cl.getPluginInstances({"feed_id": feed_id})
-            l_error = [d_instance['plugin_name'] for d_instance in l_inst_resp['data'] if d_instance['status']=='finishedWithError' or d_instance['status'] == 'cancelled']
+            l_error = [d_instance['plugin_name'] for d_instance in l_inst_resp['data']
+                       if d_instance['status']=='finishedWithError' or d_instance['status'] == 'cancelled']
             resp["errored_plugins"] = str(l_error)
         return resp
     except Exception as ex:
@@ -335,6 +337,7 @@ def _parse_response(
             status.workflow_state = State.FEED_DELETED
             status.status = False
             status.error = Error.feed_deleted.value
+            status.state_progress = "0%"
 
     return status
 

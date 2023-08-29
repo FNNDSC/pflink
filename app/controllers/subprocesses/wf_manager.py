@@ -110,11 +110,13 @@ def manage_workflow(db_key: str, test: bool):
 
         logger.info(f"Calling status update subprocess.", extra=d)
         update_status(request)
+
         logger.info(f"Sleeping for {SLEEP_TIME} seconds", extra=d)
         time.sleep(SLEEP_TIME)
 
         workflow = retrieve_workflow(key)
-        logger.debug(f"Fetching request status from DB. Current status is {workflow.response.workflow_state}", extra=d)
+        logger.debug(f"Fetching request status from DB. Current status is {workflow.response.workflow_state}",
+                     extra=d)
 
         # Reset workflow status if max service_retry is not reached
         if workflow.service_retry > 0 and not workflow.response.status:
@@ -281,7 +283,8 @@ def __run_plugin_instance(previous_id: str, request: WorkflowRequestSchema, clie
     # convert CLI params from string to a JSON dictionary
     feed_params = str_to_param_dict(request.workflow_info.plugin_params)
     feed_params["previous_id"] = previous_id
-    logger.debug(f"Creating new analysis with plugin: {plugin_search_params}  and parameters: {feed_params}", extra=d)
+    logger.debug(f"Creating new analysis with plugin: {plugin_search_params}  and parameters: {feed_params}",
+                 extra=d)
     feed_resp = client.createFeed(plugin_id, feed_params)
 
 
