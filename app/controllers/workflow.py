@@ -113,7 +113,13 @@ async def post_workflow(
     db_key = request_to_hash(request)
     d['key'] = db_key
     workflow = utils.retrieve_workflow(db_key, test)
-    if not workflow:
+
+    mode, str_data = get_suproc_params(test, request)
+    if workflow:
+        # if there is an existing record in the DB, just run a status subprocess
+        sub_updt = update_workflow_status(str_data, mode)
+
+    else:
         fingerprint = get_fingerprint(request)
         duplicates = check_for_duplicates(fingerprint, test)
         if duplicates and not request.ignore_duplicate:
@@ -124,14 +130,12 @@ async def post_workflow(
             return response
         workflow = create_new_workflow(db_key, fingerprint, request, test)
 
+
     # 'error_type' is an optional test-only parameter that forces the workflow to error out
     # at a given error state
     if error_type:
         return create_response_with_error(error_type, workflow.response)
 
-    mode, str_data = get_suproc_params(test, request)
-    # run status_update subprocess on the workflow
-    sub_updt = update_workflow_status(str_data, mode)
     # debug_process(sub_updt)
 
     # run workflow manager subprocess on the workflow

@@ -12,5 +12,32 @@ class Auth(BaseSettings):
     password: str = 'pflink1234'
 
 
+class LogConfig(BaseSettings):
+    level: str = "INFO"
+    log_config = {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "formatters": {
+            "default": {
+                "()": "uvicorn.logging.DefaultFormatter",
+                "fmt": '%(log_color)s {"level":"%(levelprefix)s", "worker":"%(workername)s", "timestamp":"%(asctime)s", "key":"%(key)s", "msg":"%(message)s"}\33[0m',
+                "datefmt": "%Y-%m-%d %H:%M:%S",
+
+            },
+        },
+        "handlers": {
+            "default": {
+                "formatter": "default",
+                "class": "logging.StreamHandler",
+                "stream": "ext://sys.stderr",
+            },
+        },
+        "loggers": {
+            "pflink-logger": {"handlers": ["default"], "level": level},
+        },
+    }
+
+
 settings = Settings()
 auth = Auth()
+log = LogConfig()

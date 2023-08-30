@@ -11,7 +11,7 @@ import pprint
 from app.controllers.subprocesses.python_chris_client import PythonChrisClient
 from app.controllers.subprocesses.subprocess_helper import get_process_count
 from logging.config import dictConfig
-from app.log_config import log_config
+from app.config import log
 from app.models.workflow import (
     Error,
     State,
@@ -28,7 +28,7 @@ from app.controllers.subprocesses.utils import (
     do_cube_create_user,
     retrieve_pfdcm_url,
 )
-dictConfig(log_config)
+dictConfig(log.log_config)
 logger = logging.getLogger('pflink-logger')
 d = {'workername': 'WORKFLOW_MGR', 'key' : "",'log_color': "\33[33m"}
 

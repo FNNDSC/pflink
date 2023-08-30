@@ -9,7 +9,7 @@ import requests
 import time
 import pprint
 from logging.config import dictConfig
-from app.log_config import log_config
+from app.config import log
 from app.models.workflow import (
     State,
     WorkflowRequestSchema,
@@ -29,7 +29,7 @@ from app.controllers.subprocesses.utils import (
 )
 
 from app.controllers.subprocesses.subprocess_helper import get_process_count
-dictConfig(log_config)
+dictConfig(log.log_config)
 logger = logging.getLogger('pflink-logger')
 d = {'workername': 'STATUS_MGR', 'log_color': "\33[36m", 'key': ""}
 

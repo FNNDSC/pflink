@@ -6,10 +6,9 @@ from app.routes.workflow import router as WorkflowRouter
 from app.routes.testing import router as WorkflowTestRouter
 from app.routes.auth import router as AuthRouter
 from app.routes.cube import router as CubeRouter
-from app.config import settings
+from app.config import settings, log
 from app.controllers import auth
 from logging.config import dictConfig
-from app.log_config import log_config
 
 description = """
 `pflink` is an application to interact with `CUBE` and `pfdcm` 🚀
@@ -65,7 +64,7 @@ tags_metadata = [
     }
 ]
 
-dictConfig(log_config)
+dictConfig(log.log_config)
 
 app = FastAPI(
     title='pflink',
