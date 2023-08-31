@@ -16,7 +16,6 @@ from app.models.workflow import (
     Error,
     State,
     WorkflowRequestSchema,
-    WorkflowDBSchema,
 )
 from app.controllers.subprocesses.utils import (
     request_to_dict,
@@ -49,9 +48,9 @@ def manage_workflow(db_key: str, test: bool):
     workflow = retrieve_workflow(db_key)
     if workflow.started or not workflow.response.status or test:
         # Do nothing and return
-        reason = f"Workflow request failed. Error: {workflow.response.error}" if not workflow.response.status \
-                 else f"Workflow already started. The current status is: {workflow.response.workflow_state}"
-        logger.warning(f"Cannot restart this workflow request. : {reason}"
+        reason = f"Workflow request failed. {workflow.response.error}" if not workflow.response.status \
+                 else f"Workflow already started. The current status is {workflow.response.workflow_state}"
+        logger.warning(f"Cannot restart this workflow request. {reason}"
                        f". Kindly delete this request to restart using the delete API end point", extra=d)
         return
 

@@ -4,6 +4,8 @@ from pydantic import BaseSettings, MongoDsn
 class Settings(BaseSettings):
     pflink_mongodb: MongoDsn = 'mongodb://localhost:27017'
     version: str = "3.7.0"
+    mongo_username: str = "admin"
+    mongo_password: str = "admin"
 
 
 class Auth(BaseSettings):
@@ -13,14 +15,15 @@ class Auth(BaseSettings):
 
 
 class LogConfig(BaseSettings):
-    level: str = "INFO"
+    level: str = "DEBUG"
     log_config = {
         "version": 1,
         "disable_existing_loggers": False,
         "formatters": {
             "default": {
                 "()": "uvicorn.logging.DefaultFormatter",
-                "fmt": '%(log_color)s {"levelname":"%(levelname)s", "worker":"%(workername)s", "timestamp":"%(asctime)s", "key":"%(key)s", "msg":"%(message)s"}\33[0m',
+                "fmt": '%(log_color)s {"levelname":"%(levelname)s", "worker":"%(workername)s", "timestamp":"%('
+                       'asctime)s", "key":"%(key)s", "msg":"%(message)s"}\33[0m',
                 "datefmt": "%Y-%m-%d %H:%M:%S",
 
             },

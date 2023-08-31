@@ -14,7 +14,7 @@ from app.controllers.pfdcm import (
 )
 MONGO_DETAILS = str(settings.pflink_mongodb)
 
-client = MongoClient(MONGO_DETAILS)
+client = MongoClient(MONGO_DETAILS, username=settings.mongo_username, password=settings.mongo_password)
 
 database = client.database
 

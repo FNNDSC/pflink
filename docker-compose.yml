@@ -9,6 +9,8 @@ services:
       - ./:/app/
     environment:
       PFLINK_MONGODB: mongodb://pflink-db:27017
+      MONGO_USERNAME: admin
+      MONGO_PASSWORD: admin
     ports:
       - "8050:8050"
     networks:
@@ -18,12 +20,18 @@ services:
   pflink-db:
     image: mongo:4.4.6
     environment:
-      - PUID=1000
-      - PGID=1000
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin
     ports:
       - 27017:27017
     volumes:
-      - pflink-db-data:/data/db
+      - type: volume
+        source: MONGO_DATA
+        target: /data/db
+      - type: volume
+        source: MONGO_CONFIG
+        target: /data/configdb
+
     restart: unless-stopped
     networks:
       pflink:
@@ -33,5 +41,6 @@ networks:
   pflink:
   
 volumes:
-  pflink-db-data:
+  MONGO_DATA:
+  MONGO_CONFIG:
   

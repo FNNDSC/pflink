@@ -169,4 +169,3 @@ class WorkflowDBSchema(BaseModel):
 class WorkflowSearchSchema(BaseModel):
     """A schema to search Workflow DB records"""
     keywords: str = ""
-    date: str = ""

@@ -1,11 +1,11 @@
 from app.models.workflow import WorkflowSearchSchema
 
+
 def compound_queries(query_params: WorkflowSearchSchema):
-    query = { "$match": { "$text":
-                               {"$search": query_params.keywords}
+    query = {"$match": {"$text":
+                            {"$search": query_params.keywords}
 
-
-    }}
+                        }}
 
     rank = {
         "$sort": {"score": {"$meta": "textScore"}}
@@ -17,8 +17,8 @@ def compound_queries(query_params: WorkflowSearchSchema):
         }
     }
 
-
     return query, rank, response
+
 
 def index_search(query_params: dict):
     query = {

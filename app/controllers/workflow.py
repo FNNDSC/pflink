@@ -14,9 +14,6 @@ from app.models.workflow import (
     UserResponseSchema,
     State,
     WorkflowSearchSchema,
-    PFDCMInfoSchema,
-    PACSqueryCore,
-    WorkflowInfoSchema,
 )
 from app.controllers import search
 from app.controllers.subprocesses.subprocess_helper import get_process_count
@@ -24,13 +21,14 @@ from app.controllers.subprocesses import utils
 from app.config import settings
 
 MONGO_DETAILS = str(settings.pflink_mongodb)
-client = MongoClient(MONGO_DETAILS)
+client = MongoClient(MONGO_DETAILS, username=settings.mongo_username, password=settings.mongo_password)
 database = client.database
 workflow_collection = database.get_collection("workflows_collection")
 test_collection = database.get_collection("tests_collection")
 
 logger = logging.getLogger('pflink-logger')
-d = {'workername': 'PFLINK' ,'log_color': "\33[32m", 'key': ""}
+d = {'workername': 'PFLINK', 'log_color': "\33[32m", 'key': ""}
+
 
 # DB methods
 
@@ -39,17 +37,17 @@ d = {'workername': 'PFLINK' ,'log_color': "\33[32m", 'key': ""}
 
 def retrieve_workflows(search_params: WorkflowSearchSchema, test: bool = False):
     collection = test_collection if test else workflow_collection
-    index = collection.create_index([('$**',TEXT)],
-                                    name='search_index',  default_language='english')
+    index = collection.create_index([('$**', TEXT)],
+                                    name='search_index', default_language='english')
     workflows = []
     query, rank, response = search.compound_queries(search_params)
     workflows = collection.aggregate(
-   [
-    { "$match": {"$text": { "$search": search_params.keywords } } },
-    { "$project": {"_id": 1 , "score": { "$meta": "textScore" }} },
-    {"$sort": {"score": -1}},
-   ]
-)
+        [
+            {"$match": {"$text": {"$search": search_params.keywords}}},
+            {"$project": {"_id": 1, "score": {"$meta": "textScore"}}},
+            {"$sort": {"score": -1}},
+        ]
+    )
     search_results = []
     for wrkflo in workflows:
         search_results.append(str(wrkflo))
@@ -130,16 +128,17 @@ async def post_workflow(
             return response
         workflow = create_new_workflow(db_key, fingerprint, request, test)
 
-
     # 'error_type' is an optional test-only parameter that forces the workflow to error out
     # at a given error state
     if error_type:
+        logger.error(workflow.response.error, extra=d)
         return create_response_with_error(error_type, workflow.response)
 
     # debug_process(sub_updt)
 
     # run workflow manager subprocess on the workflow
     sub_mng = manage_workflow(str_data, mode)
+    logger.debug(f"Status response is {workflow.response}")
     return workflow.response
 
 
@@ -154,7 +153,7 @@ def create_new_workflow(
     new_workflow = WorkflowDBSchema(key=key, fingerprint=fingerprint, request=request, response=response)
     workflow = add_workflow(new_workflow, test)
     pretty_response = pprint.pformat(workflow.response.__dict__)
-    logger.info(f"New workflow record created. Initial workflow response: {pretty_response}", extra=d)
+    logger.info(f"New workflow record created.", extra=d)
     return workflow
 
 
@@ -199,7 +198,7 @@ def update_workflow_status(str_data: str, mode: str):
     """
     proc_count = get_process_count("status", str_data)
     logger.debug(f"{proc_count} subprocess of status manager running on the system.", extra=d)
-    if proc_count>0:
+    if proc_count > 0:
         logger.info(f"No new status subprocess started.", extra=d)
         return
 
@@ -240,8 +239,8 @@ def check_for_duplicates(request_hash: str, test: bool = False):
 
 def get_fingerprint(request: WorkflowRequestSchema) -> str:
     """
-    Create a unique has on a request footprint.
-      A request footprint is a users request payload stripped down to
+    Create a unique has on a request fingerprint.
+      A request fingerprint is a users request payload stripped down to
       include only essential information such as pfdcm_info, workflow_info
       and PACS directive.
     """

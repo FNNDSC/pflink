@@ -26,15 +26,13 @@ async def create_workflow(data: WorkflowRequestSchema) -> WorkflowStatusResponse
 
 @router.get("/search", response_description="All workflows retrieved")
 async def get_workflows(
-    keywords: str = "",
-    date: str = "",
+    keywords: str = ""
 ):
     """
     Fetch all workflows currently present in the database matching the search criteria
     """
     search_params = WorkflowSearchSchema(
     keywords = keywords,
-    date = date,
     )
     workflows = workflow.retrieve_workflows(search_params)
     return workflows

@@ -1,5 +1,4 @@
 import json
-import hashlib
 import httpx
 import pymongo.results
 
@@ -7,7 +6,7 @@ from app.config import settings
 from pymongo import MongoClient
 
 MONGO_DETAILS = str(settings.pflink_mongodb)
-client = MongoClient(MONGO_DETAILS)
+client = MongoClient(MONGO_DETAILS, username=settings.mongo_username, password=settings.mongo_password)
 database = client.database
 pfdcm_collection = database.get_collection("pfdcms_collection")
 
@@ -64,8 +63,8 @@ async def hello_pfdcm(pfdcm_name: str) -> dict:
             response = await client.get(pfdcm_hello_api)
             d_results = json.loads(response.text)
             return d_results
-        except:
-            return {"error": f"Unable to reach {pfdcm_url}."}
+        except Exception as ex:
+            return {"error": f"Unable to reach {pfdcm_url}.{ex}"}
 
 
 async def about_pfdcm(service_name: str) -> dict:
