@@ -20,7 +20,7 @@ class LogConfig(BaseSettings):
         "formatters": {
             "default": {
                 "()": "uvicorn.logging.DefaultFormatter",
-                "fmt": '%(log_color)s {"level":"%(levelprefix)s", "worker":"%(workername)s", "timestamp":"%(asctime)s", "key":"%(key)s", "msg":"%(message)s"}\33[0m',
+                "fmt": '%(log_color)s {"levelname":"%(levelname)s", "worker":"%(workername)s", "timestamp":"%(asctime)s", "key":"%(key)s", "msg":"%(message)s"}\33[0m',
                 "datefmt": "%Y-%m-%d %H:%M:%S",
 
             },

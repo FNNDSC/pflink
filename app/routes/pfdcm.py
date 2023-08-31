@@ -21,9 +21,8 @@ async def add_pfdcm_data(pfdcm_data: PfdcmQuerySchema = Body(...)) -> PfdcmQuery
     """
     pfdcm_data = jsonable_encoder(pfdcm_data)
     new_pfdcm = await pfdcm.add_pfdcm(pfdcm_data)
-    if not new_pfdcm:
-        return PfdcmQueryResponseSchema(data={}, message=f"service_name must be unique."
-                                                         f" {pfdcm_data['service_name']} already exists.")
+    if new_pfdcm.get("error"):
+        return PfdcmQueryResponseSchema(data={}, message=new_pfdcm["error"])
     return PfdcmQueryResponseSchema(data=new_pfdcm, message="New record created.")
 
 

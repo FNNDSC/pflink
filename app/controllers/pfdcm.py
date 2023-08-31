@@ -1,6 +1,8 @@
 import json
 import hashlib
 import httpx
+import pymongo.results
+
 from app.config import settings
 from pymongo import MongoClient
 
@@ -33,10 +35,14 @@ async def add_pfdcm(pfdcm_data: dict) -> dict:
     DB constraint: Only unique names allowed
     """
     try:
-        pfdcm = pfdcm_collection.insert_one(pfdcm_helper(pfdcm_data))
-        return pfdcm_helper(pfdcm)
-    except:
-        return {}
+        pfdcm: pymongo.results.InsertOneResult = pfdcm_collection.insert_one(pfdcm_helper(pfdcm_data))
+        if pfdcm.acknowledged:
+            inserted_pfdcm: dict = pfdcm_collection.find_one({"_id": pfdcm.inserted_id})
+            return inserted_pfdcm
+        else:
+            raise Exception("Could not store new record.")
+    except Exception as ex:
+        return {"error": str(ex)}
 
 
 # Retrieve a pfdcm record with a matching service name
