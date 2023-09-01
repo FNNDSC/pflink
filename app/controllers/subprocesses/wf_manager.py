@@ -118,7 +118,7 @@ def manage_workflow(db_key: str, test: bool):
         time.sleep(SLEEP_TIME)
 
         workflow = retrieve_workflow(key)
-        logger.debug(f"Fetching request status from DB. Current status is {workflow.response.workflow_state}",
+        logger.info(f"Fetching request status from DB. Current status is {workflow.response.workflow_state}",
                      extra=d)
 
         # Reset workflow status if max service_retry is not reached
@@ -257,7 +257,7 @@ def do_cube_create_feed(request: WorkflowRequestSchema, cube_url: str) -> dict:
     plugin_search_params = {"name": "pl-dircopy"}
     plugin_id = client.getPluginId(plugin_search_params)
 
-    logger.info(f"Creating a new feed with feed name: {feed_name}", extra=d)
+    logger.info(f"Creating a new feed with feed name {feed_name}", extra=d)
     # create a feed
     feed_params = {'title': feed_name, 'dir': data_path}
     feed_response = client.createFeed(plugin_id, feed_params)

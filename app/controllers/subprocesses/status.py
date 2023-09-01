@@ -338,7 +338,7 @@ def _parse_response(
             status.status = False
             status.error = Error.feed_deleted.value
             status.state_progress = "0%"
-
+    logger.info(f"Current status is {status.workflow_state}", extra=d)
     return status
 
 
