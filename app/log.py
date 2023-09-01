@@ -5,8 +5,8 @@ log_config = {
         "formatters": {
             "default": {
                 "()": "uvicorn.logging.DefaultFormatter",
-                "fmt": '%(log_color)s {"worker":"%(workername)s", "timestamp":"%('
-                       'asctime)s", "key":"%(key)s", "%(levelname)s":"%(message)s"}\33[0m',
+                "fmt": '%(log_color)s {"worker":"%(workername)16s", "timestamp":"%('
+                       'asctime)s", "key":"%(key)s", "%(levelname)-8s":"%(message)s"}\33[0m',
                 "datefmt": "%Y-%m-%d %H:%M:%S",
 
             },

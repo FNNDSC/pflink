@@ -74,21 +74,25 @@ def manage_workflow(db_key: str, test: bool):
                     do_pfdcm_retrieve(request, pfdcm_url)
 
             case State.RETRIEVING:
+                logger.info(f"Retrieving progress {workflow.response.state_progress}", extra=d)
                 if workflow.response.state_progress == "100%" and workflow.stale:
                     logger.info("Requesting PACS push.", extra=d)
                     do_pfdcm_push(request, pfdcm_url)
 
             case State.PUSHING:
+                logger.info(f"Pushing progress {workflow.response.state_progress}", extra=d)
                 if workflow.response.state_progress == "100%" and workflow.stale:
                     logger.info("Requesting PACS register.", extra=d)
                     do_pfdcm_register(request, pfdcm_url)
 
             case State.REGISTERING:
+                logger.info(f"Registering progress {workflow.response.state_progress}", extra=d)
                 if workflow.response.state_progress == "100%" and workflow.stale:
                     try:
                         resp = do_cube_create_feed(request, cube_url)
                         pl_inst_id = resp["pl_inst_id"]
                         feed_id = resp["feed_id"]
+                        logger.info(f"New feed created with feed_id {feed_id}", extra=d)
                         workflow.response.feed_id = feed_id
                         update_workflow(key, workflow)
                     except Exception as ex:
@@ -282,7 +286,7 @@ def __run_plugin_instance(previous_id: str, request: WorkflowRequestSchema, clie
     # convert CLI params from string to a JSON dictionary
     feed_params = str_to_param_dict(request.workflow_info.plugin_params)
     feed_params["previous_id"] = previous_id
-    logger.debug(f"Creating new analysis with plugin: {plugin_search_params}  and parameters: {feed_params}",
+    logger.info(f"Creating new analysis with plugin: {plugin_search_params}  and parameters: {feed_params}",
                  extra=d)
     feed_resp = client.createFeed(plugin_id, feed_params)
 

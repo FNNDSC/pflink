@@ -11,7 +11,7 @@ services:
       PFLINK_MONGODB: mongodb://pflink-db:27017
       MONGO_USERNAME: admin
       MONGO_PASSWORD: admin
-      LOG_LEVEL: DEBUG
+      LOG_LEVEL: INFO
     ports:
       - "8050:8050"
     networks:
