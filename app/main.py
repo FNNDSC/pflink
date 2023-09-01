@@ -6,10 +6,10 @@ from app.routes.workflow import router as WorkflowRouter
 from app.routes.testing import router as WorkflowTestRouter
 from app.routes.auth import router as AuthRouter
 from app.routes.cube import router as CubeRouter
-from app.config import settings, log
+from app.config import settings
 from app.controllers import auth
 from logging.config import dictConfig
-
+from app import log
 description = """
 `pflink` is an application to interact with `CUBE` and `pfdcm` 🚀
 

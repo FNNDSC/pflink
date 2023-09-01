@@ -138,7 +138,7 @@ async def post_workflow(
 
     # run workflow manager subprocess on the workflow
     sub_mng = manage_workflow(str_data, mode)
-    logger.debug(f"Status response is {workflow.response}")
+    logger.debug(f"Status response is {workflow.response}", extra=d)
     return workflow.response
 
 

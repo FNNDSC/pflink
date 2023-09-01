@@ -11,7 +11,7 @@ import pprint
 from app.controllers.subprocesses.python_chris_client import PythonChrisClient
 from app.controllers.subprocesses.subprocess_helper import get_process_count
 from logging.config import dictConfig
-from app.config import log
+from app import log
 from app.models.workflow import (
     Error,
     State,
