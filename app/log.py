@@ -1,4 +1,5 @@
 from app.config import settings
+
 log_config = {
         "version": 1,
         "disable_existing_loggers": False,
@@ -6,7 +7,7 @@ log_config = {
             "default": {
                 "()": "uvicorn.logging.DefaultFormatter",
                 "fmt": '%(log_color)s {"worker":"%(workername)16s", "timestamp":"%('
-                       'asctime)s", "key":"%(key)s", "%(levelname)-8s":"%(message)s"}\33[0m',
+                       'asctime)s", "key":"%(key)s", "level":"%(levelname)-8s", "msg":"%(message)s"}\33[0m',
                 "datefmt": "%Y-%m-%d %H:%M:%S",
 
             },
