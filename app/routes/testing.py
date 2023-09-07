@@ -2,6 +2,7 @@ from fastapi import APIRouter
 from app.models.workflow import (
     WorkflowRequestSchema,
     WorkflowStatusResponseSchema,
+    WorkflowSearchSchema,
 )
 from app.controllers import workflow
 router = APIRouter()
@@ -34,20 +35,29 @@ async def test_create_workflow(
 
 
 @router.get("/list", response_description="All workflows retrieved")
-async def test_get_workflows():
+async def test_get_workflows(search_params: WorkflowSearchSchema):
     """
     Fetch all workflows currently present in the database
     """
-    workflows = workflow.retrieve_workflows(test=True)
+    workflows = workflow.retrieve_workflows(search_params, test=True)
     return workflows
 
 
-@router.delete("", response_description="All workflows deleted")
+@router.delete("/list", response_description="All workflows deleted")
 async def test_delete_workflows():
     """
     Delete all workflow records from the test database table
     """
     response = await workflow.delete_workflows(test=True)
+    return response
+
+
+@router.delete("", response_description="Selected workflow deleted successfully")
+async def test_delete_workflow(workflow_key: str):
+    """
+    Delete a single workflow record from the test database table
+    """
+    response = await workflow.delete_workflow(workflow_key, test=True)
     return response
 
 

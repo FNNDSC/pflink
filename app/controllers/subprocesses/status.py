@@ -6,7 +6,10 @@ import json
 import logging
 import random
 import requests
-
+import time
+import pprint
+from logging.config import dictConfig
+from app import log
 from app.models.workflow import (
     State,
     WorkflowRequestSchema,
@@ -26,12 +29,10 @@ from app.controllers.subprocesses.utils import (
 )
 
 from app.controllers.subprocesses.subprocess_helper import get_process_count
-log_format = "%(asctime)s: %(message)s"
-logging.basicConfig(
-    format=log_format,
-    level=logging.INFO,
-    datefmt="%H:%M:%S"
-)
+dictConfig(log.log_config)
+logger = logging.getLogger('pflink-logger')
+d = {'workername': 'STATUS_MGR', 'log_color': "\33[36m", 'key': ""}
+
 
 parser = argparse.ArgumentParser(description='Process arguments passed through CLI')
 parser.add_argument('--data', type=str)
@@ -50,7 +51,7 @@ def update_workflow_status(key: str, test: bool):
     if is_status_subprocess_running(workflow):
         return
 
-    logging.info(f"WORKING on updating the status for {key}, locking--")
+    logger.info(f"Working on fetching the current status, locking DB flag.", extra=d)
     update_status_flag(key, workflow, False, test)
 
     if test:
@@ -59,8 +60,10 @@ def update_workflow_status(key: str, test: bool):
         updated_status = get_current_status(workflow.request, workflow.response)
 
     workflow.response = update_workflow_progress(updated_status)
+    pretty_response = pprint.pformat(workflow.response.__dict__)
+    logger.debug(f"Updated response: {pretty_response}.", extra=d)
     update_status_flag(key, workflow, True, test)
-    logging.info(f"UPDATED status for {key}, releasing lock")
+    logger.info(f"Finished writing updated status to the DB, releasing lock.", extra=d)
 
 
 def update_workflow_progress(response: WorkflowStatusResponseSchema):
@@ -170,11 +173,20 @@ def _get_pfdcm_status(request: WorkflowRequestSchema):
                 "json_response": True
             }
         }
+        pretty_json = pprint.pformat(pfdcm_body)
+        logger.debug(f"POSTing the below request at {pfdcm_status_url} to get status: {pretty_json}", extra=d)
+        st = time.time()
         response = requests.post(pfdcm_status_url, json=pfdcm_body, headers=headers)
+        et = time.time()
+        elapsed_time = et - st
+        logger.debug(f'Execution time to get status:{elapsed_time} seconds', extra=d)
         d_response = json.loads(response.text)
+        #logger.debug(f"Response from pfdcm: {d_response}")
         d_response["service_name"] = request.pfdcm_info.pfdcm_service
         return d_response
     except Exception as ex:
+        logger.error(f"{Error.pfdcm.value}  {str(ex)} for pfdcm_service {request.pfdcm_info.pfdcm_service}",
+                     extra=d)
         return {"error": Error.pfdcm.value + f" {str(ex)} for pfdcm_service {request.pfdcm_info.pfdcm_service}"}
 
 
@@ -201,13 +213,18 @@ def _get_feed_status(request: WorkflowRequestSchema, feed_id: str) -> dict:
         feed_name = substitute_dicom_tags(requested_feed_name, pacs_details)
 
         # search for feed
+        logger.debug(f"Request CUBE at {cube_url} for feed id: {feed_id} and feed name: {feed_name}", extra=d)
         resp = cl.getFeed({"id": feed_id, "name_exact": feed_name})
-        if resp["errored_jobs"] or resp["cancelled_jobs"]:
+        pretty_response = pprint.pformat(resp)
+        logger.debug(f"Response from CUBE : {pretty_response}", extra=d)
+        if resp.get("errored_jobs") or resp.get("cancelled_jobs"):
             l_inst_resp = cl.getPluginInstances({"feed_id": feed_id})
-            l_error = [d_instance['plugin_name'] for d_instance in l_inst_resp['data'] if d_instance['status']=='finishedWithError' or d_instance['status'] == 'cancelled']
+            l_error = [d_instance['plugin_name'] for d_instance in l_inst_resp['data']
+                       if d_instance['status']=='finishedWithError' or d_instance['status'] == 'cancelled']
             resp["errored_plugins"] = str(l_error)
         return resp
     except Exception as ex:
+        logger.error(f"{Error.cube.value} {str(ex)}", extra=d)
         return {"error": Error.cube.value + str(ex)}
 
 
@@ -320,7 +337,8 @@ def _parse_response(
             status.workflow_state = State.FEED_DELETED
             status.status = False
             status.error = Error.feed_deleted.value
-
+            status.state_progress = "0%"
+    logger.info(f"Current status is {status.workflow_state}.", extra=d)
     return status
 
 
@@ -397,4 +415,5 @@ if __name__ == "__main__":
     """
     dict_data = json.loads(args.data)
     wf_key = dict_to_hash(dict_data)
+    d['key'] = wf_key
     update_workflow_status(wf_key, args.test)

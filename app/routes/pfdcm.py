@@ -21,9 +21,8 @@ async def add_pfdcm_data(pfdcm_data: PfdcmQuerySchema = Body(...)) -> PfdcmQuery
     """
     pfdcm_data = jsonable_encoder(pfdcm_data)
     new_pfdcm = await pfdcm.add_pfdcm(pfdcm_data)
-    if not new_pfdcm:
-        return PfdcmQueryResponseSchema(data={}, message=f"service_name must be unique."
-                                                         f" {pfdcm_data['service_name']} already exists.")
+    if new_pfdcm.get("error"):
+        raise HTTPException(status_code=400, detail=new_pfdcm["error"])
     return PfdcmQueryResponseSchema(data=new_pfdcm, message="New record created.")
 
 
@@ -66,7 +65,7 @@ async def get_hello_pfdcm(service_name: str) -> PfdcmQueryResponseSchema:
     """
     response = await pfdcm.hello_pfdcm(service_name)
     if response.get("error"):
-        raise HTTPException(status_code=404, detail=response["error"])
+        raise HTTPException(status_code=502, detail=response["error"])
     return PfdcmQueryResponseSchema(data=response, message='')
     
     
@@ -81,7 +80,7 @@ async def get_about_pfdcm(service_name: str) -> PfdcmQueryResponseSchema:
     """
     response = await pfdcm.about_pfdcm(service_name)
     if response.get("error"):
-        raise HTTPException(status_code=404, detail=response["error"])
+        raise HTTPException(status_code=502, detail=response["error"])
     return PfdcmQueryResponseSchema(data=response, message='')
 
 
@@ -96,7 +95,7 @@ async def cube_service_list(service_name: str) -> list[str]:
     """
     response = await pfdcm.cube_list(service_name)
     if not response:
-        raise HTTPException(status_code=404, detail=f"Unable to reach endpoints of {service_name}")
+        raise HTTPException(status_code=502, detail=f"Unable to reach endpoints of {service_name}")
     return response
 
 
@@ -111,7 +110,7 @@ async def storage_service_list(service_name: str) -> list[str]:
     """
     response = await pfdcm.storage_list(service_name)
     if not response:
-        raise HTTPException(status_code=404, detail=f"Unable to reach endpoints of {service_name}")
+        raise HTTPException(status_code=502, detail=f"Unable to reach endpoints of {service_name}")
     return response
 
 
@@ -126,7 +125,7 @@ async def pacs_service_list(service_name: str) -> list[str]:
     """
     response = await pfdcm.pacs_list(service_name)
     if not response:
-        raise HTTPException(status_code=404, detail=f"Unable to reach endpoints of {service_name}")
+        raise HTTPException(status_code=502, detail=f"Unable to reach endpoints of {service_name}")
     return response
 
 

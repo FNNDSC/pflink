@@ -8,7 +8,8 @@ from app.routes.auth import router as AuthRouter
 from app.routes.cube import router as CubeRouter
 from app.config import settings
 from app.controllers import auth
-
+from logging.config import dictConfig
+from app import log
 description = """
 `pflink` is an application to interact with `CUBE` and `pfdcm` 🚀
 
@@ -62,7 +63,9 @@ tags_metadata = [
                        "the records from DB"
     }
 ]
-    
+
+dictConfig(log.log_config)
+
 app = FastAPI(
     title='pflink',
     version=settings.version,

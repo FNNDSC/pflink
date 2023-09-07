@@ -1,7 +1,10 @@
-from pymongo import MongoClient
+import datetime
+
+from pymongo import MongoClient, TEXT
 import json
 import logging
 import subprocess
+import pprint
 
 from app.models.workflow import (
     WorkflowRequestSchema,
@@ -10,34 +13,46 @@ from app.models.workflow import (
     Error,
     UserResponseSchema,
     State,
+    WorkflowSearchSchema,
 )
+from app.controllers import search
+from app.controllers.subprocesses.subprocess_helper import get_process_count
 from app.controllers.subprocesses import utils
 from app.config import settings
 
 MONGO_DETAILS = str(settings.pflink_mongodb)
-client = MongoClient(MONGO_DETAILS)
+client = MongoClient(MONGO_DETAILS, username=settings.mongo_username, password=settings.mongo_password)
 database = client.database
 workflow_collection = database.get_collection("workflows_collection")
 test_collection = database.get_collection("tests_collection")
 
-log_format = "%(asctime)s: %(message)s"
-logging.basicConfig(
-    format=log_format,
-    level=logging.INFO,
-    datefmt="%H:%M:%S"
-)
+logger = logging.getLogger('pflink-logger')
+d = {'workername': 'PFLINK', 'log_color': "\33[32m", 'key': ""}
 
 
 # DB methods
 
 
 # Retrieve all workflows present in the DB
-def retrieve_workflows(test: bool = False):
+
+def retrieve_workflows(search_params: WorkflowSearchSchema, test: bool = False):
     collection = test_collection if test else workflow_collection
+    index = collection.create_index([('$**', TEXT)],
+                                    name='search_index', default_language='english')
     workflows = []
-    for workflow in collection.find():
-        workflows.append(utils.workflow_retrieve_helper(workflow))
-    return workflows
+    query, rank, response = search.compound_queries(search_params)
+    workflows = collection.aggregate(
+        [
+            {"$match": {"$text": {"$search": search_params.keywords}}},
+            {"$project": {"_id": 1, "score": {"$meta": "textScore"}}},
+            {"$sort": {"score": -1}},
+        ]
+    )
+    search_results = []
+    for wrkflo in workflows:
+        search_results.append(str(wrkflo))
+
+    return search_results
 
 
 # Add new workflow in the DB
@@ -57,6 +72,17 @@ async def delete_workflows(test: bool = False):
     for workflow in collection.find():
         collection.delete_one({"_id": workflow["_id"]})
         delete_count += 1
+    return {"Message": f"{delete_count} record(s) deleted!"}
+
+
+async def delete_workflow(workflow_key: str, test: bool = False):
+    """
+    Delete a workflow record from DB
+    """
+    collection = test_collection if test else workflow_collection
+    delete_count = 0
+    collection.delete_one({"_id": workflow_key})
+    delete_count += 1
     return {"Message": f"{delete_count} record(s) deleted!"}
 
 
@@ -83,8 +109,15 @@ async def post_workflow(
     """
     # create a hash key using the request
     db_key = request_to_hash(request)
+    d['key'] = db_key
     workflow = utils.retrieve_workflow(db_key, test)
-    if not workflow:
+
+    mode, str_data = get_suproc_params(test, request)
+    if workflow:
+        # if there is an existing record in the DB, just run a status subprocess
+        sub_updt = update_workflow_status(str_data, mode)
+
+    else:
         fingerprint = get_fingerprint(request)
         duplicates = check_for_duplicates(fingerprint, test)
         if duplicates and not request.ignore_duplicate:
@@ -98,15 +131,15 @@ async def post_workflow(
     # 'error_type' is an optional test-only parameter that forces the workflow to error out
     # at a given error state
     if error_type:
+        logger.error(workflow.response.error, extra=d)
         return create_response_with_error(error_type, workflow.response)
 
-    mode, str_data = get_suproc_params(test, request)
+    # debug_process(sub_updt)
+
     # run workflow manager subprocess on the workflow
     sub_mng = manage_workflow(str_data, mode)
-
-    # run status_update subprocess on the workflow
-    sub_updt = update_workflow_status(str_data, mode)
-    # debug_process(sub_updt)
+    logger.info(f"Current status response is {workflow.response.workflow_state}.", extra=d)
+    logger.debug(f"Status response is {workflow.response}", extra=d)
     return workflow.response
 
 
@@ -120,6 +153,8 @@ def create_new_workflow(
     response = WorkflowStatusResponseSchema()
     new_workflow = WorkflowDBSchema(key=key, fingerprint=fingerprint, request=request, response=response)
     workflow = add_workflow(new_workflow, test)
+    pretty_response = pprint.pformat(workflow.response.__dict__)
+    logger.info(f"New workflow record created.", extra=d)
     return workflow
 
 
@@ -143,7 +178,15 @@ def manage_workflow(str_data: str, mode: str):
     """
     Manage a workflow request in a separate subprocess
     """
+    proc_count = get_process_count("wf_manager", str_data)
+    logger.debug(f"{proc_count} subprocess of workflow manager running on the system.", extra=d)
+    if proc_count > 0:
+        logger.info(f"No new manager subprocess started.", extra=d)
+        return
+
     d_cmd = ["python", "app/controllers/subprocesses/wf_manager.py", "--data", str_data]
+    pretty_cmd = pprint.pformat(d_cmd)
+    logger.debug(f"New manager subprocess started with command: {pretty_cmd}", extra=d)
     if mode:
         d_cmd.append(mode)
     subproc = subprocess.Popen(d_cmd)
@@ -154,7 +197,15 @@ def update_workflow_status(str_data: str, mode: str):
     """
     Update the current status of a workflow request in a separate process
     """
+    proc_count = get_process_count("status", str_data)
+    logger.debug(f"{proc_count} subprocess of status manager running on the system.", extra=d)
+    if proc_count > 0:
+        logger.info(f"No new status subprocess started.", extra=d)
+        return
+
     d_cmd = ["python", "app/controllers/subprocesses/status.py", "--data", str_data]
+    pretty_cmd = pprint.pformat(d_cmd)
+    logger.debug(f"New status subprocess started with command: {pretty_cmd}", extra=d)
     if mode:
         d_cmd.append(mode)
     subproc = subprocess.Popen(d_cmd)
@@ -181,15 +232,16 @@ def check_for_duplicates(request_hash: str, test: bool = False):
     if workflows:
         for workflow in workflows:
             record = utils.workflow_retrieve_helper(workflow)
-            user_response = UserResponseSchema(username=record.request.cube_user_info.username, response=record.response.__dict__)
+            user_response = UserResponseSchema(username=record.request.cube_user_info.username,
+                                               response=record.response.__dict__)
             user_responses.append(user_response)
         return user_responses
 
 
 def get_fingerprint(request: WorkflowRequestSchema) -> str:
     """
-    Create a unique has on a request footprint.
-      A request footprint is a users request payload stripped down to
+    Create a unique has on a request fingerprint.
+      A request fingerprint is a users request payload stripped down to
       include only essential information such as pfdcm_info, workflow_info
       and PACS directive.
     """

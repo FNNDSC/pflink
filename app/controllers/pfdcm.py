@@ -1,11 +1,12 @@
 import json
-import hashlib
 import httpx
+import pymongo.results
+
 from app.config import settings
 from pymongo import MongoClient
 
 MONGO_DETAILS = str(settings.pflink_mongodb)
-client = MongoClient(MONGO_DETAILS)
+client = MongoClient(MONGO_DETAILS, username=settings.mongo_username, password=settings.mongo_password)
 database = client.database
 pfdcm_collection = database.get_collection("pfdcms_collection")
 
@@ -14,18 +15,11 @@ pfdcm_collection = database.get_collection("pfdcms_collection")
 
 
 def pfdcm_helper(pfdcm) -> dict:
-    key = str_to_hash(pfdcm["service_name"])
     return {
-        "_id": key,
+        "_id": pfdcm["service_name"],
         "service_name": pfdcm["service_name"],
         "service_address": pfdcm["service_address"],
     }
-
-
-def str_to_hash(str_data: str) -> str:
-    hash_request = hashlib.md5(str_data.encode())
-    key = hash_request.hexdigest()
-    return key
 
 
 # Retrieve all pfdcm records present in the database
@@ -40,11 +34,14 @@ async def add_pfdcm(pfdcm_data: dict) -> dict:
     DB constraint: Only unique names allowed
     """
     try:
-        pfdcm = pfdcm_collection.insert_one(pfdcm_helper(pfdcm_data))
-        new_pfdcm = pfdcm_collection.find_one({"_id": pfdcm.inserted_id})
-        return pfdcm_helper(new_pfdcm)
-    except:
-        return {}
+        pfdcm: pymongo.results.InsertOneResult = pfdcm_collection.insert_one(pfdcm_helper(pfdcm_data))
+        if pfdcm.acknowledged:
+            inserted_pfdcm: dict = pfdcm_collection.find_one({"_id": pfdcm.inserted_id})
+            return inserted_pfdcm
+        else:
+            raise Exception("Could not store new record.")
+    except Exception as ex:
+        return {"error": str(ex)}
 
 
 # Retrieve a pfdcm record with a matching service name
@@ -66,8 +63,8 @@ async def hello_pfdcm(pfdcm_name: str) -> dict:
             response = await client.get(pfdcm_hello_api)
             d_results = json.loads(response.text)
             return d_results
-        except:
-            return {"error": f"Unable to reach {pfdcm_url}."}
+        except Exception as ex:
+            return {"error": f"Unable to reach {pfdcm_url}.{ex}"}
 
 
 async def about_pfdcm(service_name: str) -> dict:
@@ -141,9 +138,8 @@ async def delete_pfdcm(service_name: str):
     Delete a pfdcm record from the DB
     """
     delete_count = 0
-    key = str_to_hash(service_name)
     for pfdcm in pfdcm_collection.find():
-        if pfdcm["_id"] == key:
+        if pfdcm["_id"] == service_name:
             pfdcm_collection.delete_one({"_id": pfdcm["_id"]})
             delete_count += 1
     return {"Message": f"{delete_count} record(s) deleted!"}
