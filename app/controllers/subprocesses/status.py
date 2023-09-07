@@ -51,7 +51,7 @@ def update_workflow_status(key: str, test: bool):
     if is_status_subprocess_running(workflow):
         return
 
-    logger.info(f"Working on fetching the current status, locking DB flag", extra=d)
+    logger.info(f"Working on fetching the current status, locking DB flag.", extra=d)
     update_status_flag(key, workflow, False, test)
 
     if test:
@@ -61,9 +61,9 @@ def update_workflow_status(key: str, test: bool):
 
     workflow.response = update_workflow_progress(updated_status)
     pretty_response = pprint.pformat(workflow.response.__dict__)
-    logger.debug(f"Updated response: {pretty_response}", extra=d)
+    logger.debug(f"Updated response: {pretty_response}.", extra=d)
     update_status_flag(key, workflow, True, test)
-    logger.info(f"Finished writing updated status to the DB, releasing lock", extra=d)
+    logger.info(f"Finished writing updated status to the DB, releasing lock.", extra=d)
 
 
 def update_workflow_progress(response: WorkflowStatusResponseSchema):
@@ -338,7 +338,7 @@ def _parse_response(
             status.status = False
             status.error = Error.feed_deleted.value
             status.state_progress = "0%"
-    logger.info(f"Current status is {status.workflow_state}", extra=d)
+    logger.info(f"Current status is {status.workflow_state}.", extra=d)
     return status
 
 
