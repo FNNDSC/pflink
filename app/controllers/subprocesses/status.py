@@ -214,7 +214,7 @@ def _get_feed_status(request: WorkflowRequestSchema, feed_id: str) -> dict:
 
         # search for feed
         logger.debug(f"Request CUBE at {cube_url} for feed id: {feed_id} and feed name: {feed_name}", extra=d)
-        resp = cl.getFeed({"id": feed_id, "name_exact": feed_name})
+        resp = cl.getFeed({"id": feed_id})
         pretty_response = pprint.pformat(resp)
         logger.debug(f"Response from CUBE : {pretty_response}", extra=d)
         if resp.get("errored_jobs") or resp.get("cancelled_jobs"):

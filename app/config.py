@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     version: str = "3.8.0"
     mongo_username: str = "admin"
     mongo_password: str = "admin"
-    log_level: str = "INFO"
+    log_level: str = "DEBUG"
 
 
 class Auth(BaseSettings):
