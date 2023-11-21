@@ -89,11 +89,36 @@ token=$(echo $RESP | awk '{print $3}' | sed 's/[=",]//g')
 
 
 # =========================================================
-# STEP1: CURL reqest to add a new `pfdcm` service instance
+# STEP1: CURL request to get a hash key of a submitted request
 # =========================================================  
-curl -X 'GET' \
-  "$URL/workflow/search?keywords=$KEYWORD'" \
+hash_list=$(curl -X 'GET' \
+  "$URL/workflow/search?keywords=$KEYWORD" \
   -H 'accept: application/json' \
   -H "Authorization: Bearer $token" \
-  -H 'Content-Type: application/json | jq\'
+  -H 'Content-Type: application/json' | jq )
+
+hash_key=$(echo $hash_list | awk '{print $3}' | sed "s/['\",]//g")
+
+echo $hash_key
+
+# =========================================================
+# STEP2: CURL reqest to get request stored in the db
+# =========================================================  
+workflow_record=$(curl -X 'GET' \
+  "$URL/workflow?workflow_key=$hash_key" \
+  -H 'accept: application/json' \
+  -H "Authorization: Bearer $token" \
+  -H 'Content-Type: application/json' | jq )
+
+echo $workflow_record
+
+# =========================================================
+# STEP3: CURL reqest to delete request stored in the db
+# =========================================================  
+workflow_record=$(curl -X 'DELETE' \
+  "$URL/workflow?workflow_key=$hash_key" \
+  -H 'accept: application/json' \
+  -H "Authorization: Bearer $token" \
+  -H 'Content-Type: application/json' | jq )
+
 # =========================================================

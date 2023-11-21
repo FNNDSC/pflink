@@ -80,10 +80,8 @@ async def delete_workflow(workflow_key: str, test: bool = False):
     Delete a workflow record from DB
     """
     collection = test_collection if test else workflow_collection
-    delete_count = 0
-    collection.delete_one({"_id": workflow_key})
-    delete_count += 1
-    return {"Message": f"{delete_count} record(s) deleted!"}
+    resp = collection.delete_one({"_id": workflow_key})
+    return {"Message": f"{resp.deleted_count} record(s) deleted!"}
 
 
 def request_to_hash(request: WorkflowRequestSchema) -> str:
