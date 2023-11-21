@@ -45,13 +45,16 @@ def manage_workflow(db_key: str, test: bool):
     SLEEP_TIME = 10
     MAX_RETRIES = 50
     pl_inst_id = 0
+
     workflow = retrieve_workflow(db_key)
+    logger.info(f"Fetching request status from the DB. Current status is {workflow.response.workflow_state}.", extra=d)
+
     if workflow.started or not workflow.response.status or test:
         # Do nothing and return
-        reason = f"Workflow request failed. {workflow.response.error}" if not workflow.response.status \
-                 else f"Workflow already started. The current status is {workflow.response.workflow_state}."
+        reason = f"Workflow request failed. {workflow.response.error}." if not workflow.response.status \
+                 else f"Workflow already started."
         logger.warning(f"Cannot restart this workflow request. {reason}"
-                       f". Kindly delete this request to restart using the delete API end point.", extra=d)
+                       f" Kindly delete this request to restart using the delete API end point.", extra=d)
         return
 
     request = workflow.request
@@ -74,19 +77,21 @@ def manage_workflow(db_key: str, test: bool):
                     do_pfdcm_retrieve(request, pfdcm_url)
 
             case State.RETRIEVING:
-                logger.info(f"Retrieving progress {workflow.response.state_progress}.", extra=d)
+                logger.info(f"Retrieving progress is {workflow.response.state_progress} complete.", extra=d)
                 if workflow.response.state_progress == "100%" and workflow.stale:
                     logger.info("Requesting PACS push.", extra=d)
                     do_pfdcm_push(request, pfdcm_url)
 
             case State.PUSHING:
-                logger.info(f"Pushing progress {workflow.response.state_progress}.", extra=d)
+                logger.info(f"Pushing progress is {workflow.response.state_progress} complete.", extra=d)
+
                 if workflow.response.state_progress == "100%" and workflow.stale:
                     logger.info("Requesting PACS register.", extra=d)
                     do_pfdcm_register(request, pfdcm_url)
 
             case State.REGISTERING:
-                logger.info(f"Registering progress {workflow.response.state_progress}.", extra=d)
+                logger.info(f"Registering progress is {workflow.response.state_progress} complete.", extra=d)
+
                 if workflow.response.state_progress == "100%" and workflow.stale:
                     try:
                         resp = do_cube_create_feed(request, cube_url)
@@ -118,7 +123,7 @@ def manage_workflow(db_key: str, test: bool):
         time.sleep(SLEEP_TIME)
 
         workflow = retrieve_workflow(key)
-        logger.info(f"Fetching request status from DB. Current status is {workflow.response.workflow_state}",
+        logger.info(f"Fetching request status from DB. Current status is {workflow.response.workflow_state}.",
                      extra=d)
 
         # Reset workflow status if max service_retry is not reached
@@ -128,6 +133,9 @@ def manage_workflow(db_key: str, test: bool):
             workflow.response.error = ""
             workflow.response.status = True
             update_workflow(key, workflow)
+            if workflow.service_retry <= 0: logger.warning("All retries exhausted. Giving up on this workflow request.", extra=d)
+
+
 
 
         # Reset workflow if pflink reached MAX no. of retries
@@ -154,6 +162,7 @@ def update_status(request: WorkflowRequestSchema):
         return
     d_cmd = ["python", "app/controllers/subprocesses/status.py", "--data", str_data]
     pretty_cmd = pprint.pformat(d_cmd)
+    time.sleep(2)
     logger.debug(f"New status subprocess started with command: {pretty_cmd}", extra=d)
     process = subprocess.Popen(d_cmd)
 
@@ -299,6 +308,8 @@ def __run_pipeline_instance(previous_id: str, request: WorkflowRequestSchema, cl
     pipeline_search_params = {"name": request.workflow_info.pipeline_name}
     pipeline_id = client.getPipelineId(pipeline_search_params)
     pipeline_params = {"previous_plugin_inst_id": previous_id, "name": request.workflow_info.pipeline_name}
+    logger.info(f"Creating new analysis with pipeline: {pipeline_search_params}.",
+                extra=d)
     feed_resp = client.createWorkflow(str(pipeline_id), pipeline_params)
 
 
