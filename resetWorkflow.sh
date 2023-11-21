@@ -111,14 +111,17 @@ workflow_record=$(curl -X 'GET' \
   -H 'Content-Type: application/json' | jq )
 
 echo $workflow_record
-
-# =========================================================
-# STEP3: CURL reqest to delete request stored in the db
-# =========================================================  
-workflow_record=$(curl -X 'DELETE' \
+echo "Do you wish to delete this workflow record?"
+select yn in "Yes" "No"; do
+    case $yn in
+        Yes ) delete_status=$(curl -X 'DELETE' \
   "$URL/workflow?workflow_key=$hash_key" \
   -H 'accept: application/json' \
   -H "Authorization: Bearer $token" \
-  -H 'Content-Type: application/json' | jq )
+  -H 'Content-Type: application/json' | jq ); echo $delete_status; break;;
+        No ) exit;;
+    esac
+done
+
 
 # =========================================================
