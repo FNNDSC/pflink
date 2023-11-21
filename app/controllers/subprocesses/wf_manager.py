@@ -49,9 +49,9 @@ def manage_workflow(db_key: str, test: bool):
     if workflow.started or not workflow.response.status or test:
         # Do nothing and return
         reason = f"Workflow request failed. {workflow.response.error}" if not workflow.response.status \
-                 else f"Workflow already started. The current status is {workflow.response.workflow_state}"
+                 else f"Workflow already started. The current status is {workflow.response.workflow_state}."
         logger.warning(f"Cannot restart this workflow request. {reason}"
-                       f". Kindly delete this request to restart using the delete API end point", extra=d)
+                       f". Kindly delete this request to restart using the delete API end point.", extra=d)
         return
 
     request = workflow.request
@@ -74,25 +74,25 @@ def manage_workflow(db_key: str, test: bool):
                     do_pfdcm_retrieve(request, pfdcm_url)
 
             case State.RETRIEVING:
-                logger.info(f"Retrieving progress {workflow.response.state_progress}", extra=d)
+                logger.info(f"Retrieving progress {workflow.response.state_progress}.", extra=d)
                 if workflow.response.state_progress == "100%" and workflow.stale:
                     logger.info("Requesting PACS push.", extra=d)
                     do_pfdcm_push(request, pfdcm_url)
 
             case State.PUSHING:
-                logger.info(f"Pushing progress {workflow.response.state_progress}", extra=d)
+                logger.info(f"Pushing progress {workflow.response.state_progress}.", extra=d)
                 if workflow.response.state_progress == "100%" and workflow.stale:
                     logger.info("Requesting PACS register.", extra=d)
                     do_pfdcm_register(request, pfdcm_url)
 
             case State.REGISTERING:
-                logger.info(f"Registering progress {workflow.response.state_progress}", extra=d)
+                logger.info(f"Registering progress {workflow.response.state_progress}.", extra=d)
                 if workflow.response.state_progress == "100%" and workflow.stale:
                     try:
                         resp = do_cube_create_feed(request, cube_url)
                         pl_inst_id = resp["pl_inst_id"]
                         feed_id = resp["feed_id"]
-                        logger.info(f"New feed created with feed_id {feed_id}", extra=d)
+                        logger.info(f"New feed created with feed_id {feed_id}.", extra=d)
                         workflow.response.feed_id = feed_id
                         update_workflow(key, workflow)
                     except Exception as ex:
@@ -114,7 +114,7 @@ def manage_workflow(db_key: str, test: bool):
         logger.info(f"Calling status update subprocess.", extra=d)
         update_status(request)
 
-        logger.info(f"Sleeping for {SLEEP_TIME} seconds", extra=d)
+        logger.info(f"Sleeping for {SLEEP_TIME} seconds.", extra=d)
         time.sleep(SLEEP_TIME)
 
         workflow = retrieve_workflow(key)
@@ -123,7 +123,7 @@ def manage_workflow(db_key: str, test: bool):
 
         # Reset workflow status if max service_retry is not reached
         if workflow.service_retry > 0 and not workflow.response.status:
-            logger.warning(f"Retrying request.{workflow.service_retry}/5 retries left.", extra=d)
+            logger.warning(f"Retrying request. {workflow.service_retry}/5 retries left.", extra=d)
             workflow.service_retry -= 1
             workflow.response.error = ""
             workflow.response.status = True
@@ -135,7 +135,7 @@ def manage_workflow(db_key: str, test: bool):
             logger.debug(f"Maximum retry limit reached. Resetting request flag to NOT STARTED.", extra=d)
             workflow.started = False
             update_workflow(key, workflow)
-            logger.info("Exiting manager subprocess", extra=d)
+            logger.info("Exiting manager subprocess.", extra=d)
 
     logger.info(f"Exiting while loop. End of workflow_manager.", extra=d)
 
