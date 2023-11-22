@@ -6,13 +6,14 @@ NAME
 
 SYNOPSIS
     resetWorkflow.sh [-h]                          \\
-             [-L <pflinkServiceURL>]       \\
-             [-U <pflinkUsername>]         \\
-             [-P <pflinkPassword>]         \\
-             [-K <searchKeyWord>]          \\
+                     [-L <pflinkServiceURL>]       \\
+                     [-U <pflinkUsername>]         \\
+                     [-P <pflinkPassword>]         \\
+                     [-K <searchKeyWord>]          \\
 DESC
-    setup.sh is a helper script to authenticate into a
-    'pflink' instance and add a new 'pfdcm' service.
+    resetWorkflow.sh is a helper script to authenticate into a
+    'pflink' instance and re-run an existing workflow request by
+    deleting it's existing record.
 
 ARGS
     [-h]
@@ -31,21 +32,16 @@ ARGS
     If specified, use this string as pflink password.
     Default value is 'pflink1234'.
 
-    [-S <pfdcmServiceName>]
-    If specified, use this string to add a new pfdcm instance.
-    Default value is 'PFDCM'.
+    [-K <searchKeyWord>]
+    A comma separated list of keywords to search in an
+    existing workflow record inside pflink-db.
 
-    [-A <pfdcmServiceAddress>]
-    If specified, use this string as the service address of
-    a new pfdcm instance.
-    Default value is http://localhost:4005/api/v1.
 
 EXAMPLES
     $ ./setup.sh -L http://localhost:8050/api/v1   \\
                  -U pflink                         \\
                  -P pflink1234                     \\
-                 -S PFDCM                          \\
-                 -A http://localhost:4005/api/v1
+                 -K 120.11.34.7634334100
 
 "
 # =========================================================
@@ -54,8 +50,6 @@ EXAMPLES
 URL='http://localhost:8050/api/v1'
 USERNAME='pflink'
 PASSWORD='pflink1234'
-SERVICENAME='PFDCM'
-SERVICEADDRESS='http://localhost:4005/api/v1'
 
 while getopts "L:U:P:K:h" opt; do
     case $opt in
@@ -67,7 +61,7 @@ while getopts "L:U:P:K:h" opt; do
 
         P) PASSWORD=$OPTARG                               ;;
 
-        K) KEYWORD=$OPTARG                            ;;
+        K) KEYWORD=$OPTARG                                ;;
 
         *) exit 0                                         ;;
 
@@ -82,11 +76,7 @@ RESP=$(curl -X 'POST' \
   -H 'Content-Type: application/x-www-form-urlencoded' \
   -d "&username=$USERNAME&password=$PASSWORD" | jq)
 
-
-  
 token=$(echo $RESP | awk '{print $3}' | sed 's/[=",]//g')
-
-
 
 # =========================================================
 # STEP1: CURL request to get a hash key of a submitted request
@@ -95,11 +85,10 @@ hash_list=$(curl -X 'GET' \
   "$URL/workflow/search?keywords=$KEYWORD" \
   -H 'accept: application/json' \
   -H "Authorization: Bearer $token" \
-  -H 'Content-Type: application/json' | jq )
+  -H 'Content-Type: application/json' | jq)
 
 hash_key=$(echo $hash_list | awk '{print $3}' | sed "s/['\",]//g")
 
-echo $hash_key
 
 # =========================================================
 # STEP2: CURL reqest to get request stored in the db
@@ -110,33 +99,35 @@ workflow_record=$(curl -X 'GET' \
   -H "Authorization: Bearer $token" \
   -H 'Content-Type: application/json' | jq '.request')
 
-request=$(echo $workflow_record )
-echo $request
+echo $workflow_record | jq
 # =========================================================
 # Confirmation prompt to delete a record
 # ========================================================= 
 echo "Do you wish to delete this workflow record?"
 select yn in "Yes" "No"; do
+    # =========================================================
+    # STEP3: CURL request to delete and re-run an existing request
+    # =========================================================
     case $yn in
-        Yes ) delete_status=$(curl -X 'DELETE' \
-  "$URL/workflow?workflow_key=$hash_key" \
-  -H 'accept: application/json' \
-  -H "Authorization: Bearer $token" \
-  -H 'Content-Type: application/json' | jq ); echo $delete_status; 
-  # =========================================================
-  # STEP3: CURL reqest to post a  request to pflink
-  # ========================================================= 
-  curl -X 'POST' \
-  "$URL/workflow" \
-  -H 'accept: application/json' \
-  -H "Authorization: Bearer $token" \
-  -H 'Content-Type: application/json' \
-  -d "$request" | jq
+        Yes ) curl -X 'DELETE' \
+              "$URL/workflow?workflow_key=$hash_key" \
+              -H 'accept: application/json' \
+              -H "Authorization: Bearer $token" \
+              -H 'Content-Type: application/json' | jq;
+              echo "Re-running the above workflow request."
+              # =========================================================
+              # STEP3a: CURL request to post a  request to pflink
+              # =========================================================
+              curl -X 'POST' \
+              "$URL/workflow" \
+              -H 'accept: application/json' \
+              -H "Authorization: Bearer $token" \
+              -H 'Content-Type: application/json' \
+              -d "$workflow_record" | jq
   
-    break;;
+              break;;
         No ) exit;;
     esac
 done
-
 
 # =========================================================
