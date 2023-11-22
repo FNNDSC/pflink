@@ -108,9 +108,13 @@ workflow_record=$(curl -X 'GET' \
   "$URL/workflow?workflow_key=$hash_key" \
   -H 'accept: application/json' \
   -H "Authorization: Bearer $token" \
-  -H 'Content-Type: application/json' | jq )
+  -H 'Content-Type: application/json' | jq '.request')
 
-echo $workflow_record
+request=$(echo $workflow_record )
+echo $request
+# =========================================================
+# Confirmation prompt to delete a record
+# ========================================================= 
 echo "Do you wish to delete this workflow record?"
 select yn in "Yes" "No"; do
     case $yn in
@@ -118,7 +122,18 @@ select yn in "Yes" "No"; do
   "$URL/workflow?workflow_key=$hash_key" \
   -H 'accept: application/json' \
   -H "Authorization: Bearer $token" \
-  -H 'Content-Type: application/json' | jq ); echo $delete_status; break;;
+  -H 'Content-Type: application/json' | jq ); echo $delete_status; 
+  # =========================================================
+  # STEP3: CURL reqest to post a  request to pflink
+  # ========================================================= 
+  curl -X 'POST' \
+  "$URL/workflow" \
+  -H 'accept: application/json' \
+  -H "Authorization: Bearer $token" \
+  -H 'Content-Type: application/json' \
+  -d "$request" | jq
+  
+    break;;
         No ) exit;;
     esac
 done
