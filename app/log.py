@@ -20,6 +20,6 @@ log_config = {
             },
         },
         "loggers": {
-            "pflink-logger": {"handlers": ["default"], "level": "DEBUG"},
+            "pflink-logger": {"handlers": ["default"], "level": settings.log_level},
         },
     }

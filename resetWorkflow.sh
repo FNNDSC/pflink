@@ -38,9 +38,9 @@ ARGS
 
 
 EXAMPLES
-    $ ./setup.sh -L http://localhost:8050/api/v1   \\
-                 -U pflink                         \\
-                 -P pflink1234                     \\
+    $ ./resetWorkflow.sh -L http://localhost:8050/api/v1   \\
+                 -U pflink                                 \\
+                 -P pflink1234                             \\
                  -K 120.11.34.7634334100
 
 "
@@ -70,7 +70,7 @@ done
 # =========================================================
 # AUTHENTICATION
 # =========================================================
-RESP=$(curl -X 'POST' \
+RESP=$(curl -s -X 'POST' \
   "$URL/auth-token" \
   -H 'accept: application/json' \
   -H 'Content-Type: application/x-www-form-urlencoded' \
@@ -81,7 +81,7 @@ token=$(echo $RESP | awk '{print $3}' | sed 's/[=",]//g')
 # =========================================================
 # STEP1: CURL request to get a hash key of a submitted request
 # =========================================================  
-hash_list=$(curl -X 'GET' \
+hash_list=$(curl -s -X 'GET' \
   "$URL/workflow/search?keywords=$KEYWORD" \
   -H 'accept: application/json' \
   -H "Authorization: Bearer $token" \
@@ -93,7 +93,7 @@ hash_key=$(echo $hash_list | awk '{print $3}' | sed "s/['\",]//g")
 # =========================================================
 # STEP2: CURL reqest to get request stored in the db
 # =========================================================  
-workflow_record=$(curl -X 'GET' \
+workflow_record=$(curl -s -X 'GET' \
   "$URL/workflow?workflow_key=$hash_key" \
   -H 'accept: application/json' \
   -H "Authorization: Bearer $token" \
@@ -109,7 +109,7 @@ select yn in "Yes" "No"; do
     # STEP3: CURL request to delete and re-run an existing request
     # =========================================================
     case $yn in
-        Yes ) curl -X 'DELETE' \
+        Yes ) curl -s -X 'DELETE' \
               "$URL/workflow?workflow_key=$hash_key" \
               -H 'accept: application/json' \
               -H "Authorization: Bearer $token" \
@@ -118,7 +118,7 @@ select yn in "Yes" "No"; do
               # =========================================================
               # STEP3a: CURL request to post a  request to pflink
               # =========================================================
-              curl -X 'POST' \
+              curl -s -X 'POST' \
               "$URL/workflow" \
               -H 'accept: application/json' \
               -H "Authorization: Bearer $token" \
