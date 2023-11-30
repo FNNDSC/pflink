@@ -87,12 +87,14 @@ def manage_workflow(db_key: str, test: bool):
 
             case State.PUSHING:
                 logger.info(f"Pushing progress is {workflow.response.state_progress} complete.", extra=d)
+
                 if workflow.response.state_progress == "100%" and workflow.stale:
                     logger.info("Requesting PACS register.", extra=d)
                     do_pfdcm_register(request, pfdcm_url)
 
             case State.REGISTERING:
                 logger.info(f"Registering progress is {workflow.response.state_progress} complete.", extra=d)
+
                 if workflow.response.state_progress == "100%" and workflow.stale:
                     try:
                         resp = do_cube_create_feed(request, cube_url, workflow.service_retry)
@@ -126,13 +128,13 @@ def manage_workflow(db_key: str, test: bool):
         workflow = retrieve_workflow(key)
         logger.info(f"Fetching request status from DB. Current status is {workflow.response.workflow_state}.",
                      extra=d)
-
+        
         # Reset workflow if pflink reached MAX no. of retries
         if MAX_RETRIES==0:
             logger.debug(f"Maximum retry limit reached. Resetting request flag to NOT STARTED.", extra=d)
             workflow.started = False
             update_workflow(key, workflow)
-            logger.info("Exiting manager subprocess", extra=d)
+            logger.info("Exiting manager subprocess.", extra=d)
 
     logger.info(f"Exiting while loop. End of workflow_manager.", extra=d)
 
