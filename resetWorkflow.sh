@@ -86,20 +86,24 @@ hash_list=$(curl -s -X 'GET' \
   -H 'accept: application/json' \
   -H "Authorization: Bearer $token" \
   -H 'Content-Type: application/json' | jq)
+echo $hash_list | jq
 
 hash_key=$(echo $hash_list | awk '{print $3}' | sed "s/['\",]//g")
 
 
 # =========================================================
-# STEP2: CURL reqest to get request stored in the db
+# STEP2: CURL request to get request stored in the db
 # =========================================================  
 workflow_record=$(curl -s -X 'GET' \
   "$URL/workflow?workflow_key=$hash_key" \
   -H 'accept: application/json' \
   -H "Authorization: Bearer $token" \
-  -H 'Content-Type: application/json' | jq '.request')
+  -H 'Content-Type: application/json')
 
 echo $workflow_record | jq
+
+workflow_request=$(echo $workflow_record | jq '.request')
+
 # =========================================================
 # Confirmation prompt to delete a record
 # ========================================================= 
@@ -123,7 +127,7 @@ select yn in "Yes" "No"; do
               -H 'accept: application/json' \
               -H "Authorization: Bearer $token" \
               -H 'Content-Type: application/json' \
-              -d "$workflow_record" | jq
+              -d "$workflow_request" | jq
   
               break;;
         No ) exit;;
