@@ -16,6 +16,7 @@ from app.models.workflow import (
     Error,
     State,
     WorkflowRequestSchema,
+    WorkflowDBSchema,
 )
 from app.controllers.subprocesses.utils import (
     request_to_dict,
@@ -48,6 +49,8 @@ def manage_workflow(db_key: str, test: bool):
 
     workflow = retrieve_workflow(db_key)
     logger.info(f"Fetching request status from the DB. Current status is {workflow.response.workflow_state}.", extra=d)
+
+    workflow = analysis_retry(workflow)
 
     if workflow.started or not workflow.response.status or test:
         # Do nothing and return
@@ -94,7 +97,7 @@ def manage_workflow(db_key: str, test: bool):
 
                 if workflow.response.state_progress == "100%" and workflow.stale:
                     try:
-                        resp = do_cube_create_feed(request, cube_url)
+                        resp = do_cube_create_feed(request, cube_url, workflow.service_retry)
                         pl_inst_id = resp["pl_inst_id"]
                         feed_id = resp["feed_id"]
                         logger.info(f"New feed created with feed_id {feed_id}.", extra=d)
@@ -125,19 +128,7 @@ def manage_workflow(db_key: str, test: bool):
         workflow = retrieve_workflow(key)
         logger.info(f"Fetching request status from DB. Current status is {workflow.response.workflow_state}.",
                      extra=d)
-
-        # Reset workflow status if max service_retry is not reached
-        if workflow.service_retry > 0 and not workflow.response.status:
-            logger.warning(f"Retrying request. {workflow.service_retry}/5 retries left.", extra=d)
-            workflow.service_retry -= 1
-            workflow.response.error = ""
-            workflow.response.status = True
-            update_workflow(key, workflow)
-            if workflow.service_retry <= 0: logger.warning("All retries exhausted. Giving up on this workflow request.", extra=d)
-
-
-
-
+        
         # Reset workflow if pflink reached MAX no. of retries
         if MAX_RETRIES==0:
             logger.debug(f"Maximum retry limit reached. Resetting request flag to NOT STARTED.", extra=d)
@@ -147,6 +138,26 @@ def manage_workflow(db_key: str, test: bool):
 
     logger.info(f"Exiting while loop. End of workflow_manager.", extra=d)
 
+
+def analysis_retry(workflow: WorkflowDBSchema):
+    """
+    Retry analysis on failures
+    """
+    # Reset workflow status if max service_retry is not reached
+    if workflow.service_retry > 0 and not workflow.response.status and workflow.response.workflow_state == State.ANALYZING:
+        logger.warning(f"Retrying request.{workflow.service_retry}/5 retries left.", extra=d)
+        workflow.service_retry -= 1
+        workflow.response.feed_id = ""
+        workflow.response.feed_name = ""
+        workflow.started = False
+        workflow.response.workflow_state = State.REGISTERING
+        workflow.response.state_progress = "100%"
+        workflow.response.error = ""
+        workflow.response.status = True
+        update_workflow(key, workflow)
+        if workflow.service_retry <= 0: logger.warning("All retries exhausted. Giving up on this workflow request.",
+                                                       extra=d)
+    return workflow
 
 def update_status(request: WorkflowRequestSchema):
     """
@@ -253,7 +264,7 @@ def do_pfdcm_register(request: WorkflowRequestSchema, pfdcm_url: str):
     pfdcm_do("register", register_args, request, pfdcm_url)
 
 
-def do_cube_create_feed(request: WorkflowRequestSchema, cube_url: str) -> dict:
+def do_cube_create_feed(request: WorkflowRequestSchema, cube_url: str, retries: int) -> dict:
     """
     Create a new feed in `CUBE` if not already present
     """
@@ -261,6 +272,9 @@ def do_cube_create_feed(request: WorkflowRequestSchema, cube_url: str) -> dict:
     pacs_details = client.getPACSdetails(request.PACS_directive.__dict__)
     feed_name = substitute_dicom_tags(request.workflow_info.feed_name, pacs_details)
     data_path = client.getSwiftPath(pacs_details)
+
+    if retries < 5:
+        feed_name = feed_name + f"retry#{retries}"
 
     # Get plugin Id
     plugin_search_params = {"name": "pl-dircopy"}
