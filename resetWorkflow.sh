@@ -88,50 +88,60 @@ hash_list=$(curl -s -X 'GET' \
   -H 'Content-Type: application/json' | jq)
 echo $hash_list | jq
 
-hash_key=$(echo $hash_list | awk '{print $3}' | sed "s/['\",]//g")
+rem=$(echo $hash_list | tr '""' "\n" | sed "s/[][{}':,]//g")
+list=$rem
 
-
-# =========================================================
-# STEP2: CURL request to get request stored in the db
-# =========================================================  
-workflow_record=$(curl -s -X 'GET' \
-  "$URL/workflow?workflow_key=$hash_key" \
-  -H 'accept: application/json' \
-  -H "Authorization: Bearer $token" \
-  -H 'Content-Type: application/json')
-
-echo $workflow_record | jq
-
-workflow_request=$(echo $workflow_record | jq '.request')
-
-# =========================================================
-# Confirmation prompt to delete a record
-# ========================================================= 
-echo "Do you wish to delete this workflow record?"
-select yn in "Yes" "No"; do
-    # =========================================================
-    # STEP3: CURL request to delete and re-run an existing request
-    # =========================================================
-    case $yn in
-        Yes ) curl -s -X 'DELETE' \
-              "$URL/workflow?workflow_key=$hash_key" \
-              -H 'accept: application/json' \
-              -H "Authorization: Bearer $token" \
-              -H 'Content-Type: application/json' | jq;
-              echo "Re-running the above workflow request."
-              # =========================================================
-              # STEP3a: CURL request to post a  request to pflink
-              # =========================================================
-              curl -s -X 'POST' \
-              "$URL/workflow" \
-              -H 'accept: application/json' \
-              -H "Authorization: Bearer $token" \
-              -H 'Content-Type: application/json' \
-              -d "$workflow_request" | jq
-  
-              break;;
-        No ) exit;;
-    esac
+for item in "${list[@]}"; do 
+    hash_key=$(echo "$item" | awk '{print $2}'); 
 done
+for i in $hash_key; do
+    echo $i
+    # =========================================================
+    # STEP2: CURL request to get request stored in the db
+    # =========================================================  
+    workflow_record=$(curl -s -X 'GET' \
+      "$URL/workflow?workflow_key=$i" \
+      -H 'accept: application/json' \
+      -H "Authorization: Bearer $token" \
+      -H 'Content-Type: application/json')
+
+    echo $workflow_record | jq
+
+    workflow_request=$(echo $workflow_record | jq '.request')
+
+    # =========================================================
+    # Confirmation prompt to delete a record
+    # ========================================================= 
+    echo "Do you wish to delete this workflow record?"
+    select ynx in "Yes" "No" "Exit"; do
+        # =========================================================
+        # STEP3: CURL request to delete and re-run an existing request
+        # =========================================================
+        case $ynx in
+            Yes ) curl -s -X 'DELETE' \
+                  "$URL/workflow?workflow_key=$i" \
+                  -H 'accept: application/json' \
+                  -H "Authorization: Bearer $token" \
+                  -H 'Content-Type: application/json' | jq;
+                  echo "Re-running the above workflow request."
+                  # =========================================================
+                  # STEP3a: CURL request to post a  request to pflink
+                  # =========================================================
+                  curl -s -X 'POST' \
+                  "$URL/workflow" \
+                  -H 'accept: application/json' \
+                  -H "Authorization: Bearer $token" \
+                  -H 'Content-Type: application/json' \
+                  -d "$workflow_request" | jq
+  
+                  break;;
+            No )  break;;
+            Exit ) exit;;
+        esac
+    done
+done
+
+
+
 
 # =========================================================
