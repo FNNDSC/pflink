@@ -94,8 +94,10 @@ list=$rem
 for item in "${list[@]}"; do 
     hash_key=$(echo "$item" | awk '{print $2}'); 
 done
+
 for i in $hash_key; do
     echo $i
+
     # =========================================================
     # STEP2: CURL request to get request stored in the db
     # =========================================================  
@@ -112,7 +114,7 @@ for i in $hash_key; do
     # =========================================================
     # Confirmation prompt to delete a record
     # ========================================================= 
-    echo "Do you wish to delete this workflow record?"
+    echo "Do you wish to redo this workflow record?"
     select ynx in "Yes" "No" "Exit"; do
         # =========================================================
         # STEP3: CURL request to delete and re-run an existing request
