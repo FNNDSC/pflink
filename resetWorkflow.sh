@@ -94,9 +94,11 @@ list=$rem
 for item in "${list[@]}"; do 
     hash_key=$(echo "$item" | awk '{print $2}'); 
 done
-
+search_count=$(echo $hash_key | wc -w)
+current=1
 for i in $hash_key; do
-    echo $i
+    echo "[$current/$search_count] hash_key: $i"
+    
 
     # =========================================================
     # STEP2: CURL request to get request stored in the db
@@ -141,6 +143,7 @@ for i in $hash_key; do
             Exit ) exit;;
         esac
     done
+    ((current++))
 done
 
 
