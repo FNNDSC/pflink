@@ -97,7 +97,8 @@ done
 search_count=$(echo $hash_key | wc -w)
 current=1
 for i in $hash_key; do
-    echo "[$current/$search_count] hash_key: $i"
+    echo "[Showing $current of $search_count records]"
+    echo "Current hash_key: $i"
     
 
     # =========================================================
