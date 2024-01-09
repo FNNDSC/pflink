@@ -1,6 +1,6 @@
 pydantic==1.10.11
 requests
-python-chrisclient
+python-chrisclient==2.9.1
 asyncio
 psutil
 pytz

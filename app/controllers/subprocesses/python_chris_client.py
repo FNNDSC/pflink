@@ -28,7 +28,7 @@ class PythonChrisClient():
         response = self.cl.get_pacs_files(searchParams)
         if response['data']:
             return response['data'][0]
-        return {}
+        raise Exception(f"No PACS details with matching search criteria {searchParams}")
 
     def createFeed(self, plugin_id: str,params: dict):
         response = self.cl.create_plugin_instance(plugin_id,params)
@@ -49,7 +49,7 @@ class PythonChrisClient():
         if response['total'] > 0:
             return response['data'][0]
         else:
-            return {}
+            return response
         
     def getWorkflow(self, searchParams: dict):
         response = self.cl.get_workflows(searchParams)

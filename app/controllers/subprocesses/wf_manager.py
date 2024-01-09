@@ -268,11 +268,20 @@ def do_cube_create_feed(request: WorkflowRequestSchema, cube_url: str, retries: 
     """
     Create a new feed in `CUBE` if not already present
     """
+    logger.info(f"Creating Chris client with {cube_url, request.cube_user_info.username, request.cube_user_info.password}", extra=d)
     client = do_cube_create_user(cube_url, request.cube_user_info.username, request.cube_user_info.password)
-    pacs_details = client.getPACSdetails(request.PACS_directive.__dict__)
-    feed_name = substitute_dicom_tags(request.workflow_info.feed_name, pacs_details)
-    data_path = client.getSwiftPath(pacs_details)
+    logger.info(f"Created client details {client}", extra=d)
 
+    logger.info(f"Fetching PACS details for {request.PACS_directive.__dict__}", extra=d)
+    pacs_details = {}
+    try:
+        pacs_details = client.getPACSdetails(request.PACS_directive.__dict__)
+    except Exception as ex:
+        logger.info(f"Error receiving PACS details: {ex}", extra=d)
+    feed_name = substitute_dicom_tags(request.workflow_info.feed_name, pacs_details)
+    logger.info(f"Fetching data path..", extra=d)
+    data_path = client.getSwiftPath(pacs_details)
+    logger.info(f"Received data path: {data_path}", extra=d)
     if retries < 5:
         feed_name = feed_name + f"retry#{retries}"
 
