@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 import pytz
 from pydantic import BaseModel, Field, ValidationError, validator
 from enum import Enum
@@ -158,7 +158,7 @@ class WorkflowDBSchema(BaseModel):
     """The DB model of a workflow object"""
     key: str = ""
     fingerprint: str = ""
-    creation_time: datetime.datetime = datetime.datetime.now(datetime.timezone.utc)
+    creation_time: str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     request: WorkflowRequestSchema
     response: WorkflowStatusResponseSchema
     service_retry: int = 5
