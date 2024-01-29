@@ -42,7 +42,7 @@ def workflow_retrieve_helper(workflow: dict) -> WorkflowDBSchema:
     return WorkflowDBSchema(
         key=workflow["_id"],
         fingerprint=workflow["fingerprint"],
-        creation_time=datetime.min.strftime("%Y-%m-%d %H:%M:%S") if not workflow.get("creation_time") else workflow["creation_time"],
+        creation_time=datetime.min.strftime("%Y-%m-%d %H:%M:%S") if not workflow.get("creation_time") else str(workflow["creation_time"]),
         request=request,
         response=workflow["response"],
         service_retry=workflow["service_retry"],

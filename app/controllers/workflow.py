@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 
 from pymongo import MongoClient, TEXT
 import json
@@ -148,8 +148,9 @@ def create_new_workflow(
         test: bool = False,
 ) -> WorkflowDBSchema:
     """Create a new workflow object and add it to the database"""
+    creation_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     response = WorkflowStatusResponseSchema()
-    new_workflow = WorkflowDBSchema(key=key, fingerprint=fingerprint, request=request, response=response)
+    new_workflow = WorkflowDBSchema(key=key, fingerprint=fingerprint, creation_time=creation_time, request=request, response=response)
     workflow = add_workflow(new_workflow, test)
     pretty_response = pprint.pformat(workflow.response.__dict__)
     logger.info(f"New workflow record created.", extra=d)

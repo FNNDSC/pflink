@@ -158,7 +158,7 @@ class WorkflowDBSchema(BaseModel):
     """The DB model of a workflow object"""
     key: str = ""
     fingerprint: str = ""
-    creation_time: str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    creation_time: str = ""
     request: WorkflowRequestSchema
     response: WorkflowStatusResponseSchema
     service_retry: int = 5
