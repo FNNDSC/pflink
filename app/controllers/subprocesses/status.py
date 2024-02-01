@@ -94,7 +94,7 @@ def __progress_percent(curr_state: int, total_states: int, state_progress: int) 
 
 
 def is_status_subprocess_running(workflow: WorkflowDBSchema):
-    proc_count = get_process_count("status", args.data)
+    proc_count = get_process_count("app/controllers/subprocesses/status.py", args.data)
 
     if not workflow.stale:
         return True

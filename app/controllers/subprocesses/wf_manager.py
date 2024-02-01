@@ -52,7 +52,7 @@ def manage_workflow(db_key: str, test: bool):
 
     workflow = analysis_retry(workflow)
 
-    if workflow.started or not workflow.response.status or test:
+    if not workflow.response.status or test:
         # Do nothing and return
         reason = f"Workflow request failed. {workflow.response.error}." if not workflow.response.status \
                  else f"Workflow already started."
@@ -118,6 +118,9 @@ def manage_workflow(db_key: str, test: bool):
                         workflow.response.error = Error.analysis.value + str(ex)
                         workflow.response.status = False
                         update_workflow(key, workflow)
+            case State.COMPLETED:
+                logger.info(f"Request is now complete. Exiting while loop. ",extra=d)
+                return
 
         logger.info(f"Calling status update subprocess.", extra=d)
         update_status(request)
@@ -166,7 +169,7 @@ def update_status(request: WorkflowRequestSchema):
     """
     d_data = request_to_dict(request)
     str_data = json.dumps(d_data)
-    proc_count = get_process_count("status", str_data)
+    proc_count = get_process_count("app/controllers/subprocesses/status.py", str_data)
     logger.debug(f"{proc_count} subprocess of status manager running on the system.", extra=d)
     if proc_count > 0:
         logger.info(f"No new status subprocess started.", extra=d)
@@ -283,7 +286,7 @@ def do_cube_create_feed(request: WorkflowRequestSchema, cube_url: str, retries: 
     data_path = client.getSwiftPath(pacs_details)
     logger.info(f"Received data path: {data_path}", extra=d)
     if retries < 5:
-        feed_name = feed_name + f"retry#{retries}"
+        feed_name = feed_name + f"-retry#{retries}"
 
     # Get plugin Id
     plugin_search_params = {"name": "pl-dircopy"}

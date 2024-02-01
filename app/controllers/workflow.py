@@ -177,7 +177,7 @@ def manage_workflow(str_data: str, mode: str):
     """
     Manage a workflow request in a separate subprocess
     """
-    proc_count = get_process_count("wf_manager", str_data)
+    proc_count = get_process_count("app/controllers/subprocesses/wf_manager.py", str_data)
     logger.debug(f"{proc_count} subprocess of workflow manager running on the system.", extra=d)
     if proc_count > 0:
         logger.info(f"No new manager subprocess started.", extra=d)
@@ -196,7 +196,7 @@ def update_workflow_status(str_data: str, mode: str):
     """
     Update the current status of a workflow request in a separate process
     """
-    proc_count = get_process_count("status", str_data)
+    proc_count = get_process_count("app/controllers/subprocesses/status.py", str_data)
     logger.debug(f"{proc_count} subprocess of status manager running on the system.", extra=d)
     if proc_count > 0:
         logger.info(f"No new status subprocess started.", extra=d)
