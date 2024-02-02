@@ -95,7 +95,7 @@ def manage_workflow(db_key: str, test: bool):
             case State.REGISTERING:
                 logger.info(f"Registering progress is {workflow.response.state_progress} complete.", extra=d)
 
-                if workflow.response.state_progress == "100%" and workflow.stale:
+                if workflow.response.state_progress == "100%" and workflow.stale and not workflow.response.feed_id:
                     try:
                         resp = do_cube_create_feed(request, cube_url, workflow.service_retry)
                         pl_inst_id = resp["pl_inst_id"]
@@ -170,7 +170,7 @@ def update_status(request: WorkflowRequestSchema):
     d_data = request_to_dict(request)
     str_data = json.dumps(d_data)
     proc_count = get_process_count("app/controllers/subprocesses/status.py", str_data)
-    logger.debug(f"{proc_count} subprocess of status manager running on the system.", extra=d)
+    logger.info(f"{proc_count} subprocess of status manager running on the system.", extra=d)
     if proc_count > 0:
         logger.info(f"No new status subprocess started.", extra=d)
         return
