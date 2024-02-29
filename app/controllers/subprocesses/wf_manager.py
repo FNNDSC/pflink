@@ -103,21 +103,22 @@ def manage_workflow(db_key: str, test: bool):
                         logger.info(f"New feed created with feed_id {feed_id}.", extra=d)
                         workflow.response.feed_id = feed_id
                         update_workflow(key, workflow)
+                        do_cube_start_analysis(pl_inst_id, request, cube_url)
                     except Exception as ex:
                         logger.error(Error.feed.value, extra=d)
                         workflow.response.error = Error.feed.value + str(ex)
                         workflow.response.status = False
                         update_workflow(key, workflow)
 
-            case State.FEED_CREATED:
-                if workflow.stale:
-                    try:
-                        do_cube_start_analysis(pl_inst_id, request, cube_url)
-                    except Exception as ex:
-                        logger.error(Error.analysis.value + str(ex), extra=d)
-                        workflow.response.error = Error.analysis.value + str(ex)
-                        workflow.response.status = False
-                        update_workflow(key, workflow)
+            # case State.FEED_CREATED:
+            #     if workflow.stale:
+            #         try:
+            #             do_cube_start_analysis(pl_inst_id, request, cube_url)
+            #         except Exception as ex:
+            #             logger.error(Error.analysis.value + str(ex), extra=d)
+            #             workflow.response.error = Error.analysis.value + str(ex)
+            #             workflow.response.status = False
+            #             update_workflow(key, workflow)
             case State.COMPLETED:
                 logger.info(f"Request is now complete. Exiting while loop. ",extra=d)
                 return
