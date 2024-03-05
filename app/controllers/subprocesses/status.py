@@ -232,7 +232,6 @@ def get_analysis_status(response: dict) -> dict:
     """
     Get details about an analysis running on the given feed
     """
-    MAX_JOBS = 12
     analysis_details = {}
 
     created = response['created_jobs']

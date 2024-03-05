@@ -149,7 +149,7 @@ def analysis_retry(workflow: WorkflowDBSchema):
     """
     # Reset workflow status if max service_retry is not reached
     if workflow.service_retry < 5 and not workflow.response.status and workflow.response.workflow_state == State.ANALYZING:
-        logger.warning(f"Retrying request.{workflow.service_retry}/5 retries left.", extra=d)
+        logger.warning(f"Retrying request.{5 - workflow.service_retry}/5 retries left.", extra=d)
         workflow.service_retry += 1
         workflow.response.feed_id = ""
         workflow.response.feed_name = ""
@@ -161,7 +161,7 @@ def analysis_retry(workflow: WorkflowDBSchema):
         update_workflow(key, workflow)
         if workflow.service_retry >= 5: logger.warning("All retries exhausted. Giving up on this workflow request.",
                                                        extra=d)
-    return workflow
+    return retrieve_workflow(key)
 
 def update_status(request: WorkflowRequestSchema):
     """
@@ -272,11 +272,11 @@ def do_cube_create_feed(request: WorkflowRequestSchema, cube_url: str, retries: 
     """
     Create a new feed in `CUBE` if not already present
     """
-    logger.info(f"Creating Chris client with {cube_url, request.cube_user_info.username, request.cube_user_info.password}", extra=d)
+    logger.debug(f"Creating Chris client with {cube_url, request.cube_user_info.username, request.cube_user_info.password}", extra=d)
     client = do_cube_create_user(cube_url, request.cube_user_info.username, request.cube_user_info.password)
-    logger.info(f"Created client details {client}", extra=d)
+    logger.debug(f"Created client details {client}", extra=d)
 
-    logger.info(f"Fetching PACS details for {request.PACS_directive.__dict__}", extra=d)
+    logger.debug(f"Fetching PACS details for {request.PACS_directive.__dict__}", extra=d)
     pacs_details = {}
     try:
         pacs_details = client.getPACSdetails(request.PACS_directive.__dict__)
@@ -285,7 +285,7 @@ def do_cube_create_feed(request: WorkflowRequestSchema, cube_url: str, retries: 
     feed_name = substitute_dicom_tags(request.workflow_info.feed_name, pacs_details)
     logger.info(f"Fetching data path..", extra=d)
     data_path = client.getSwiftPath(pacs_details)
-    logger.info(f"Received data path: {data_path}", extra=d)
+    logger.debug(f"Received data path: {data_path}", extra=d)
     if retries > 0:
         feed_name = feed_name + f"-retry#{retries}"
 
@@ -317,12 +317,13 @@ def __run_plugin_instance(previous_id: str, request: WorkflowRequestSchema, clie
     """
     # search for plugin
     plugin_search_params = {"name": request.workflow_info.plugin_name, "version": request.workflow_info.plugin_version}
+    logger.info(f"Adding plugin: {plugin_search_params} to pl_inst: {previous_id}", extra=d)
     plugin_id = client.getPluginId(plugin_search_params)
 
     # convert CLI params from string to a JSON dictionary
     feed_params = str_to_param_dict(request.workflow_info.plugin_params)
     feed_params["previous_id"] = previous_id
-    logger.info(f"Creating new analysis with plugin: {plugin_search_params}  and parameters: {feed_params}",
+    logger.debug(f"Creating new analysis with plugin: {plugin_search_params}  and parameters: {feed_params}",
                  extra=d)
     feed_resp = client.createFeed(plugin_id, feed_params)
 
@@ -333,9 +334,10 @@ def __run_pipeline_instance(previous_id: str, request: WorkflowRequestSchema, cl
     """
     # search for pipeline
     pipeline_search_params = {"name": request.workflow_info.pipeline_name}
+    logger.info(f"Adding pipeline: {pipeline_search_params} to pl_inst: {previous_id}", extra=d)
     pipeline_id = client.getPipelineId(pipeline_search_params)
     pipeline_params = {"previous_plugin_inst_id": previous_id, "name": request.workflow_info.pipeline_name}
-    logger.info(f"Creating new analysis with pipeline: {pipeline_search_params}.",
+    logger.debug(f"Creating new analysis with pipeline: {pipeline_search_params}.",
                 extra=d)
     feed_resp = client.createWorkflow(str(pipeline_id), pipeline_params)
 
