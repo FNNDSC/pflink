@@ -161,7 +161,7 @@ class WorkflowDBSchema(BaseModel):
     creation_time: str = ""
     request: WorkflowRequestSchema
     response: WorkflowStatusResponseSchema
-    service_retry: int = 5
+    service_retry: int = 0
     stale: bool = True
     started: bool = False
 

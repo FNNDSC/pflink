@@ -148,9 +148,9 @@ def analysis_retry(workflow: WorkflowDBSchema):
     Retry analysis on failures
     """
     # Reset workflow status if max service_retry is not reached
-    if workflow.service_retry > 0 and not workflow.response.status and workflow.response.workflow_state == State.ANALYZING:
+    if workflow.service_retry < 5 and not workflow.response.status and workflow.response.workflow_state == State.ANALYZING:
         logger.warning(f"Retrying request.{workflow.service_retry}/5 retries left.", extra=d)
-        workflow.service_retry -= 1
+        workflow.service_retry += 1
         workflow.response.feed_id = ""
         workflow.response.feed_name = ""
         workflow.started = False
@@ -159,7 +159,7 @@ def analysis_retry(workflow: WorkflowDBSchema):
         workflow.response.error = ""
         workflow.response.status = True
         update_workflow(key, workflow)
-        if workflow.service_retry <= 0: logger.warning("All retries exhausted. Giving up on this workflow request.",
+        if workflow.service_retry >= 5: logger.warning("All retries exhausted. Giving up on this workflow request.",
                                                        extra=d)
     return workflow
 
@@ -286,7 +286,7 @@ def do_cube_create_feed(request: WorkflowRequestSchema, cube_url: str, retries: 
     logger.info(f"Fetching data path..", extra=d)
     data_path = client.getSwiftPath(pacs_details)
     logger.info(f"Received data path: {data_path}", extra=d)
-    if retries < 5:
+    if retries > 0:
         feed_name = feed_name + f"-retry#{retries}"
 
     # Get plugin Id
