@@ -1,5 +1,7 @@
 *~
 *.DS_Store
+cmd.sh
+run-MainThread.log
 *.egg-info
 __pycache__
 docs/build
