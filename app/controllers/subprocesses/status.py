@@ -71,7 +71,7 @@ def update_workflow_progress(response: WorkflowStatusResponseSchema):
     Update the overall workflow progress of a workflow from its current
     workflow state.
     """
-    MAX_STATE = 7
+    MAX_STATE = 6
     index = 0
     for elem in State:
         if response.workflow_state == elem:
@@ -319,10 +319,10 @@ def _parse_response(
         return status
 
     if cube_response:
-        status.workflow_state = State.FEED_CREATED
+        status.workflow_state = State.ANALYZING
         status.feed_name = cube_response['name']
         status.feed_id = cube_response['id']
-        status.state_progress = "100%"
+        status.state_progress = "0%"
 
         # check if analysis is scheduled
         analysis = get_analysis_status(cube_response)

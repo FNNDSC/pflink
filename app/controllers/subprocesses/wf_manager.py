@@ -95,7 +95,8 @@ def manage_workflow(db_key: str, test: bool):
             case State.REGISTERING:
                 logger.info(f"Registering progress is {workflow.response.state_progress} complete.", extra=d)
 
-                if workflow.response.state_progress == "100%" and workflow.stale and not workflow.response.feed_id:
+                if workflow.response.state_progress == "100%" and workflow.stale and pl_inst_id ==0:
+                    logger.info(f"feed id is {workflow.response.feed_id}", extra=d)
                     try:
                         resp = do_cube_create_feed(request, cube_url, workflow.service_retry)
                         pl_inst_id = resp["pl_inst_id"]
