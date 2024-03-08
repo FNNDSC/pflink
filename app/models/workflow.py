@@ -164,6 +164,7 @@ class WorkflowDBSchema(BaseModel):
     service_retry: int = 0
     stale: bool = True
     started: bool = False
+    feed_requested: bool = False
 
 
 class WorkflowSearchSchema(BaseModel):

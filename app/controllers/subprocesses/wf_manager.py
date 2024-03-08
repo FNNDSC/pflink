@@ -4,20 +4,16 @@ This module manages different states of a workflow by constantly checking the st
 import argparse
 import json
 import logging
+import pprint
 import subprocess
 import time
+from logging.config import dictConfig
+
 import requests
-import pprint
+
+from app import log
 from app.controllers.subprocesses.python_chris_client import PythonChrisClient
 from app.controllers.subprocesses.subprocess_helper import get_process_count
-from logging.config import dictConfig
-from app import log
-from app.models.workflow import (
-    Error,
-    State,
-    WorkflowRequestSchema,
-    WorkflowDBSchema,
-)
 from app.controllers.subprocesses.utils import (
     request_to_dict,
     dict_to_hash,
@@ -28,6 +24,13 @@ from app.controllers.subprocesses.utils import (
     do_cube_create_user,
     retrieve_pfdcm_url,
 )
+from app.models.workflow import (
+    Error,
+    State,
+    WorkflowRequestSchema,
+    WorkflowDBSchema,
+)
+
 dictConfig(log.log_config)
 logger = logging.getLogger('pflink-logger')
 d = {'workername': 'WORKFLOW_MGR', 'key' : "",'log_color': "\33[33m"}
@@ -71,58 +74,53 @@ def manage_workflow(db_key: str, test: bool):
         update_workflow(key, workflow)
         MAX_RETRIES -= 1
         logger.debug(f"{MAX_RETRIES} iterations left.", extra=d)
+        if workflow.stale:
 
-        match workflow.response.workflow_state:
+            match workflow.response.workflow_state:
 
-            case State.INITIALIZING:
-                if workflow.stale:
+                case State.INITIALIZING:
                     logger.info("Requesting PACS retrieve.", extra=d)
                     do_pfdcm_retrieve(request, pfdcm_url)
 
-            case State.RETRIEVING:
-                logger.info(f"Retrieving progress is {workflow.response.state_progress} complete.", extra=d)
-                if workflow.response.state_progress == "100%" and workflow.stale:
-                    logger.info("Requesting PACS push.", extra=d)
-                    do_pfdcm_push(request, pfdcm_url)
+                case State.RETRIEVING:
+                    logger.info(f"Retrieving progress is {workflow.response.state_progress} complete.", extra=d)
+                    if workflow.response.state_progress == "100%":
+                            logger.info("Requesting PACS push.", extra=d)
+                            do_pfdcm_push(request, pfdcm_url)
 
-            case State.PUSHING:
-                logger.info(f"Pushing progress is {workflow.response.state_progress} complete.", extra=d)
+                case State.PUSHING:
+                    logger.info(f"Pushing progress is {workflow.response.state_progress} complete.", extra=d)
 
-                if workflow.response.state_progress == "100%" and workflow.stale:
-                    logger.info("Requesting PACS register.", extra=d)
-                    do_pfdcm_register(request, pfdcm_url)
+                    if workflow.response.state_progress == "100%":
+                        logger.info("Requesting PACS register.", extra=d)
+                        do_pfdcm_register(request, pfdcm_url)
 
-            case State.REGISTERING:
-                logger.info(f"Registering progress is {workflow.response.state_progress} complete.", extra=d)
+                case State.REGISTERING:
+                    logger.info(f"Registering progress is {workflow.response.state_progress} complete.", extra=d)
+                    logger.info(f"Feed requested status is currently {workflow.feed_requested}", extra=d)
+                    if workflow.response.state_progress == "100%" and not workflow.feed_requested:
 
-                if workflow.response.state_progress == "100%" and workflow.stale and pl_inst_id ==0:
-                    logger.info(f"feed id is {workflow.response.feed_id}", extra=d)
-                    try:
-                        resp = do_cube_create_feed(request, cube_url, workflow.service_retry)
-                        pl_inst_id = resp["pl_inst_id"]
-                        feed_id = resp["feed_id"]
-                        logger.info(f"New feed created with feed_id {feed_id}.", extra=d)
-                        workflow.response.feed_id = feed_id
-                        update_workflow(key, workflow)
-                        do_cube_start_analysis(pl_inst_id, request, cube_url)
-                    except Exception as ex:
-                        logger.error(Error.feed.value, extra=d)
-                        workflow.response.error = Error.feed.value + str(ex)
-                        workflow.response.status = False
-                        update_workflow(key, workflow)
+                        try:
+                            resp = do_cube_create_feed(request, cube_url, workflow.service_retry)
+                            pl_inst_id = resp["pl_inst_id"]
+                            feed_id = resp["feed_id"]
+                            logger.info(f"New feed created with feed_id {feed_id}.", extra=d)
+                            workflow.response.feed_id = feed_id
+                            logger.info(f"Setting feed requested status to True in the DB", extra=d)
+                            workflow.feed_requested = True
+                            update_workflow(key, workflow)
+                            do_cube_start_analysis(pl_inst_id, request, cube_url)
+                        except Exception as ex:
+                            logger.error(Error.feed.value, extra=d)
+                            workflow.response.error = Error.feed.value + str(ex)
+                            workflow.response.status = False
+                            update_workflow(key, workflow)
 
-            # case State.FEED_CREATED:
-            #     if workflow.stale:
-            #         try:
-            #             do_cube_start_analysis(pl_inst_id, request, cube_url)
-            #         except Exception as ex:
-            #             logger.error(Error.analysis.value + str(ex), extra=d)
-            #             workflow.response.error = Error.analysis.value + str(ex)
-            #             workflow.response.status = False
-            #             update_workflow(key, workflow)
-            case State.COMPLETED:
-                logger.info(f"Request is now complete. Exiting while loop. ",extra=d)
-                return
+                case State.COMPLETED:
+                    logger.info(f"Request is now complete. Exiting while loop. ",extra=d)
+                    return
+        else:
+            logger.info(f"Database is stale. No task performed.", extra=d)
 
         logger.info(f"Calling status update subprocess.", extra=d)
         update_status(request)
@@ -133,7 +131,7 @@ def manage_workflow(db_key: str, test: bool):
         workflow = retrieve_workflow(key)
         logger.info(f"Fetching request status from DB. Current status is {workflow.response.workflow_state}.",
                      extra=d)
-        
+
         # Reset workflow if pflink reached MAX no. of retries
         if MAX_RETRIES==0:
             logger.debug(f"Maximum retry limit reached. Resetting request flag to NOT STARTED.", extra=d)
@@ -151,7 +149,9 @@ def analysis_retry(workflow: WorkflowDBSchema):
     # Reset workflow status if max service_retry is not reached
     if workflow.service_retry < 5 and not workflow.response.status and workflow.response.workflow_state == State.ANALYZING:
         logger.warning(f"Retrying request.{5 - workflow.service_retry}/5 retries left.", extra=d)
+        logger.warning(f"Setting feed requested status to False in the DB", extra=d)
         workflow.service_retry += 1
+        workflow.feed_requested = False
         workflow.response.feed_id = ""
         workflow.response.feed_name = ""
         workflow.started = False
