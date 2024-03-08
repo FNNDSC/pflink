@@ -48,7 +48,7 @@ def workflow_retrieve_helper(workflow: dict) -> WorkflowDBSchema:
         service_retry=workflow["service_retry"],
         stale=workflow["stale"],
         started=workflow["started"],
-        feed_requested=True if not workflow.get("feed_requested") else workflow["feed_requested"],
+        feed_requested=False if not workflow.get("feed_requested") else workflow["feed_requested"],
     )
 
 

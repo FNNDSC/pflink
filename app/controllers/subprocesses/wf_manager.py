@@ -97,7 +97,7 @@ def manage_workflow(db_key: str, test: bool):
 
                 case State.REGISTERING:
                     logger.info(f"Registering progress is {workflow.response.state_progress} complete.", extra=d)
-                    #logger.info(f"Feed requested status is currently {workflow.feed_requested}", extra=d)
+                    logger.info(f"Feed requested status is currently {workflow.feed_requested}", extra=d)
                     if workflow.response.state_progress == "100%" and (not workflow.feed_requested or pl_inst_id==0):
 
                         try:
