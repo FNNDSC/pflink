@@ -53,7 +53,7 @@ def manage_workflow(db_key: str, test: bool):
     workflow = retrieve_workflow(db_key)
     logger.info(f"Fetching request status from the DB. Current status is {workflow.response.workflow_state}.", extra=d)
 
-    workflow = analysis_retry(workflow)
+    workflow = analysis_retry(workflow,db_key)
 
     if not workflow.response.status or test:
         # Do nothing and return
@@ -71,7 +71,7 @@ def manage_workflow(db_key: str, test: bool):
     while not workflow.response.workflow_state == State.ANALYZING and MAX_RETRIES > 0 and workflow.response.status:
 
         workflow.started = True
-        update_workflow(key, workflow)
+        update_workflow(db_key, workflow)
         MAX_RETRIES -= 1
         logger.debug(f"{MAX_RETRIES} iterations left.", extra=d)
         if workflow.stale:
@@ -97,8 +97,8 @@ def manage_workflow(db_key: str, test: bool):
 
                 case State.REGISTERING:
                     logger.info(f"Registering progress is {workflow.response.state_progress} complete.", extra=d)
-                    logger.info(f"Feed requested status is currently {workflow.feed_requested}", extra=d)
-                    if workflow.response.state_progress == "100%" and not workflow.feed_requested:
+                    #logger.info(f"Feed requested status is currently {workflow.feed_requested}", extra=d)
+                    if workflow.response.state_progress == "100%" and (not workflow.feed_requested or pl_inst_id==0):
 
                         try:
                             resp = do_cube_create_feed(request, cube_url, workflow.service_retry)
@@ -108,13 +108,13 @@ def manage_workflow(db_key: str, test: bool):
                             workflow.response.feed_id = feed_id
                             logger.info(f"Setting feed requested status to True in the DB", extra=d)
                             workflow.feed_requested = True
-                            update_workflow(key, workflow)
+                            update_workflow(db_key, workflow)
                             do_cube_start_analysis(pl_inst_id, request, cube_url)
                         except Exception as ex:
                             logger.error(Error.feed.value, extra=d)
                             workflow.response.error = Error.feed.value + str(ex)
                             workflow.response.status = False
-                            update_workflow(key, workflow)
+                            update_workflow(db_key, workflow)
 
                 case State.COMPLETED:
                     logger.info(f"Request is now complete. Exiting while loop. ",extra=d)
@@ -128,7 +128,7 @@ def manage_workflow(db_key: str, test: bool):
         logger.info(f"Sleeping for {SLEEP_TIME} seconds.", extra=d)
         time.sleep(SLEEP_TIME)
 
-        workflow = retrieve_workflow(key)
+        workflow = retrieve_workflow(db_key)
         logger.info(f"Fetching request status from DB. Current status is {workflow.response.workflow_state}.",
                      extra=d)
 
@@ -136,13 +136,13 @@ def manage_workflow(db_key: str, test: bool):
         if MAX_RETRIES==0:
             logger.debug(f"Maximum retry limit reached. Resetting request flag to NOT STARTED.", extra=d)
             workflow.started = False
-            update_workflow(key, workflow)
+            update_workflow(db_key, workflow)
             logger.info("Exiting manager subprocess.", extra=d)
 
     logger.info(f"Exiting while loop. End of workflow_manager.", extra=d)
 
 
-def analysis_retry(workflow: WorkflowDBSchema):
+def analysis_retry(workflow: WorkflowDBSchema,db_key: str):
     """
     Retry analysis on failures
     """
@@ -159,10 +159,11 @@ def analysis_retry(workflow: WorkflowDBSchema):
         workflow.response.state_progress = "100%"
         workflow.response.error = ""
         workflow.response.status = True
-        update_workflow(key, workflow)
+        update_workflow(db_key, workflow)
         if workflow.service_retry >= 5: logger.warning("All retries exhausted. Giving up on this workflow request.",
                                                        extra=d)
-    return retrieve_workflow(key)
+        workflow = retrieve_workflow(db_key)
+    return workflow
 
 def update_status(request: WorkflowRequestSchema):
     """
