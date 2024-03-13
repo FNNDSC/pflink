@@ -149,7 +149,7 @@ def update_status_flag(key: str, flag: bool, test: bool = False) -> bool:
     workflow = collection.find_one({"_id": key})
     if workflow:
         updated_workflow = collection.update_one(
-            {"_id": key}, {"$set": {"response.stale": flag}}
+            {"_id": key}, {"$set": {"stale": flag}}
         )
         if updated_workflow:
             return True
