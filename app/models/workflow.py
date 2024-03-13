@@ -165,6 +165,7 @@ class WorkflowDBSchema(BaseModel):
     stale: bool = True
     started: bool = False
     feed_requested: bool = False
+    feed_id_generated: str = ""
 
 
 class WorkflowSearchSchema(BaseModel):

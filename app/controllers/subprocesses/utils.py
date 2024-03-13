@@ -8,6 +8,7 @@ from app.config import settings
 from app.models.workflow import (
     WorkflowRequestSchema,
     WorkflowDBSchema,
+    WorkflowStatusResponseSchema,
 )
 from app.controllers.pfdcm import (
     retrieve_pfdcm
@@ -48,7 +49,8 @@ def workflow_retrieve_helper(workflow: dict) -> WorkflowDBSchema:
         service_retry=workflow["service_retry"],
         stale=workflow["stale"],
         started=workflow["started"],
-        feed_requested= False if "feed_requested" not in workflow else workflow["feed_requested"]
+        feed_requested= False if "feed_requested" not in workflow else workflow["feed_requested"],
+        feed_id_generated=workflow["response"]["feed_id"] if "feed_id_generated" not in workflow else workflow["feed_id_generated"],
     )
 
 
@@ -70,6 +72,7 @@ def workflow_add_helper(workflow: WorkflowDBSchema) -> dict:
         "stale": workflow.stale,
         "started": workflow.started,
         "feed_requested": workflow.feed_requested,
+        "feed_id_generated": workflow.feed_id_generated,
     }
 
 
@@ -124,6 +127,33 @@ def update_workflow(key: str, data: WorkflowDBSchema, test: bool = False) -> boo
             return True
         return False
 
+def update_workflow_response(key: str, data: WorkflowStatusResponseSchema, test: bool = False) -> bool:
+    """
+    Update an existing response in the DB
+    """
+    collection = test_collection if test else workflow_collection
+    workflow = collection.find_one({"_id": key})
+    if workflow:
+        updated_workflow = collection.update_one(
+            {"_id": key}, {"$set": {"response": data.__dict__}}
+        )
+        if updated_workflow:
+            return True
+        return False
+
+def update_status_flag(key: str, flag: bool, test: bool = False) -> bool:
+    """
+    Update an existing response in the DB
+    """
+    collection = test_collection if test else workflow_collection
+    workflow = collection.find_one({"_id": key})
+    if workflow:
+        updated_workflow = collection.update_one(
+            {"_id": key}, {"$set": {"response.stale": flag}}
+        )
+        if updated_workflow:
+            return True
+        return False
 
 def retrieve_workflow(key: str, test: bool = False) -> WorkflowDBSchema:
     """

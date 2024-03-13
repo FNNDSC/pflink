@@ -8,7 +8,7 @@ import pprint
 import subprocess
 import time
 from logging.config import dictConfig
-
+from app.config import settings
 import requests
 
 from app import log
@@ -105,14 +105,14 @@ def manage_workflow(db_key: str, test: bool):
                             pl_inst_id = resp["pl_inst_id"]
                             feed_id = resp["feed_id"]
                             logger.info(f"New feed created with feed_id {feed_id}.", extra=d)
-                            workflow.response.feed_id = feed_id
+                            workflow.feed_id_generated = feed_id
                             logger.info(f"Setting feed requested status to True in the DB", extra=d)
                             workflow.feed_requested = True
                             update_workflow(db_key, workflow)
                             do_cube_start_analysis(pl_inst_id, request, cube_url)
                         except Exception as ex:
-                            logger.error(Error.feed.value, extra=d)
-                            workflow.response.error = Error.feed.value + str(ex)
+                            logger.error(Error.analysis.value + str(ex), extra=d)
+                            workflow.response.error = Error.analysis.value + str(ex)
                             workflow.response.status = False
                             update_workflow(db_key, workflow)
 
@@ -152,11 +152,11 @@ def analysis_retry(workflow: WorkflowDBSchema,db_key: str):
         logger.warning(f"Setting feed requested status to False in the DB", extra=d)
         workflow.service_retry += 1
         workflow.feed_requested = False
-        workflow.response.feed_id = ""
-        workflow.response.feed_name = ""
+        workflow.feed_id_generated = ""
         workflow.started = False
         workflow.response.workflow_state = State.REGISTERING
         workflow.response.state_progress = "100%"
+        workflow.response.workflow_progress_perc = 0
         workflow.response.error = ""
         workflow.response.status = True
         update_workflow(db_key, workflow)
@@ -284,6 +284,8 @@ def do_cube_create_feed(request: WorkflowRequestSchema, cube_url: str, retries: 
         pacs_details = client.getPACSdetails(request.PACS_directive.__dict__)
     except Exception as ex:
         logger.info(f"Error receiving PACS details: {ex}", extra=d)
+        raise Exception(f"Error receiving PACS details: {ex}")
+
     feed_name = substitute_dicom_tags(request.workflow_info.feed_name, pacs_details)
     logger.info(f"Fetching data path..", extra=d)
     data_path = client.getSwiftPath(pacs_details)

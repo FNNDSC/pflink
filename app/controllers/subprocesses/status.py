@@ -26,6 +26,8 @@ from app.controllers.subprocesses.utils import (
     substitute_dicom_tags,
     do_cube_create_user,
     retrieve_pfdcm_url,
+    update_workflow_response,
+    update_status_flag,
 )
 
 from app.controllers.subprocesses.subprocess_helper import get_process_count
@@ -52,19 +54,20 @@ def update_workflow_status(key: str, test: bool):
         return
 
     logger.info(f"Working on fetching the current status, locking DB flag.", extra=d)
-    update_status_flag(key, workflow, False, test)
+    update_status_flag(key, False, test)
 
     if test:
         updated_status = get_simulated_status(workflow)
     else:
-        updated_status = get_current_status(workflow.request, workflow.response)
+        updated_status = get_current_status(workflow.request, workflow.response, workflow.feed_id_generated)
 
-    workflow.response = update_workflow_progress(updated_status)
+    updated_response = update_workflow_progress(updated_status)
     pretty_response = pprint.pformat(workflow.response.__dict__)
     logger.debug(f"Updated response: {pretty_response}.", extra=d)
     logger.info(f"Current status is {workflow.response.workflow_state}.", extra=d)
-    update_status_flag(key, workflow, True, test)
+    update_workflow_response(key, updated_response, test)
     logger.info(f"Finished writing updated status to the DB, releasing lock.", extra=d)
+    update_status_flag(key, True, test)
 
 
 def update_workflow_progress(response: WorkflowStatusResponseSchema):
@@ -102,19 +105,10 @@ def is_status_subprocess_running(workflow: WorkflowDBSchema):
     return False
 
 
-def update_status_flag(key: str, workflow: WorkflowDBSchema, flag: bool, test: bool):
-    """
-    Change the flag `stale` of a workflow response in the DB
-    `stale` essentially means the current status information of a workflow is outdated and a new
-    `status-update` process can update the information in the DB
-    """
-    workflow.stale = flag
-    update_workflow(key, workflow, test)
-
-
 def get_current_status(
         request: WorkflowRequestSchema,
         status: WorkflowStatusResponseSchema,
+        feed_id: str,
 ) -> WorkflowStatusResponseSchema:
     """
     Return the status of a workflow in `pflink` by asking `pfdcm` & `cube`. The sequence is as follows:
@@ -124,7 +118,7 @@ def get_current_status(
         4) Return the response
     """
     pfdcm_resp = _get_pfdcm_status(request)
-    cube_resp = _get_feed_status(request, status.feed_id)
+    cube_resp = _get_feed_status(request, feed_id)
     status = _parse_response(pfdcm_resp, cube_resp, status)
     return status
 
@@ -270,8 +264,8 @@ def _parse_response(
     """
     # status = WorkflowStatusResponseSchema()
     # reset status of any stale errors or states
-    status.status = True
-    status.error = ""
+    # status.status = True
+    # status.error = ""
 
     pfdcm_has_error = pfdcm_response.get("error")
     cube_has_error = cube_response.get("error")
