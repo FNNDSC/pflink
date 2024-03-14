@@ -4,23 +4,18 @@ This module updates the state of a workflow in the DB
 import argparse
 import json
 import logging
-import random
-import requests
-import time
 import pprint
+import random
+import time
 from logging.config import dictConfig
+
+import requests
+
 from app import log
-from app.models.workflow import (
-    State,
-    WorkflowRequestSchema,
-    WorkflowDBSchema,
-    WorkflowStatusResponseSchema,
-    Error,
-)
+from app.controllers.subprocesses.subprocess_helper import get_process_count
 from app.controllers.subprocesses.utils import (
     query_to_dict,
     dict_to_hash,
-    update_workflow,
     retrieve_workflow,
     get_cube_url_from_pfdcm,
     substitute_dicom_tags,
@@ -29,8 +24,14 @@ from app.controllers.subprocesses.utils import (
     update_workflow_response,
     update_status_flag,
 )
+from app.models.workflow import (
+    State,
+    WorkflowRequestSchema,
+    WorkflowDBSchema,
+    WorkflowStatusResponseSchema,
+    Error,
+)
 
-from app.controllers.subprocesses.subprocess_helper import get_process_count
 dictConfig(log.log_config)
 logger = logging.getLogger('pflink-logger')
 d = {'workername': 'STATUS_MGR', 'log_color': "\33[36m", 'key': ""}
@@ -75,14 +76,14 @@ def update_workflow_progress(response: WorkflowStatusResponseSchema):
     Update the overall workflow progress of a workflow from its current
     workflow state.
     """
-    MAX_STATE = 6
+    MAX_STATE = 7
     index = 0
     for elem in State:
         if response.workflow_state == elem:
             state_progress = int(response.state_progress.replace('%',''))
 
-            response.workflow_progress_perc = max(response.workflow_progress_perc,
-                                                  __progress_percent(index,MAX_STATE,state_progress))
+            response.workflow_progress_perc = min(100, max(response.workflow_progress_perc,
+                                                  __progress_percent(index,MAX_STATE,state_progress)))
         index += 1
     return response
 
@@ -264,8 +265,8 @@ def _parse_response(
     """
     # status = WorkflowStatusResponseSchema()
     # reset status of any stale errors or states
-    # status.status = True
-    # status.error = ""
+    status.status = True
+    status.error = ""
 
     pfdcm_has_error = pfdcm_response.get("error")
     cube_has_error = cube_response.get("error")
@@ -330,12 +331,12 @@ def _parse_response(
                 status.status = False
                 return status
 
-    else:
-        if status.feed_name:
-            status.workflow_state = State.FEED_DELETED
-            status.status = False
-            status.error = Error.feed_deleted.value
-            status.state_progress = "0%"
+    # else:
+    #     if status.feed_name:
+    #         status.workflow_state = State.FEED_DELETED
+    #         status.status = False
+    #         status.error = Error.feed_deleted.value
+    #         status.state_progress = "0%"
     return status
 
 

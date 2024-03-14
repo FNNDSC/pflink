@@ -150,12 +150,15 @@ def analysis_retry(workflow: WorkflowDBSchema,db_key: str):
     if workflow.service_retry < 5 and not workflow.response.status and workflow.response.workflow_state == State.ANALYZING:
         logger.warning(f"Retrying request.{5 - workflow.service_retry}/5 retries left.", extra=d)
         logger.warning(f"Setting feed requested status to False in the DB", extra=d)
-        workflow.service_retry += 1
-        workflow.feed_requested = False
+        if workflow.feed_requested:
+            workflow.service_retry += 1
+            workflow.feed_requested = False
         workflow.feed_id_generated = ""
         workflow.started = False
         workflow.response.workflow_state = State.REGISTERING
         workflow.response.state_progress = "100%"
+        workflow.response.feed_id = ""
+        workflow.response.feed_name = ""
         workflow.response.workflow_progress_perc = 0
         workflow.response.error = ""
         workflow.response.status = True
