@@ -4,6 +4,7 @@ This module updates the state of a workflow in the DB
 import argparse
 import json
 import logging
+import os
 import pprint
 import random
 import time
@@ -34,7 +35,7 @@ from app.models.workflow import (
 
 dictConfig(log.log_config)
 logger = logging.getLogger('pflink-logger')
-d = {'workername': 'STATUS_MGR', 'log_color': "\33[36m", 'key': ""}
+d = {'workername': 'STATUS_MGR', 'log_color': "\33[36m", 'key': "", 'pid':os.getpid()}
 
 
 parser = argparse.ArgumentParser(description='Process arguments passed through CLI')

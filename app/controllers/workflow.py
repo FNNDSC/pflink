@@ -19,6 +19,7 @@ from app.controllers import search
 from app.controllers.subprocesses.subprocess_helper import get_process_count
 from app.controllers.subprocesses import utils
 from app.config import settings
+import os
 
 MONGO_DETAILS = str(settings.pflink_mongodb)
 client = MongoClient(MONGO_DETAILS, username=settings.mongo_username, password=settings.mongo_password)
@@ -27,7 +28,7 @@ workflow_collection = database.get_collection("workflows_collection")
 test_collection = database.get_collection("tests_collection")
 
 logger = logging.getLogger('pflink-logger')
-d = {'workername': 'PFLINK', 'log_color': "\33[32m", 'key': ""}
+d = {'workername': 'PFLINK', 'log_color': "\33[32m", 'key': "", 'pid':os.getpid()}
 
 
 # DB methods

@@ -10,6 +10,7 @@ import time
 from logging.config import dictConfig
 from app.config import settings
 import requests
+import os
 
 from app import log
 from app.controllers.subprocesses.python_chris_client import PythonChrisClient
@@ -33,7 +34,7 @@ from app.models.workflow import (
 
 dictConfig(log.log_config)
 logger = logging.getLogger('pflink-logger')
-d = {'workername': 'WORKFLOW_MGR', 'key' : "",'log_color': "\33[33m"}
+d = {'workername': 'WORKFLOW_MGR', 'key' : "",'log_color': "\33[33m", 'pid':os.getpid()}
 
 parser = argparse.ArgumentParser(description='Process arguments')
 parser.add_argument('--data', type=str)

@@ -117,28 +117,36 @@ for i in $hash_key; do
     # =========================================================
     # Confirmation prompt to delete a record
     # ========================================================= 
-    echo "Do you wish to redo this workflow record?"
+    echo "Do you wish to delete and redo this workflow record?"
     select ynx in "Yes" "No" "Exit"; do
         # =========================================================
         # STEP3: CURL request to delete and re-run an existing request
         # =========================================================
         case $ynx in
-            Yes ) curl -s -X 'DELETE' \
-                  "$URL/workflow?workflow_key=$i" \
-                  -H 'accept: application/json' \
-                  -H "Authorization: Bearer $token" \
-                  -H 'Content-Type: application/json' | jq;
-                  echo "Re-running the above workflow request."
-                  # =========================================================
-                  # STEP3a: CURL request to post a  request to pflink
-                  # =========================================================
-                  curl -s -X 'POST' \
-                  "$URL/workflow" \
-                  -H 'accept: application/json' \
-                  -H "Authorization: Bearer $token" \
-                  -H 'Content-Type: application/json' \
-                  -d "$workflow_request" | jq
-  
+            Yes )
+                  echo -e "\033[31mThis action will permanently delete the workflow record!\033[0m"
+                  select ynx in "Proceed" "Cancel" ; do
+                        case $ynx in
+                            Proceed )
+                                curl -s -X 'DELETE' \
+                                "$URL/workflow?workflow_key=$i" \
+                                -H 'accept: application/json' \
+                                -H "Authorization: Bearer $token" \
+                                -H 'Content-Type: application/json' | jq;
+                                echo "Re-running the above workflow request."
+                                # =========================================================
+                                # STEP3a: CURL request to post a  request to pflink
+                                # =========================================================
+                                curl -s -X 'POST' \
+                                "$URL/workflow" \
+                                -H 'accept: application/json' \
+                                -H "Authorization: Bearer $token" \
+                                -H 'Content-Type: application/json' \
+                                -d "$workflow_request" | jq
+                                break ;;
+                            Cancel ) break;;
+                        esac
+                  done
                   break;;
             No )  break;;
             Exit ) exit;;
