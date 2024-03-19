@@ -14,3 +14,5 @@ fastapi_jwt_auth
 python-jose[cryptography]
 passlib[bcrypt]
 python-multipart
+# uvicorn>=0.15.0,<0.16.0
+# fastapi>=0.68.0,<0.69.0

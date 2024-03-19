@@ -18,17 +18,28 @@ class PythonChrisClient():
         raise Exception(f"No plugin found with matching search criteria {searchParams}")
 
     def getSwiftPath(self, searchParams:dict):
+        searchParams["limit"] = 100000
         files = self.cl.get_pacs_files(searchParams)
-        filePath = files['data'][0]['fname']
-        fileName = filePath.split('/')[-1]
-        dirPath = filePath.replace(fileName,'')
-        return dirPath
+        l_dir_path = []
+        for file in files['data']:
+            filePath = file['fname']
+            fileName = filePath.split('/')[-1]
+            dirPath = filePath.replace(fileName,'')
+            l_dir_path.append(dirPath)
+        return ','.join(l_dir_path)
         
     def getPACSdetails(self,searchParams:dict):
         response = self.cl.get_pacs_files(searchParams)
         if response['data']:
             return response['data'][0]
         raise Exception(f"No PACS details with matching search criteria {searchParams}")
+
+    def getPACSfilesCount(self,searchParams:dict):
+        response = self.cl.get_pacs_files(searchParams)
+        if response:
+            return response['total']
+        raise Exception(f"No PACS details with matching search criteria {searchParams}")
+
 
     def createFeed(self, plugin_id: str,params: dict):
         response = self.cl.create_plugin_instance(plugin_id,params)

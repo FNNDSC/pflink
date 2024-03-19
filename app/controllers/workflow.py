@@ -28,7 +28,7 @@ workflow_collection = database.get_collection("workflows_collection")
 test_collection = database.get_collection("tests_collection")
 
 logger = logging.getLogger('pflink-logger')
-d = {'workername': 'PFLINK', 'log_color': "\33[32m", 'key': "", 'pid':os.getpid()}
+d = {'workername': 'PFLINK', 'log_color': "\33[32m", 'key': ""}
 
 
 # DB methods

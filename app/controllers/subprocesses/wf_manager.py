@@ -8,7 +8,6 @@ import pprint
 import subprocess
 import time
 from logging.config import dictConfig
-from app.config import settings
 import requests
 import os
 
@@ -34,7 +33,7 @@ from app.models.workflow import (
 
 dictConfig(log.log_config)
 logger = logging.getLogger('pflink-logger')
-d = {'workername': 'WORKFLOW_MGR', 'key' : "",'log_color': "\33[33m", 'pid':os.getpid()}
+d = {'workername': 'WORKFLOW_MGR', 'key' : "",'log_color': "\33[33m"}
 
 parser = argparse.ArgumentParser(description='Process arguments')
 parser.add_argument('--data', type=str)
@@ -148,7 +147,7 @@ def analysis_retry(workflow: WorkflowDBSchema,db_key: str):
     Retry analysis on failures
     """
     # Reset workflow status if max service_retry is not reached
-    if workflow.service_retry < 5 and not workflow.response.status and workflow.response.workflow_state == State.ANALYZING:
+    if workflow.service_retry < 5 and not workflow.response.status and workflow.response.workflow_state == State.ANALYZING and workflow.feed_id_generated == workflow.response.feed_id:
         logger.warning(f"Retrying request.{5 - workflow.service_retry}/5 retries left.", extra=d)
         logger.warning(f"Setting feed requested status to False in the DB", extra=d)
         if workflow.feed_requested:
@@ -278,25 +277,26 @@ def do_cube_create_feed(request: WorkflowRequestSchema, cube_url: str, retries: 
     """
     Create a new feed in `CUBE` if not already present
     """
+    pacs_search_params = dict((k,v) for k,v in request.PACS_directive.__dict__.items())
     logger.debug(f"Creating Chris client with {cube_url, request.cube_user_info.username, request.cube_user_info.password}", extra=d)
     client = do_cube_create_user(cube_url, request.cube_user_info.username, request.cube_user_info.password)
     logger.debug(f"Created client details {client}", extra=d)
 
-    logger.debug(f"Fetching PACS details for {request.PACS_directive.__dict__}", extra=d)
+    logger.debug(f"Fetching PACS details for {pacs_search_params}", extra=d)
     pacs_details = {}
     try:
-        pacs_details = client.getPACSdetails(request.PACS_directive.__dict__)
+        pacs_details = client.getPACSdetails(pacs_search_params)
     except Exception as ex:
         logger.info(f"Error receiving PACS details: {ex}", extra=d)
         raise Exception(f"Error receiving PACS details: {ex}")
 
     feed_name = substitute_dicom_tags(request.workflow_info.feed_name, pacs_details)
     logger.info(f"Fetching data path..", extra=d)
-    data_path = client.getSwiftPath(pacs_details)
+    data_path = client.getSwiftPath(pacs_search_params)
     logger.debug(f"Received data path: {data_path}", extra=d)
     if retries > 0:
         feed_name = feed_name + f"-retry#{retries}"
-
+    feed_name = shorten(feed_name)
     # Get plugin Id
     plugin_search_params = {"name": "pl-dircopy"}
     plugin_id = client.getPluginId(plugin_search_params)
@@ -317,6 +317,14 @@ def do_cube_start_analysis(previous_id: str, request: WorkflowRequestSchema, cub
         __run_plugin_instance(previous_id, request, client)
     if request.workflow_info.pipeline_name:
         __run_pipeline_instance(previous_id,request, client)
+
+
+def shorten(s, width=100, placeholder='[...]'):
+    """
+    Validate a given feed name for size = 100 chars
+    if size exceeds, trim the name and add a suffix placeholder
+    """
+    return s[:width] if len(s) <= width else s[:width-len(placeholder)] + placeholder
 
 
 def __run_plugin_instance(previous_id: str, request: WorkflowRequestSchema, client: PythonChrisClient):

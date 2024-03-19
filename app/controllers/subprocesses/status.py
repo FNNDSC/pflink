@@ -49,6 +49,7 @@ def update_workflow_status(key: str, test: bool):
     """
     Update the status of a workflow object in the DB
     """
+    print(f"KEY:{key}")
     workflow = retrieve_workflow(key, test)
     # If the status of the workflow is currently being updated by another process
     # Do nothing and exit
@@ -195,6 +196,14 @@ def _get_feed_status(request: WorkflowRequestSchema, feed_id: str) -> dict:
     3) Serialize for information
     4) Return a suitable response
     """
+    pfdcm_url = retrieve_pfdcm_url(request.pfdcm_info.pfdcm_service)
+    cube_url = get_cube_url_from_pfdcm(pfdcm_url, request.pfdcm_info.cube_service)
+
+    # create a client using the username
+    cl = do_cube_create_user(cube_url, request.cube_user_info.username, request.cube_user_info.password)
+    register_count = cl.getPACSfilesCount(request.PACS_directive.__dict__)
+    logger.info(f"Registered files are: {register_count}", extra=d)
+
     if feed_id == "":
         return {}
     try:
@@ -283,13 +292,26 @@ def _parse_response(
         return status
     data = pfdcm_response['pypx']['data']
     study = pfdcm_response['pypx']['then']['00-status']['study']
+    file_count = 0
+    for l_series in pfdcm_response['pypx']['data']:
+        for series in l_series["series"]:
+            file_count += int(series["NumberOfSeriesRelatedInstances"]["value"])
+
+    logger.info(f"Total number of files in this request: {file_count}.", extra=d)
 
     if study:
-        images = study[0][data[0]['StudyInstanceUID']['value']][0]['images']
-        total_images = images["requested"]["count"]
-        total_retrieved = images["packed"]["count"]
-        total_pushed = images["pushed"]["count"]
-        total_registered = images["registered"]["count"]
+        total_images = file_count
+        total_retrieved = 0
+        total_pushed = 0
+        total_registered = 0
+        for l_series,sid in zip(study,data):
+            for series in l_series[sid['StudyInstanceUID']['value']]:
+                images = series['images']
+                #total_images += max(images["requested"]["count"],0)
+                total_retrieved += max(images["packed"]["count"],0)
+                total_pushed += max(images["pushed"]["count"],0)
+                total_registered += max(images["registered"]["count"],0)
+        print(total_images,total_pushed,total_retrieved,total_registered)
 
         if total_images > 0:
             total_ret_perc = round((total_retrieved / total_images) * 100)
