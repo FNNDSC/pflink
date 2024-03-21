@@ -121,7 +121,7 @@ async def post_workflow(
         duplicates = check_for_duplicates(fingerprint, test)
         if duplicates and not request.ignore_duplicate:
             response = WorkflowStatusResponseSchema()
-            response.message = "Duplicate request(s) already exist in the DB."
+            response.message = Error.feed_duplicate
             response.workflow_state = State.DUPLICATE_REQUEST
             response.duplicates = duplicates
             return response
@@ -151,7 +151,11 @@ def create_new_workflow(
     """Create a new workflow object and add it to the database"""
     creation_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     response = WorkflowStatusResponseSchema()
-    new_workflow = WorkflowDBSchema(key=key, fingerprint=fingerprint, creation_time=creation_time, request=request, response=response)
+    new_workflow = WorkflowDBSchema(key=key,
+                                    fingerprint=fingerprint,
+                                    creation_time=creation_time,
+                                    request=request,
+                                    response=response)
     workflow = add_workflow(new_workflow, test)
     pretty_response = pprint.pformat(workflow.response.__dict__)
     logger.info(f"New workflow record created.", extra=d)
@@ -169,8 +173,8 @@ def create_response_with_error(
     response.status = False
     try:
         response.error = Error[error_type]
-    except:
-        response.error = Error.undefined
+    except Exception as ex:
+        response.error = Error.undefined + f": {ex}"
     return response
 
 

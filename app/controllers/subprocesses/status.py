@@ -49,7 +49,6 @@ def update_workflow_status(key: str, test: bool):
     """
     Update the status of a workflow object in the DB
     """
-    print(f"KEY:{key}")
     workflow = retrieve_workflow(key, test)
     # If the status of the workflow is currently being updated by another process
     # Do nothing and exit
@@ -108,7 +107,7 @@ def is_status_subprocess_running(workflow: WorkflowDBSchema) -> bool:
     # get the number of status subprocess running in the background
     proc_count = get_process_count("app/controllers/subprocesses/status.py", args.data)
 
-    if not workflow.stale:
+    if not workflow.stale and not proc_count:
         return True
     return False
 
@@ -205,7 +204,9 @@ def _get_feed_status(request: WorkflowRequestSchema, feed_id: str) -> dict:
 
     # create a client using the username
     cl = do_cube_create_user(cube_url, request.cube_user_info.username, request.cube_user_info.password)
-    register_count = cl.getPACSfilesCount(request.PACS_directive.__dict__)
+    pacs_search_params = dict((k, v) for k, v in request.PACS_directive.__dict__.items())
+    pacs_search_params["pacs_identifier"] = request.pfdcm_info.PACS_service
+    register_count = cl.getPACSfilesCount(pacs_search_params)
     logger.info(f"Registered files are: {register_count}", extra=d)
 
     if feed_id == "":
@@ -219,7 +220,7 @@ def _get_feed_status(request: WorkflowRequestSchema, feed_id: str) -> dict:
 
         # substitute dicom values for dicom tags present in feed name
         requested_feed_name = request.workflow_info.feed_name
-        pacs_details = cl.getPACSdetails(request.PACS_directive.__dict__)
+        pacs_details = cl.getPACSdetails(pacs_search_params)
         feed_name = substitute_dicom_tags(requested_feed_name, pacs_details)
 
         # search for feed
@@ -232,6 +233,7 @@ def _get_feed_status(request: WorkflowRequestSchema, feed_id: str) -> dict:
             l_error = [d_instance['plugin_name'] for d_instance in l_inst_resp['data']
                        if d_instance['status']=='finishedWithError' or d_instance['status'] == 'cancelled']
             resp["errored_plugins"] = str(l_error)
+            resp["register_count"] = register_count
         return resp
     except Exception as ex:
         logger.error(f"{Error.cube.value} {str(ex)}", extra=d)
@@ -314,7 +316,7 @@ def _parse_response(
                 #total_images += max(images["requested"]["count"],0)
                 total_retrieved += max(images["packed"]["count"],0)
                 total_pushed += max(images["pushed"]["count"],0)
-                total_registered += max(images["registered"]["count"],0)
+                #total_registered += max(images["registered"]["count"],0)
         print(total_images,total_pushed,total_retrieved,total_registered)
 
         if total_images > 0:
@@ -341,7 +343,7 @@ def _parse_response(
         status.error = cube_response["error"]
         return status
 
-    if cube_response:
+    if cube_response.get('id'):
         status.workflow_state = State.ANALYZING
         status.feed_name = cube_response['name']
         status.feed_id = cube_response['id']

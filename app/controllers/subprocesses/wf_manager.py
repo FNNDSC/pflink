@@ -278,6 +278,7 @@ def do_cube_create_feed(request: WorkflowRequestSchema, cube_url: str, retries: 
     Create a new feed in `CUBE` if not already present
     """
     pacs_search_params = dict((k,v) for k,v in request.PACS_directive.__dict__.items())
+    pacs_search_params["pacs_identifier"] = request.pfdcm_info.PACS_service
     logger.debug(f"Creating Chris client with {cube_url, request.cube_user_info.username, request.cube_user_info.password}", extra=d)
     client = do_cube_create_user(cube_url, request.cube_user_info.username, request.cube_user_info.password)
     logger.debug(f"Created client details {client}", extra=d)
@@ -297,11 +298,13 @@ def do_cube_create_feed(request: WorkflowRequestSchema, cube_url: str, retries: 
     if retries > 0:
         feed_name = feed_name + f"-retry#{retries}"
     feed_name = shorten(feed_name)
+
     # Get plugin Id
     plugin_search_params = {"name": "pl-dircopy"}
     plugin_id = client.getPluginId(plugin_search_params)
 
     logger.info(f"Creating a new feed with feed name {feed_name}", extra=d)
+
     # create a feed
     feed_params = {'title': feed_name, 'dir': data_path}
     feed_response = client.createFeed(plugin_id, feed_params)

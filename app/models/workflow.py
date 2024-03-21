@@ -37,6 +37,7 @@ class Error(str, Enum):
     required_field = "Empty strings not allowed."
     undefined = "Please enter a valid error type."
     feed_deleted = "Feed deleted from CUBE. Please change the feed name and re-submit the request."
+    feed_duplicate = "Duplicate request(s) already exist in the DB."
 
 
 class PFDCMInfoSchema(BaseModel):

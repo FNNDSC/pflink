@@ -20,12 +20,12 @@ class PythonChrisClient():
     def getSwiftPath(self, searchParams:dict):
         searchParams["limit"] = 100000
         files = self.cl.get_pacs_files(searchParams)
-        l_dir_path = []
+        l_dir_path = set()
         for file in files['data']:
             filePath = file['fname']
             fileName = filePath.split('/')[-1]
             dirPath = filePath.replace(fileName,'')
-            l_dir_path.append(dirPath)
+            l_dir_path.add(dirPath)
         return ','.join(l_dir_path)
         
     def getPACSdetails(self,searchParams:dict):
