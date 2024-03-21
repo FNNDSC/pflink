@@ -35,7 +35,7 @@ from app.models.workflow import (
 
 dictConfig(log.log_config)
 logger = logging.getLogger('pflink-logger')
-d = {'workername': 'STATUS_MGR', 'log_color': "\33[36m", 'key': "", 'pid':os.getpid()}
+d = {'workername': 'STATUS_MGR', 'log_color': "\33[36m", 'key': ""}
 
 
 parser = argparse.ArgumentParser(description='Process arguments passed through CLI')
@@ -100,7 +100,12 @@ def __progress_percent(curr_state: int, total_states: int, state_progress: int) 
     return  progress_percent
 
 
-def is_status_subprocess_running(workflow: WorkflowDBSchema):
+def is_status_subprocess_running(workflow: WorkflowDBSchema) -> bool:
+    """
+    Determine if a status manager subprocess is currently running in the background.
+    """
+
+    # get the number of status subprocess running in the background
     proc_count = get_process_count("app/controllers/subprocesses/status.py", args.data)
 
     if not workflow.stale:
@@ -179,7 +184,6 @@ def _get_pfdcm_status(request: WorkflowRequestSchema):
         elapsed_time = et - st
         logger.debug(f'Execution time to get status:{elapsed_time} seconds', extra=d)
         d_response = json.loads(response.text)
-        #logger.debug(f"Response from pfdcm: {d_response}")
         d_response["service_name"] = request.pfdcm_info.pfdcm_service
         return d_response
     except Exception as ex:
@@ -205,7 +209,7 @@ def _get_feed_status(request: WorkflowRequestSchema, feed_id: str) -> dict:
     logger.info(f"Registered files are: {register_count}", extra=d)
 
     if feed_id == "":
-        return {}
+        return {"register_count": register_count}
     try:
         pfdcm_url = retrieve_pfdcm_url(request.pfdcm_info.pfdcm_service)
         cube_url = get_cube_url_from_pfdcm(pfdcm_url, request.pfdcm_info.cube_service)
@@ -303,7 +307,7 @@ def _parse_response(
         total_images = file_count
         total_retrieved = 0
         total_pushed = 0
-        total_registered = 0
+        total_registered = cube_response["register_count"]
         for l_series,sid in zip(study,data):
             for series in l_series[sid['StudyInstanceUID']['value']]:
                 images = series['images']
