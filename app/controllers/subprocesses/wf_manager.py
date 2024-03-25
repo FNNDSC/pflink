@@ -9,7 +9,6 @@ import subprocess
 import time
 from logging.config import dictConfig
 import requests
-import os
 
 from app import log
 from app.controllers.subprocesses.python_chris_client import PythonChrisClient
@@ -81,19 +80,6 @@ def manage_workflow(db_key: str, test: bool):
                 case State.INITIALIZING:
                     logger.info("Requesting PACS retrieve.", extra=d)
                     do_pfdcm_retrieve(request, pfdcm_url)
-
-                case State.RETRIEVING:
-                    logger.info(f"Retrieving progress is {workflow.response.state_progress} complete.", extra=d)
-                    if workflow.response.state_progress == "100%":
-                            logger.info("Requesting PACS push.", extra=d)
-                            do_pfdcm_push(request, pfdcm_url)
-
-                case State.PUSHING:
-                    logger.info(f"Pushing progress is {workflow.response.state_progress} complete.", extra=d)
-
-                    if workflow.response.state_progress == "100%":
-                        logger.info("Requesting PACS register.", extra=d)
-                        do_pfdcm_register(request, pfdcm_url)
 
                 case State.REGISTERING:
                     logger.info(f"Registering progress is {workflow.response.state_progress} complete.", extra=d)

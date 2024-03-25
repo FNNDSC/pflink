@@ -4,7 +4,6 @@ This module updates the state of a workflow in the DB
 import argparse
 import json
 import logging
-import os
 import pprint
 import random
 import time
@@ -77,7 +76,7 @@ def update_workflow_progress(response: WorkflowStatusResponseSchema):
     Update the overall workflow progress of a workflow from its current
     workflow state.
     """
-    MAX_STATE = 7
+    MAX_STATE = 4
     index = 0
     for elem in State:
         if response.workflow_state == elem:
@@ -93,7 +92,6 @@ def __progress_percent(curr_state: int, total_states: int, state_progress: int) 
     """
     Return the percentage of states completed when the total no. of states and
     current state is given.
-
     """
     progress_percent = round((curr_state/total_states) * 100 + (state_progress/total_states))
     return  progress_percent
@@ -228,12 +226,16 @@ def _get_feed_status(request: WorkflowRequestSchema, feed_id: str) -> dict:
         resp = cl.getFeed({"id": feed_id})
         pretty_response = pprint.pformat(resp)
         logger.debug(f"Response from CUBE : {pretty_response}", extra=d)
+        resp["register_count"] = register_count
+
+        # if cancelled or errored jobs, recursively figure out the list of
+        # errored jobs
         if resp.get("errored_jobs") or resp.get("cancelled_jobs"):
             l_inst_resp = cl.getPluginInstances({"feed_id": feed_id})
             l_error = [d_instance['plugin_name'] for d_instance in l_inst_resp['data']
                        if d_instance['status']=='finishedWithError' or d_instance['status'] == 'cancelled']
             resp["errored_plugins"] = str(l_error)
-            resp["register_count"] = register_count
+
         return resp
     except Exception as ex:
         logger.error(f"{Error.cube.value} {str(ex)}", extra=d)
@@ -296,7 +298,7 @@ def _parse_response(
         status.error = Error.PACS.value + f" {pfdcm_response['message']} for pfdcm_service" \
                                           f" {pfdcm_response['service_name']}"
         return status
-    data = pfdcm_response['pypx']['data']
+
     study = pfdcm_response['pypx']['then']['00-status']['study']
     file_count = 0
     for l_series in pfdcm_response['pypx']['data']:
@@ -307,32 +309,10 @@ def _parse_response(
 
     if study:
         total_images = file_count
-        total_retrieved = 0
-        total_pushed = 0
         total_registered = cube_response["register_count"]
-        for l_series,sid in zip(study,data):
-            for series in l_series[sid['StudyInstanceUID']['value']]:
-                images = series['images']
-                #total_images += max(images["requested"]["count"],0)
-                total_retrieved += max(images["packed"]["count"],0)
-                total_pushed += max(images["pushed"]["count"],0)
-                #total_registered += max(images["registered"]["count"],0)
-        print(total_images,total_pushed,total_retrieved,total_registered)
-
-        if total_images > 0:
-            total_ret_perc = round((total_retrieved / total_images) * 100)
-            total_push_perc = round((total_pushed / total_images) * 100)
-            total_reg_perc = round((total_registered / total_images) * 100)
-
-            if total_ret_perc > 0:
-                status.workflow_state = State.RETRIEVING
-                status.state_progress = str(total_ret_perc) + "%"
-            if total_push_perc > 0:
-                status.workflow_state = State.PUSHING
-                status.state_progress = str(total_push_perc) + "%"
-            if total_reg_perc > 0:
-                status.workflow_state = State.REGISTERING
-                status.state_progress = str(total_reg_perc) + "%"
+        total_reg_perc = round((total_registered / total_images) * 100)
+        status.workflow_state = State.REGISTERING
+        status.state_progress = str(total_reg_perc) + "%"
     else:
         status.error = Error.study.value
         status.status = False
@@ -360,12 +340,6 @@ def _parse_response(
                 status.status = False
                 return status
 
-    # else:
-    #     if status.feed_name:
-    #         status.workflow_state = State.FEED_DELETED
-    #         status.status = False
-    #         status.error = Error.feed_deleted.value
-    #         status.state_progress = "0%"
     return status
 
 
