@@ -20,6 +20,7 @@ def sample_workflow_entry():
     return {
         "_id": "e3bcafc90fd53d82bf409f4c7f3f7a73",
         "fingerprint": "hashedtext",
+        "creation_time": "2024-03-25 22:34:10",
         "request": {
             "pfdcm_info": {
                 "pfdcm_service": "PFDCM",
@@ -70,10 +71,15 @@ def sample_workflow_entry():
             "feed_id": "",
             "feed_name": "",
             "message": "",
-            "error": ""
+            "duplicates": None,
+            "error": "",
+            "workflow_progress_perc": 0
         },
+        "service_retry": 0,
         "stale": True,
-        "started": False
+        "started": False,
+        "feed_requested": False,
+        "feed_id_generated": ""
     }
 
 
