@@ -37,6 +37,16 @@ class Error(str, Enum):
     feed_duplicate = "Duplicate request(s) already exist in the DB."
 
 
+class Warnings(str, Enum):
+    """This Enum represents all the possible warnings in a workflow"""
+    max_manager_retry = ""
+    max_analysis_retry = "All retries exhausted. Giving up on this workflow request."
+    unable_to_restart = ""
+
+
+
+
+
 class PFDCMInfoSchema(BaseModel):
     """This model contains service details of a pfdcm instance"""
     pfdcm_service: str = Field(...)

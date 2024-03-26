@@ -16,7 +16,7 @@ from app.models.workflow import (
     WorkflowSearchSchema,
 )
 from app.controllers import search
-from app.controllers.subprocesses.subprocess_helper import get_process_count
+from app.controllers.subprocesses.subprocess_helper import Subprocess
 from app.controllers.subprocesses import utils
 from app.config import settings
 
@@ -155,6 +155,8 @@ def create_new_workflow(
                                     creation_time=creation_time,
                                     request=request,
                                     response=response)
+
+    # add new workflow record to DB
     workflow = add_workflow(new_workflow, test)
     pretty_response = pprint.pformat(workflow.response.__dict__)
     logger.info(f"New workflow record created.", extra=d)
@@ -181,7 +183,8 @@ def manage_workflow(str_data: str, mode: str):
     """
     Manage a workflow request in a separate subprocess
     """
-    proc_count = get_process_count("app/controllers/subprocesses/wf_manager.py", str_data)
+    workflow_mgr_subprocess = Subprocess("app/controllers/subprocesses/wf_manager.py", str_data)
+    proc_count = workflow_mgr_subprocess.get_process_count()
     logger.debug(f"{proc_count} subprocess of workflow manager running on the system.", extra=d)
     if proc_count > 0:
         logger.info(f"No new manager subprocess started.", extra=d)
@@ -200,7 +203,8 @@ def update_workflow_status(str_data: str, mode: str):
     """
     Update the current status of a workflow request in a separate process
     """
-    proc_count = get_process_count("app/controllers/subprocesses/status.py", str_data)
+    status_mgr_subprocess = Subprocess("app/controllers/subprocesses/status.py", str_data)
+    proc_count = status_mgr_subprocess.get_process_count()
     logger.debug(f"{proc_count} subprocess of status manager running on the system.", extra=d)
     if proc_count > 0:
         logger.info(f"No new status subprocess started.", extra=d)
