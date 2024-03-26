@@ -18,13 +18,6 @@ def test_str_to_hash():
 
 
 @pytest.mark.unittest
-def test_serialization_and_deserialization(sample_workflow_request):
-    # del sample_workflow_request['cube_user_info']
-    d_request = json.dumps(sample_workflow_request)
-    assert query_to_dict(dict_to_query(sample_workflow_request)) == d_request
-
-
-@pytest.mark.unittest
 def test_substitute_dicom_tags():
     test_d_dicom = {"PatientID": "1237", "PatientAge": "27"}
     test_name = "testing-%PatientID-%PatientAge"

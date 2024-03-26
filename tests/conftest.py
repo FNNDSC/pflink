@@ -1,6 +1,7 @@
 import pytest
 from starlette.testclient import TestClient
 from app.controllers.auth import create_access_token
+from app.models.workflow import State
 from app.main import app
 
 
@@ -66,7 +67,7 @@ def sample_workflow_entry():
         },
         "response": {
             "status": True,
-            "workflow_state": "initializing workflow",
+            "workflow_state":  State.INITIALIZING,
             "state_progress": "0%",
             "feed_id": "",
             "feed_name": "",

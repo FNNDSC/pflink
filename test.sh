@@ -1,2 +1,2 @@
 #!/bin/bash
-docker-compose exec pflink pytest .
+docker-compose exec pflink pytest  -vv .

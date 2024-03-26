@@ -5,6 +5,7 @@ import pprint
 import subprocess
 import time
 from logging.config import dictConfig
+
 import requests
 
 from app import log
@@ -170,7 +171,7 @@ class WorkflowManager:
             workflow.response.state_progress = "100%"
 
             update_workflow(db_key, workflow)
-            if workflow.service_retry >= 5: logger.warning(Warnings.max_analysis_retry, extra=d)
+            if workflow.service_retry >= 5: logger.warning(Warnings.max_analysis_retry.value, extra=d)
             workflow = retrieve_workflow(db_key)
         return workflow
 
@@ -261,29 +262,6 @@ class WorkflowManager:
         retrieve_args = {}
         self.pfdcm_do("retrieve", retrieve_args, dicom, pfdcm_url)
 
-    def do_pfdcm_push(self, request: WorkflowRequestSchema, pfdcm_url: str):
-        """
-        Push PACS to a Swift store using `pfdcm`
-        """
-        push_args = {
-            'db': request.pfdcm_info.db_log_path,
-            'swift': request.pfdcm_info.swift_service,
-            'swiftServicesPACS': request.pfdcm_info.PACS_service,
-            'swiftPackEachDICOM': True
-        }
-        self.pfdcm_do("push", push_args, request, pfdcm_url)
-
-    def do_pfdcm_register(self, request: WorkflowRequestSchema, pfdcm_url: str):
-        """
-        Register PACS files to a `CUBE`
-        """
-        register_args = {
-            "db": request.pfdcm_info.db_log_path,
-            "CUBE": request.pfdcm_info.cube_service,
-            "swiftServicesPACS": request.pfdcm_info.PACS_service,
-            "parseAllFilesWithSubStr": request.pfdcm_info.dicom_file_extension
-        }
-        self.pfdcm_do("register", register_args, request, pfdcm_url)
 
     def do_cube_create_feed(self, request: WorkflowRequestSchema, cube_url: str, retries: int) -> dict:
         """
