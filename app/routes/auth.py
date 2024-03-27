@@ -14,13 +14,13 @@ security = HTTPBasic()
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     if auth.user_name != form_data.username:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username"
         )
 
     if auth.password != form_data.password:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect password"
         )
 

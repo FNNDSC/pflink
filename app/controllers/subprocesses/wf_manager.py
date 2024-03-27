@@ -48,12 +48,11 @@ class WorkflowManager:
     """
     This module manages different states of a workflow by constantly checking the status of a workflow in the DB.
     """
-    def __init__(self):
+    def __init__(self,args):
         """
         set some parameters here
         """
-        parser = define_parameters()
-        self.args = parser.parse_args()
+        self.args = args
 
     def run(self):
         d_data = json.loads(self.args.data)
@@ -375,7 +374,9 @@ if __name__ == "__main__":
     """
     Main entry point of this script
     """
-    workflow_manager = WorkflowManager()
+    parser = define_parameters()
+    args = parser.parse_args()
+    workflow_manager = WorkflowManager(args)
     workflow_manager.run()
 
 

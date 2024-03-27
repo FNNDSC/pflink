@@ -8,7 +8,7 @@ import requests
 import json
 
 
-def get_plugins(pfdcm: str, cube_name: str):
+async def get_plugins(pfdcm: str, cube_name: str):
     try:
         client = get_cube_client(pfdcm, cube_name)
         resp = client.getPlugins()
@@ -18,7 +18,7 @@ def get_plugins(pfdcm: str, cube_name: str):
             plugins.append(plugin)
         return plugins
     except Exception as ex:
-        return {"error": str(ex)}
+        raise Exception(str(ex))
 
 
 def get_pipelines(pfdcm: str, cube_name: str):
@@ -30,7 +30,7 @@ def get_pipelines(pfdcm: str, cube_name: str):
             pipelines.append(item["name"])
         return pipelines
     except Exception as ex:
-        return {"error": str(ex)}
+        raise Exception(str(ex))
 
 
 def get_cube_client(pfdcm: str, cube_name: str):

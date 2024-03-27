@@ -7,7 +7,10 @@ from app.controllers.subprocesses.utils import (
     substitute_dicom_tags,
     workflow_retrieve_helper,
     workflow_add_helper,
+    do_cube_create_user,
 )
+import requests
+from app.controllers.subprocesses.python_chris_client import PythonChrisClient
 
 
 @pytest.mark.unittest
@@ -28,4 +31,16 @@ def test_substitute_dicom_tags():
 @pytest.mark.unittest
 def test_workflow_add_and_retrieve_helper(sample_workflow_entry):
     assert workflow_add_helper(workflow_retrieve_helper(sample_workflow_entry)) == sample_workflow_entry
+
+
+@pytest.mark.unittest
+def test_do_cube_create_user(monkeypatch):
+    test_username: str = "cube"
+    test_password: str = "password"
+    test_url: str = "http://localhost:8000/api/v1"
+    def mock_create_user(url,json,headers):
+        return {}
+    monkeypatch.setattr(requests,"post", mock_create_user)
+    response = do_cube_create_user(test_url, test_username, test_password)
+    assert type(response) == type(PythonChrisClient(test_url, test_username, test_password))
 

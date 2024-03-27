@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import argparse
 import json
 import logging
@@ -47,12 +48,11 @@ class StatusManager:
     """
     This module updates the state of a workflow in the DB
     """
-    def __init__(self):
+    def __init__(self, args):
         """
         Set something here
         """
-        parser = define_parameters()
-        self.args = parser.parse_args()
+        self.args = args
 
 
     def run(self):
@@ -142,13 +142,13 @@ class StatusManager:
             3) Serialize both the results to a response schema
             4) Return the response
         """
-        pfdcm_resp = self._get_pfdcm_status(request)
+        pfdcm_resp = self.get_pfdcm_status(request)
         cube_resp = self._get_feed_status(request, feed_id)
         status = self._parse_response(pfdcm_resp, cube_resp, status)
         return status
 
 
-    def _get_pfdcm_status(self, request: WorkflowRequestSchema):
+    def get_pfdcm_status(self, request: WorkflowRequestSchema):
         """
         Get the status of PACS from `pfdcm`
         by running the synchronous API of `pfdcm`
@@ -404,5 +404,7 @@ if __name__ == "__main__":
     """
     Main entry point
     """
-    status_manager = StatusManager()
+    parser = define_parameters()
+    args = parser.parse_args()
+    status_manager = StatusManager(args)
     status_manager.run()
