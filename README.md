@@ -45,9 +45,23 @@ The setup script provides the following support:
 2) Add a new `PFDCM` service to `MongoDB`
 
 ### to use:
-```bash
+```commandline
 cd pflink
 ./setup.sh --help
 ```
 
 ## `resetWorkflow.sh`
+Sometimes, we need to find a specific workflow request and restart using `pflink`. This repo 
+contains a script ``resetWorkflow`` to do so. The script does the following tasks:
+1) Authenticate to a ``pflink`` instance
+2) Find a list of "keys" pointing to workflow records that match the user search values
+3) Display each workflow record and provide the following options:
+   1) delete the record and re-submit
+   2) continue to the next record
+   3) exit
+
+### to use:
+```commandline
+cd pflink
+./resetWorkflow.sh --help
+```
