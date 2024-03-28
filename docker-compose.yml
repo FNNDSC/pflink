@@ -20,7 +20,7 @@ services:
       pflink:
 
   pflink-db:
-    image: mongo:4.4.6
+    image: mongo
     environment:
       MONGO_INITDB_ROOT_USERNAME: admin
       MONGO_INITDB_ROOT_PASSWORD: admin
@@ -30,36 +30,33 @@ services:
       - type: volume
         source: MONGO_DATA
         target: /data/db
-      - type: volume
-        source: MONGO_CONFIG
-        target: /data/configdb
-
     restart: unless-stopped
     networks:
       pflink:
-      
+
   mongo-express:
-    image: mongo-express:latest
-    container_name: pfmongo-db-ui
+    image: mongo-express
     environment:
-      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
-      ME_CONFIG_MONGODB_ADMINPASSWORD: admin
-      ME_CONFIG_MONGODB_SERVER: mongodb
-      ME_CONFIG_MONGODB_PORT: "27017"
-    ports:
-      - "8081:8081"
-    networks:
-      pflink:
-      local:
+      - ME_CONFIG_MONGODB_SERVER=pflink-db
+      - ME_CONFIG_MONGODB_PORT=27017
+      - ME_CONFIG_MONGODB_ENABLE_ADMIN=true
+      - ME_CONFIG_MONGODB_AUTH_DATABASE=admin
+      - ME_CONFIG_MONGODB_AUTH_USERNAME=admin
+      - ME_CONFIG_MONGODB_AUTH_PASSWORD=admin
+      - ME_CONFIG_BASICAUTH_USERNAME=admin
+      - ME_CONFIG_BASICAUTH_PASSWORD=admin
     depends_on:
       - pflink-db
+    ports:
+      - "8888:8081"
     restart: unless-stopped
-    
+    networks:
+      local:
+      pflink:
+
 networks:
   local:
   pflink:
   
 volumes:
   MONGO_DATA:
-  MONGO_CONFIG:
-  

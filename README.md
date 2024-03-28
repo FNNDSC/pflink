@@ -1,9 +1,9 @@
 # pflink
 [![Build](https://github.com/FNNDSC/pflink/actions/workflows/build.yml/badge.svg)](https://github.com/FNNDSC/pflink/actions/workflows/build.yml)
 
-A Python-FastAPI application to interact with CUBE and pfdcm.
+A Python-FastAPI application to create and manage workflows using `PFDCM` & `CUBE` .
 
-User can Query/Retrieve/Push/Register dicoms and additionally create new feed, add new node or pipeline on the registered dicoms in CUBE using `pflink`.
+User can register DICOMs to `CUBE`and additionally create new feed, add new plugin or pipeline  in CUBE .
 
 ## Quick Start
 
@@ -36,3 +36,18 @@ cd pflink
 cd pflink
 ./unmake.sh
 ```
+
+# Addition support scripts
+## `setup.sh`
+After starting new instances of `pflink` & `mongo` locally, we can a `setup` script available in the repo.
+The setup script provides the following support:
+1) Authentication (authenticate into any running instance of ``pflink``)
+2) Add a new `PFDCM` service to `MongoDB`
+
+### to use:
+```bash
+cd pflink
+./setup.sh --help
+```
+
+## `resetWorkflow.sh`

@@ -12,10 +12,7 @@ str_description = """
 class State(str, Enum):
     """This Enum represents all the possible states of a workflow"""
     INITIALIZING = "initializing workflow"
-    RETRIEVING = "retrieving from PACS"
-    PUSHING = "pushing to swift"
     REGISTERING = "registering to CUBE"
-    FEED_CREATED = "feed created"
     ANALYZING = "analyzing study"
     COMPLETED = "completed"
     FEED_DELETED = "feed deleted from CUBE"
@@ -38,6 +35,16 @@ class Error(str, Enum):
     undefined = "Please enter a valid error type."
     feed_deleted = "Feed deleted from CUBE. Please change the feed name and re-submit the request."
     feed_duplicate = "Duplicate request(s) already exist in the DB."
+
+
+class Warnings(str, Enum):
+    """This Enum represents all the possible warnings in a workflow"""
+    max_manager_retry = ""
+    max_analysis_retry = "All retries exhausted. Giving up on this workflow request."
+    unable_to_restart = ""
+
+
+
 
 
 class PFDCMInfoSchema(BaseModel):

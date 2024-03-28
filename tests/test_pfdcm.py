@@ -128,11 +128,11 @@ def test_get_pfdcm_swift_list(test_app, monkeypatch, sample_list_response, auth_
     async def mock_swift_list(name):
         return sample_list_response
 
-    monkeypatch.setattr(pfdcm, "swift_list", mock_swift_list)
+    monkeypatch.setattr(pfdcm, "storage_list", mock_swift_list)
     headers = {
         'Authorization': f'Bearer {auth_token}'
     }
-    response = test_app.get("/api/v1/pfdcm/something/swift/list", headers=headers)
+    response = test_app.get("/api/v1/pfdcm/something/storage/list", headers=headers)
     assert response.status_code == 200
     assert response.json() == sample_list_response
 
