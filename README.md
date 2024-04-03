@@ -23,6 +23,7 @@ cd pflink
 
 Go to http://localhost:8050/docs for API usage
 
+
 ## Testing
 
 ```bash
@@ -37,7 +38,49 @@ cd pflink
 ./unmake.sh
 ```
 
-# Addition support scripts
+# Examples
+The `POST` API endpoint to create a new workflow or to get the status of an existing workflow is (`/api/v1/workflow/`)
+### sample workflow request
+```commandline
+{
+  "ignore_duplicate": true,
+  "pfdcm_info": {
+    "pfdcm_service": "PFDCM",
+    "PACS_service": "orthanc"
+  },
+  "PACS_directive": {
+    "StudyInstanceUID": "12365548",
+    "SeriesInstanceUID": "66498598"
+  },
+  "workflow_info": {
+    "feed_name": "test-%SeriesInstanceUID",
+    "plugin_name": "pl-simpledsapp",
+    "plugin_version": "2.1.0",
+    "plugin_params": "--args ARGS"
+  },
+  "cube_user_info": {
+    "username": "chris",
+    "password": "chris1234"
+  }
+}
+```
+
+### sample workflow response
+```commandline
+{
+  "status": true,
+  "workflow_state": "initializing workflow",
+  "state_progress": "0%",
+  "feed_id": "",
+  "feed_name": "",
+  "message": "",
+  "duplicates": null,
+  "error": "",
+  "workflow_progress_perc": 0
+}
+```
+
+# Additional support scripts
 ## `setup.sh`
 After starting new instances of `pflink` & `mongo` locally, we can a `setup` script available in the repo.
 The setup script provides the following support:
