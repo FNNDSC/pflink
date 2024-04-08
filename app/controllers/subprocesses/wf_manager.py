@@ -5,7 +5,7 @@ import pprint
 import subprocess
 import time
 from logging.config import dictConfig
-
+from typing import Final
 import requests
 
 from app import log
@@ -59,6 +59,51 @@ class WorkflowManager:
         key = dict_to_hash(d_data)
         d['key'] = key
         self.manage_workflow(key, self.args.test)
+
+    def manage_workflow_new(self, db_key: str, test: bool):
+        """
+        Method to manage a workflow.
+        1) Get the current DB record.
+        2) Schedule or wait for a task
+        3) Run a status update subprocess
+        4) Sleep for N seconds
+        5) Go to step 1
+        """
+        SLEEP_TIME: Final[int] = 10
+        MAX_ITER: Final[int] = 50
+
+        workflow = retrieve_workflow(db_key, test)
+        while True and MAX_ITER > 0:
+            match workflow.response.workflow_state:
+                # request a retrieve
+                case State.INITIALIZING:
+                    pass
+                # create an analysis
+                case State.REGISTERING:
+                    pass
+                # check on analysis and retry if needs be
+                case State.ANALYZING:
+                    pass
+                # do nothing and exit
+                case State.COMPLETED:
+                    return
+            # request for status update, sleep, and get the latest from DB
+            workflow = self.update_and_wait(workflow.request,SLEEP_TIME,db_key,test)
+
+
+    def update_and_wait(self,
+                        request: WorkflowRequestSchema,
+                        sleep: int,
+                        db_key: str,
+                        test: bool) -> WorkflowDBSchema:
+        """
+
+        """
+        self.update_status(request)
+        time.sleep(sleep)
+        workflow = retrieve_workflow(db_key, test)
+        return workflow
+
 
     def manage_workflow(self, db_key: str, test: bool):
         """
