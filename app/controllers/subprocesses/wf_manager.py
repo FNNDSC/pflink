@@ -7,7 +7,7 @@ import time
 from logging.config import dictConfig
 from typing import Final
 import requests
-
+from typing import List
 from app import log
 from app.controllers.subprocesses.python_chris_client import PythonChrisClient
 from app.controllers.subprocesses.subprocess_helper import Subprocess
@@ -44,15 +44,25 @@ def define_parameters():
     parser.add_argument('--test', default=False, action='store_true')
     return parser
 
+class WorkflowError(Exception):
+    def __init__(self, message, errors):
+
+        # Call the base class constructor with the parameters it needs
+        super(WorkflowError, self).__init__(message)
+
+        # Now for your custom code...
+        self.errors = errors
+
 class WorkflowManager:
     """
     This module manages different states of a workflow by constantly checking the status of a workflow in the DB.
     """
-    def __init__(self,args):
+    def __init__(self, args):
         """
         set some parameters here
         """
         self.args = args
+        self.__client = None
 
     def run(self):
         d_data = json.loads(self.args.data)
@@ -83,25 +93,26 @@ class WorkflowManager:
         request = workflow.request
         pfdcm_url = retrieve_pfdcm_url(request.pfdcm_info.pfdcm_service)
         cube_url = get_cube_url_from_pfdcm(pfdcm_url, request.pfdcm_info.cube_service)
+        self.__client = self.create_client(cube_url, request.cube_user_info.username, request.cube_user_info.password)
 
         while True and MAX_ITER > 0:
             match workflow.response.workflow_state:
                 # request a retrieve
                 case State.INITIALIZING:
-                    pass
+                    self.register_pacsfiles(pfdcm_url, request)
                 # create an analysis
                 case State.REGISTERING:
-                    pass
+                    self.create_analysis()
                 # check on analysis and retry if needs be
                 case State.ANALYZING:
-                    pass
+                    self.analysis_retry(workflow, db_key)
                 # do nothing and exit
                 case State.COMPLETED:
                     return
             # request for status update, sleep, and get the latest from DB
             workflow = self.update_and_wait(workflow.request, SLEEP_TIME, db_key, test)
 
-    def create_analysis(self):
+    def create_analysis(self, request: WorkflowRequestSchema):
         """
         A method to create a new analysis in a CUBE instance. This is a multistep process,
         and requires multiple calls to CUBE's API using a python-chris client.
@@ -113,38 +124,126 @@ class WorkflowManager:
             5) Search for required plugin or pipeline inside CUBE
             6) Create a new instance of the plugin or pipeline with the previous `dircopy` instance
         """
-        pass
+        try:
+            dircopy_id = self.get_plugin_id('pl-dircopy')
+            data_path = self.get_data_path(request)
+            feed_name = ""
+            prev_id, feed_id = self.create_new_feed(feed_name, data_path, dircopy_id)
+        except WorkflowError as er:
+            logger.error(er, extra=d)
 
-    def create_client(self):
+    def create_client(self, cube_url: str, username: str, password: str) -> PythonChrisClient:
         """
         Method to create a ChRIS client using username, password and URL to a CUBE instance
         """
-        pass
+        logger.info("Creating new chris client", extra=d)
+        try:
+            client = do_cube_create_user(cube_url, username, password)
+            return client
+        except WorkflowError as ex:
+            logger.error(ex, extra=d)
 
-    def get_plugin_id(self):
+    def register_pacsfiles(self, pfdcm_url: str, request: WorkflowRequestSchema):
+        """
+        This method uses the async API endpoint of `pfdcm` to send a single 'retrieve' request that in
+        turn uses `oxidicom` to push and register PACS files to a CUBE instance
+        """
+        pfdcm_dicom_api = f'{pfdcm_url}/PACS/thread/pypx/'
+        headers = {'Content-Type': 'application/json', 'accept': 'application/json'}
+        body = {
+            "PACSservice": {
+                "value": request.pfdcm_info.PACS_service
+            },
+            "listenerService": {
+                "value": "default"
+            },
+            "PACSdirective": {
+                "AccessionNumber": request.PACS_directive.AccessionNumber,
+                "PatientID": request.PACS_directive.PatientID,
+                "PatientName": request.PACS_directive.PatientName,
+                "PatientBirthDate": request.PACS_directive.PatientBirthDate,
+                "PatientAge": request.PACS_directive.PatientAge,
+                "PatientSex": request.PACS_directive.PatientSex,
+                "StudyDate": request.PACS_directive.StudyDate,
+                "StudyDescription": request.PACS_directive.StudyDescription,
+                "StudyInstanceUID": request.PACS_directive.StudyInstanceUID,
+                "Modality": request.PACS_directive.Modality,
+                "ModalitiesInStudy": request.PACS_directive.ModalitiesInStudy,
+                "PerformedStationAETitle": request.PACS_directive.PerformedStationAETitle,
+                "NumberOfSeriesRelatedInstances": request.PACS_directive.NumberOfSeriesRelatedInstances,
+                "InstanceNumber": request.PACS_directive.InstanceNumber,
+                "SeriesDate": request.PACS_directive.SeriesDate,
+                "SeriesDescription": request.PACS_directive.SeriesDescription,
+                "SeriesInstanceUID": request.PACS_directive.SeriesInstanceUID,
+                "ProtocolName": request.PACS_directive.ProtocolName,
+                "AcquisitionProtocolDescription": request.PACS_directive.AcquisitionProtocolDescription,
+                "AcquisitionProtocolName": request.PACS_directive.AcquisitionProtocolName,
+                "withFeedBack": True,
+                "then": "retrieve",
+                "thenArgs": '',
+                "dblogbasepath": '/home/dicom/log',
+                "json_response": False
+            }
+        }
+        try:
+            response = requests.post(pfdcm_dicom_api, json=body, headers=headers)
+            return response
+        except WorkflowError as er:
+            logger.error(er, extra=d)
+
+    def get_plugin_id(self, name: str, version: str = "") -> str:
         """
         Method to search for a particular plugin with its version and return its ID
         """
-        pass
+        plugin_search_params = {"name": name, "version": version}
+        logger.info(f"Searching plugin {name}:{version} in CUBE")
+        try:
+            plugin_id: str = self.__client.getPluginId(plugin_search_params)
+            return plugin_id
+        except WorkflowError as ex:
+            logger.error(ex, extra=d)
 
-    def get_data_path(self):
+    def get_data_path(self, request: WorkflowRequestSchema) -> str:
         """
         Method to get a list of data path from CUBE containing all the files that match the given PACS
         details
         """
-        pass
+        pacs_search_params = dict((k, v) for k, v in request.PACS_directive.__dict__.items())
+        pacs_search_params["pacs_identifier"] = request.pfdcm_info.PACS_service  # specify "PACS identifier" for CUBE
+        try:
+            data_path = self.__client.getSwiftPath(pacs_search_params)
+            return data_path
+        except WorkflowError as er:
+            logger.error(er, extra=d)
 
-    def get_pipeline_id(self):
-        """
-        Method to search for a particular pipeline and return its ID
-        """
-        pass
+    def get_pipeline_id(self, name: str) -> str:
+        """Method to search for a particular pipeline and return its ID"""
+        pipeline_search_params = {"name": name}
+        try:
+            pipeline_id = self.__client.getPipelineId(pipeline_search_params)
+            return str(pipeline_id)
+        except WorkflowError as er:
+            logger.error(er, extra=d)
 
-    def create_new_instance(self):
+    def run_pipeline(self, pipeline_id: str, name: str, prev_id: str) -> dict:
+        """Run a pipeline instance of a previous plugin instance ID"""
+        pipeline_params = {"previous_plugin_inst_id": prev_id, "name": name}
+        try:
+            feed_resp: dict = self.__client.createWorkflow(pipeline_id, pipeline_params)
+            return feed_resp
+        except WorkflowError as er:
+            logger.error(er, extra=d)
+
+    def create_new_feed(self, feed_name: str, data_path: str, dircopy_id: str) -> dict:
         """
-        Method to create a new plugin instance in CUBE
+        Method to create a new feed in CUBE
         """
-        pass
+        feed_params = {'title': feed_name, 'dir': data_path}
+        try:
+            feed_response = self.__client.createFeed(dircopy_id, feed_params)
+            return {"feed_id": feed_response["feed_id"], "pl_inst_id": feed_response["id"]}
+        except WorkflowError as er:
+            logger.error(er, extra=d)
 
     def task_producer(self):
         """
@@ -173,7 +272,6 @@ class WorkflowManager:
         time.sleep(sleep)
         workflow = retrieve_workflow(db_key, test)
         return workflow
-
 
     def manage_workflow(self, db_key: str, test: bool):
         """
@@ -303,23 +401,10 @@ class WorkflowManager:
                 and workflow.feed_id_generated == workflow.response.feed_id)
 
     def update_status(self, request: WorkflowRequestSchema):
-        """
-        Trigger an update status in
-        a separate python process
-        """
-        d_data = request_to_dict(request)
-        str_data = json.dumps(d_data)
-        status_mgr_subprocess = Subprocess("app/controllers/subprocesses/status.py", str_data)
-        proc_count = status_mgr_subprocess.get_process_count()
-        logger.info(f"{proc_count} subprocess of status manager running on the system.", extra=d)
-        if proc_count > 0:
-            logger.info(f"No new status subprocess started.", extra=d)
-            return
-        d_cmd = ["python", "app/controllers/subprocesses/status.py", "--data", str_data]
-        pretty_cmd = pprint.pformat(d_cmd)
-        time.sleep(2)
-        logger.debug(f"New status subprocess started with command: {pretty_cmd}", extra=d)
-        process = subprocess.Popen(d_cmd)
+        """Start an update status in a separate python process"""
+        status_mgr_subprocess = Subprocess("app/controllers/subprocesses/status.py", self.args.data)
+        resp: str = status_mgr_subprocess.run()
+        logger.info(resp, extra=d)
 
     def pfdcm_do(self, verb: str, then_args: dict, request: WorkflowRequestSchema, url: str):
         """
@@ -375,7 +460,6 @@ class WorkflowManager:
         """
         retrieve_args = {}
         self.pfdcm_do("retrieve", retrieve_args, dicom, pfdcm_url)
-
 
     def do_cube_create_feed(self, request: WorkflowRequestSchema, cube_url: str, retries: int) -> dict:
         """
@@ -485,13 +569,20 @@ class WorkflowManager:
         return d_params
 
 
+def main():
+    # parse CLI arguments
+    parser = define_parameters()
+    args = parser.parse_args()
+
+    # Run an instance of WorkflowManager class with the specified args
+    workflow_manager = WorkflowManager(args)
+    workflow_manager.run()
+
+
 if __name__ == "__main__":
     """
     Main entry point of this script
     """
-    parser = define_parameters()
-    args = parser.parse_args()
-    workflow_manager = WorkflowManager(args)
-    workflow_manager.run()
+    main()
 
 

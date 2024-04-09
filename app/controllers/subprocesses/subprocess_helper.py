@@ -1,7 +1,8 @@
 import subprocess
 """
-A helper module to monitor subprocesses running on the background
+A helper module to run and monitor subprocesses running on the background
 """
+
 
 class Subprocess:
     def __init__(self, name, args):
@@ -20,3 +21,12 @@ class Subprocess:
             if process.__contains__(self.__process_args):
                 process_count += 1
         return process_count
+
+    def run(self) -> str:
+        """Run a sub process if and only if no other process exists with the same arguments"""
+        proc_count = self.get_process_count()
+        if proc_count > 0:
+            return f"No subprocess started: {proc_count} already running."
+        d_cmd = ["python", self.__process_name, "--data", self.__process_args]
+        process = subprocess.Popen(d_cmd)
+        return "Subprocess started successfully."
