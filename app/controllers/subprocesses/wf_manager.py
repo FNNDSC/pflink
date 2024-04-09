@@ -44,6 +44,7 @@ def define_parameters():
     parser.add_argument('--test', default=False, action='store_true')
     return parser
 
+
 class WorkflowError(Exception):
     def __init__(self, message, errors):
 
@@ -52,6 +53,7 @@ class WorkflowError(Exception):
 
         # Now for your custom code...
         self.errors = errors
+
 
 class WorkflowManager:
     """
@@ -131,6 +133,18 @@ class WorkflowManager:
             prev_id, feed_id = self.create_new_feed(feed_name, data_path, dircopy_id)
         except WorkflowError as er:
             logger.error(er, extra=d)
+
+    def run_plugin_or_pipeline_instance(self, prev_id: str, request: WorkflowRequestSchema):
+        """
+        A method to decide whether to add a new pipeline or plugin instance to an existing
+        plugin instance, and run it.
+        """
+        if request.workflow_info.plugin_name:
+            plugin_id = self.get_plugin_id(request.workflow_info.plugin_name, request.workflow_info.plugin_version)
+            self.
+        if request.workflow_info.pipeline_name:
+            pipeline_id = self.get_pipeline_id(request.workflow_info.pipeline_name)
+            self.run_pipeline(pipeline_id, request.workflow_info.pipeline_name, prev_id)
 
     def create_client(self, cube_url: str, username: str, password: str) -> PythonChrisClient:
         """
@@ -234,6 +248,16 @@ class WorkflowManager:
         except WorkflowError as er:
             logger.error(er, extra=d)
 
+    def run_plugin(self, plugin_id: str, prev_id: str, plugin_params: dict) -> str:
+        """Run a plugin instance on a previous plugin instance ID"""
+        plugin_params["previous_id"] = prev_id
+        try:
+            resp = self.__client.createFeed(plugin_id, plugin_params)
+            return resp
+        except WorkflowError as err:
+            logger.error(err, extra=d)
+
+
     def create_new_feed(self, feed_name: str, data_path: str, dircopy_id: str) -> dict:
         """
         Method to create a new feed in CUBE
@@ -256,7 +280,6 @@ class WorkflowManager:
         A method to dequeue and run tasks
         """
         pass
-
 
     def update_and_wait(self,
                         request: WorkflowRequestSchema,
