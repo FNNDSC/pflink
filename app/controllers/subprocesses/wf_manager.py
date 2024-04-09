@@ -62,17 +62,28 @@ class WorkflowManager:
 
     def manage_workflow_new(self, db_key: str, test: bool):
         """
-        Method to manage a workflow.
-        1) Get the current DB record.
-        2) Schedule or wait for a task
-        3) Run a status update subprocess
-        4) Sleep for N seconds
-        5) Go to step 1
+        The first thing this method does is to retrieve the current data related to db_key from the DB.
+        The data/workflow record contains all kinds of information related to a workflow i.e.
+            1) Original request sent to create  a new workflow
+            2) The most recent updated status of the workflow that can be sent to a client in response
+            3) Some system flags to manage both the subprocess: 1) workflow_manager 2) status_manager
+            4) Some data relevant to the initial creation of a record in the DB: 1) creation date 2) unique id
+
+        Based on the existing information found in the DB, it can be decided if a workflow request qualifies for a
+        retry. If that is True, the workflow response and system flags are changed to qualify the request for a retry.
+
+        Once that is done, a loop with certain terminating conditions is started that can do the following tasks:
+            1) Based on the current STATE, start the next task.
+            2) Start a new status_manager subprocess and wait for N seconds
         """
-        SLEEP_TIME: Final[int] = 10
-        MAX_ITER: Final[int] = 50
+        SLEEP_TIME: Final[int] = 10  # wait time before checking the DB
+        MAX_ITER: Final[int] = 50  # max number of iterations inside while loop
 
         workflow = retrieve_workflow(db_key, test)
+        request = workflow.request
+        pfdcm_url = retrieve_pfdcm_url(request.pfdcm_info.pfdcm_service)
+        cube_url = get_cube_url_from_pfdcm(pfdcm_url, request.pfdcm_info.cube_service)
+
         while True and MAX_ITER > 0:
             match workflow.response.workflow_state:
                 # request a retrieve
@@ -88,7 +99,64 @@ class WorkflowManager:
                 case State.COMPLETED:
                     return
             # request for status update, sleep, and get the latest from DB
-            workflow = self.update_and_wait(workflow.request,SLEEP_TIME,db_key,test)
+            workflow = self.update_and_wait(workflow.request, SLEEP_TIME, db_key, test)
+
+    def create_analysis(self):
+        """
+        A method to create a new analysis in a CUBE instance. This is a multistep process,
+        and requires multiple calls to CUBE's API using a python-chris client.
+        The following tasks are needed to be done in order to create a new analysis in CUBE.
+            1) Create a CUBE client instance using credentials and URL of CUBE
+            2) Search for the plugin `pl-dircopy` in CUBE
+            3) Search for the relevant data path containing the required data
+            4) Create a new `pl-dircopy` instance in CUBE on the data path
+            5) Search for required plugin or pipeline inside CUBE
+            6) Create a new instance of the plugin or pipeline with the previous `dircopy` instance
+        """
+        pass
+
+    def create_client(self):
+        """
+        Method to create a ChRIS client using username, password and URL to a CUBE instance
+        """
+        pass
+
+    def get_plugin_id(self):
+        """
+        Method to search for a particular plugin with its version and return its ID
+        """
+        pass
+
+    def get_data_path(self):
+        """
+        Method to get a list of data path from CUBE containing all the files that match the given PACS
+        details
+        """
+        pass
+
+    def get_pipeline_id(self):
+        """
+        Method to search for a particular pipeline and return its ID
+        """
+        pass
+
+    def create_new_instance(self):
+        """
+        Method to create a new plugin instance in CUBE
+        """
+        pass
+
+    def task_producer(self):
+        """
+        A method to add new tasks to the task queue
+        """
+        pass
+
+    def task_consumer(self):
+        """
+        A method to dequeue and run tasks
+        """
+        pass
 
 
     def update_and_wait(self,
@@ -97,7 +165,9 @@ class WorkflowManager:
                         db_key: str,
                         test: bool) -> WorkflowDBSchema:
         """
-
+        1) Create a new status manager sub-process to update the DB
+        2) sleep for N seconds
+        3) retrieve the latest data from the DB
         """
         self.update_status(request)
         time.sleep(sleep)
