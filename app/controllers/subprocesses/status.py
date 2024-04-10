@@ -294,9 +294,6 @@ class StatusManager:
         Parse JSON object for workflow status response
         """
         # status = WorkflowStatusResponseSchema()
-        # reset status of any stale errors or states
-        status.status = True
-        status.error = ""
 
         pfdcm_has_error = pfdcm_response.get("error")
         cube_has_error = cube_response.get("error")

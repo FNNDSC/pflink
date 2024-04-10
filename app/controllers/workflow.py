@@ -49,8 +49,8 @@ def retrieve_workflows(search_params: WorkflowSearchSchema, test: bool = False):
         ]
     )
     search_results = []
-    for wrkflo in workflows:
-        search_results.append(str(wrkflo))
+    for workflow in workflows:
+        search_results.append(str(workflow))
 
     return search_results
 
