@@ -173,7 +173,7 @@ class WorkflowManager:
             6) Create a new instance of the plugin or pipeline with the previous `dircopy` instance
         """
         # if PACS files registering is in progress, do nothing and exit
-        if not self.__workflow.response.state_progress == "100%":
+        if not self.__workflow.response.state_progress == "100%" and self.__workflow.feed_requested:
             return
 
         logger.info(f"Creating new analysis.", extra=d)
