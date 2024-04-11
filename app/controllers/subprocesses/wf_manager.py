@@ -28,7 +28,7 @@ from app.models.workflow import (
 
 dictConfig(log.log_config)
 logger = logging.getLogger('pflink-logger')
-d = {'workername': 'WORKFLOW_MGR', 'key' : "",'log_color': "\33[33m"}
+d = {'workername': 'WORKFLOW_MGR', 'key': "", 'log_color': "\33[33m"}
 
 
 def define_parameters():
@@ -40,12 +40,14 @@ def define_parameters():
     parser.add_argument('--test', default=False, action='store_true')
     return parser
 
+
 def shorten(s, width=100, placeholder='[...]'):
     """
     Validate a given feed name for size = 100 chars
     if size exceeds, trim the name and add a suffix placeholder
     """
     return s[:width] if len(s) <= width else s[:width - len(placeholder)] + placeholder
+
 
 def str_to_param_dict(params: str) -> dict:
     """
@@ -69,7 +71,6 @@ def str_to_param_dict(params: str) -> dict:
 
 class WorkflowError(Exception):
     def __init__(self, message, errors):
-
         # Call the base class constructor with the parameters it needs
         super(WorkflowError, self).__init__(message)
 
@@ -81,6 +82,7 @@ class WorkflowManager:
     """
     This module manages different states of a workflow by constantly checking the status of a workflow in the DB.
     """
+
     def __init__(self, args):
         """
         Initialize class variables
@@ -99,7 +101,7 @@ class WorkflowManager:
         self.manage_workflow(key, self.args.test)
         response = self.__workflow.response
         logger.info(f"Workflow manager exited with status {response.status} and\
-                        current workflow state as {response.workflow_state}",extra=d)
+                        current workflow state as {response.workflow_state}", extra=d)
 
     def fetch_and_load(self, db_key: str, test: bool):
         """
@@ -209,7 +211,7 @@ class WorkflowManager:
             feed_name = shorten(feed_name)
             return feed_name
         except WorkflowError as er:
-            raise WorkflowError("Feed name could not be created.",er)
+            raise WorkflowError("Feed name could not be created.", er)
 
     def run_plugin_or_pipeline_instance(self, prev_id: str):
         """
@@ -223,7 +225,7 @@ class WorkflowManager:
                 plugin_params = str_to_param_dict(request.workflow_info.plugin_params)
                 plugin_params["previous_id"] = prev_id
                 plugin_id = self.get_plugin_id(request.workflow_info.plugin_name,
-                                           request.workflow_info.plugin_version)
+                                               request.workflow_info.plugin_version)
                 self.run_plugin(plugin_id, prev_id, plugin_params)
             if request.workflow_info.pipeline_name:
                 pipeline_id = self.get_pipeline_id(request.workflow_info.pipeline_name)
@@ -291,7 +293,7 @@ class WorkflowManager:
             plugin_id: str = self.__client.getPluginId(plugin_search_params)
             return plugin_id
         except Exception as er:
-            raise WorkflowError("Plugin could not be found.",er)
+            raise WorkflowError("Plugin could not be found.", er)
 
     def get_data_path(self, request: WorkflowRequestSchema) -> str:
         """
@@ -305,7 +307,7 @@ class WorkflowManager:
             data_path = self.__client.getSwiftPath(pacs_search_params)
             return data_path
         except WorkflowError as er:
-            raise WorkflowError("Data path could not be found.",er)
+            raise WorkflowError("Data path could not be found.", er)
 
     def get_pipeline_id(self, name: str) -> str:
         """Method to search for a particular pipeline and return its ID"""
@@ -314,7 +316,7 @@ class WorkflowManager:
             pipeline_id = self.__client.getPipelineId(pipeline_search_params)
             return str(pipeline_id)
         except WorkflowError as er:
-            raise WorkflowError("Pipeline could not be found.",er)
+            raise WorkflowError("Pipeline could not be found.", er)
 
     def run_pipeline(self, pipeline_id: str, name: str, prev_id: str) -> dict:
         """Run a pipeline instance of a previous plugin instance ID"""
@@ -324,7 +326,7 @@ class WorkflowManager:
             feed_resp: dict = self.__client.createWorkflow(pipeline_id, pipeline_params)
             return feed_resp
         except WorkflowError as er:
-            raise WorkflowError("Pipeline could not be run.",er)
+            raise WorkflowError("Pipeline could not be run.", er)
 
     def run_plugin(self, plugin_id: str, prev_id: str, plugin_params: dict) -> str:
         """Run a plugin instance on a previous plugin instance ID"""
@@ -334,7 +336,7 @@ class WorkflowManager:
             resp = self.__client.createFeed(plugin_id, plugin_params)
             return resp
         except WorkflowError as err:
-            raise WorkflowError("Plugin could not be run.",err)
+            raise WorkflowError("Plugin could not be run.", err)
 
     def create_new_feed(self, feed_name: str, data_path: str, dircopy_id: str) -> (str, str):
         """
@@ -346,7 +348,7 @@ class WorkflowManager:
             feed_response = self.__client.createFeed(dircopy_id, feed_params)
             return feed_response["feed_id"], feed_response["id"]
         except WorkflowError as er:
-            raise WorkflowError("Feed could not be created.",er)
+            raise WorkflowError("Feed could not be created.", er)
 
     def task_producer(self):
         """
@@ -437,5 +439,3 @@ if __name__ == "__main__":
     Main entry point of this script
     """
     main()
-
-

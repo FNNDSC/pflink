@@ -39,8 +39,7 @@ def retrieve_workflows(search_params: WorkflowSearchSchema, test: bool = False):
     collection = test_collection if test else workflow_collection
     index = collection.create_index([('$**', TEXT)],
                                     name='search_index', default_language='english')
-    workflows = []
-    # query, rank, response = search.compound_queries(search_params)
+
     workflows = collection.aggregate(
         [
             {"$match": {"$text": {"$search": search_params.keywords}}},
