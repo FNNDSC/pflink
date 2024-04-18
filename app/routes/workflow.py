@@ -5,6 +5,7 @@ from app.models.workflow import (
     WorkflowStatusResponseSchema,
     WorkflowSearchSchema,
 )
+import datetime
 from app.controllers.subprocesses import utils
 router = APIRouter()
 
@@ -54,3 +55,7 @@ async def delete_workflow(workflow_key: str):
     """
     response = await workflow.delete_workflow(workflow_key)
     return response
+
+@router.get("/date_search")
+async def get_workflows_by_date(start_date: datetime.date, end_date: datetime.date | None = None):
+    return workflow.search_workflows_by_date(str(start_date), str(end_date))

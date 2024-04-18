@@ -31,3 +31,10 @@ def index_search(query_params: dict):
         }
     }
     return query
+
+def date_search(start_date: str, end_date: str):
+    """
+    Search for specific DB record between date ranges
+    """
+    query = { "creation_time": { "$gte": start_date , "$lte": end_date} }
+    return query

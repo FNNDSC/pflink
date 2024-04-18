@@ -61,6 +61,14 @@ tags_metadata = [
         "name": "Test Workflow Services",
         "description": "Create dummy workflow records and get updated **status**. You can also **retrieve** all "
                        "the records from DB"
+    },
+    {
+        "name": "CUBE service Info",
+        "description": "Service information of various `CUBE` instances"
+    },
+    {
+        "name": "Auth service info",
+        "description": "Create new authentication tokens using authentication endpoint"
     }
 ]
 
@@ -86,5 +94,6 @@ app.include_router(PfdcmRouter, tags=["Pfdcm Service Info"], prefix="/api/v1/pfd
 app.include_router(WorkflowRouter, tags=["Workflow Services"], prefix="/api/v1/workflow",
                    dependencies=[Depends(auth.get_current_user)])
 app.include_router(WorkflowTestRouter, tags=["Test Workflow Services"], prefix="/api/v1/testing")
-app.include_router(AuthRouter, tags=["Basic Auth"], prefix="/api/v1/auth-token")
-app.include_router(CubeRouter, tags=["Cube services"], prefix="/api/v1/cube")
+app.include_router(AuthRouter, tags=["Auth service info"], prefix="/api/v1/auth-token")
+app.include_router(CubeRouter, tags=["CUBE service Info"], prefix="/api/v1/cube",
+                   dependencies=[Depends(auth.get_current_user)])
