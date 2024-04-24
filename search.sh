@@ -102,8 +102,7 @@ done
 search_count=$(echo $hash_key | wc -w)
 current=1
 for i in $hash_key; do
-    echo "[Showing $current of $search_count records]"
-    echo "Current hash_key: $i"
+    current_hash=$i
     
 
     # =========================================================
@@ -115,12 +114,21 @@ for i in $hash_key; do
       -H "Authorization: Bearer $token" \
       -H 'Content-Type: application/json')
 
+    response_count=$(echo $workflow_record | wc -w)
+
+    if [ $response_count == 3 ]; then
+      continue
+    fi
     study_id=$(echo $workflow_record | jq '.request.PACS_directive.StudyInstanceUID')
+    if [ $study_id == "" ]; then
+      continue
+    fi
+    request_date=$(echo $workflow_record | jq '.creation_time' | awk '{print $1}')
+    username=$(echo $workflow_record | jq '.request.cube_user_info.username')
 
     # =========================================================
     # Search PACS using px-find
-    # ========================================================= 
-    echo "Searching PACS for StudyInstanceUID: $study_id ..."
+    # =========================================================
     status=$(px-find \
                                 --aec 'SYNAPSERESEARCH' \
                                 --aet 'SYNAPSERESEARCH' \
@@ -129,12 +137,13 @@ for i in $hash_key; do
                                 --StudyInstanceUID $study_id \
                                 --withFeedBack \
                                 --StudyOnly)
-                                # | awk '/NumberOfStudyRelatedInstances/ {print $41}'
-                                present=$(echo $status );
-                                echo $present
-    RED_ON_GREEN='\033[31;42m'
-    RESET='\033[0m'
-    echo -e "${RED_ON_GREEN}${RESET}"
+
+    G='\033[32m'
+    R='\033[0m'
+    StudyDate=$(echo $status | awk '{print $20}' );
+    AccessionNumber=$(echo $status | awk '{print $41}' );
+    StudyDescription=$(echo $status | awk -v b=62 -v e=64 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' );
+    echo -e "[$current/$search_count] ${G}StudyID:${study_id}${R} ${G}RequestedOn:${request_date}${R}  ${G}RequestedBy:${username}${R}  ${G}StudyDate:${StudyDate}${R} ${G}AccessionNumber:${AccessionNumber}${R} ${G}StudyDescription:${StudyDescription}${R}"
 
     ((current++))
 done

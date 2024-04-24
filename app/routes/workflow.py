@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Body
 from app.controllers import workflow
 from app.models.workflow import (
     WorkflowRequestSchema,
@@ -7,6 +7,8 @@ from app.models.workflow import (
 )
 import datetime
 from app.controllers.subprocesses import utils
+from typing import Annotated
+
 router = APIRouter()
 
 
@@ -57,5 +59,7 @@ async def delete_workflow(workflow_key: str):
     return response
 
 @router.get("/date_search")
-async def get_workflows_by_date(start_date: datetime.date, end_date: datetime.date | None = None):
-    return workflow.search_workflows_by_date(str(start_date), str(end_date))
+async def get_workflows_by_date(
+        start_date: datetime.date=datetime.date.today(),
+        end_date: datetime.date=datetime.date.today()):
+    return workflow.search_workflows_by_date(start_date, end_date)

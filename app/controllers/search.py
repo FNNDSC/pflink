@@ -1,4 +1,6 @@
 from app.models.workflow import WorkflowSearchSchema
+from datetime import date
+import datetime
 
 
 def compound_queries(query_params: WorkflowSearchSchema):
@@ -32,9 +34,12 @@ def index_search(query_params: dict):
     }
     return query
 
-def date_search(start_date: str, end_date: str):
+def date_search(start_date: datetime.date, end_date: datetime.date):
     """
     Search for specific DB record between date ranges
     """
-    query = { "creation_time": { "$gte": start_date , "$lte": end_date} }
+    # end date by default has zero-hour timestamp which means any records created after that
+    # will not show up in the results. To include the end date, we must add the day after in the range
+    end_date = end_date + datetime.timedelta(days=1)
+    query = { "creation_time": { "$gte": str(start_date) , "$lte": str(end_date)} }
     return query

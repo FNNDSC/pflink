@@ -1,4 +1,5 @@
-from datetime import datetime
+from datetime import datetime, date
+import datetime
 from typing import List
 from pymongo import MongoClient, TEXT
 import json
@@ -53,13 +54,13 @@ def retrieve_workflows(search_params: WorkflowSearchSchema, test: bool = False):
 
     return search_results
 
-def search_workflows_by_date(start: str, end: str, test: bool = False) -> List[str]:
+def search_workflows_by_date(start: date, end: date, test: bool = False) -> List[str]:
     """Fetch all workflow records by date"""
     collection = test_collection if test else workflow_collection
     try:
         results = collection.aggregate([
             {"$match": search.date_search(start, end)},
-            {"$project": {"_id": 1}},
+            {"$project": {"_id": 1, "creation_time": 1}},
         ])
         return list(results)
     except Exception as ex:
