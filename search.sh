@@ -51,7 +51,7 @@ URL='http://localhost:8050/api/v1'
 USERNAME='pflink'
 PASSWORD='pflink1234'
 
-while getopts "L:U:P:K:S:E:K:h" opt; do
+while getopts "L:U:P:K:D:E:K:h" opt; do
     case $opt in
         h) printf "%s" "$SYNOPSIS"; exit 1                ;;
 
@@ -61,7 +61,7 @@ while getopts "L:U:P:K:S:E:K:h" opt; do
 
         P) PASSWORD=$OPTARG                               ;;
 
-        S) START_DATE=$OPTARG                             ;;
+        D) DATE=$OPTARG                                   ;;
         
         E) END_DATE=$OPTARG                               ;;
 
@@ -99,11 +99,14 @@ for item in "${list[@]}"; do
     hash_key=$(echo "$item" | awk '{print $2}');
     #hash_key=$(echo "$item" | awk '!/_id/ {print}');
 done
-search_count=$(echo $hash_key | wc -w)
-current=1
+l_study_id=()
+count=$(echo "${#hash_key[@]}")
+if [ $count == 0 ] ; then
+  echo "No search results for $KEYWORD"
+  exit
+fi
 for i in $hash_key; do
     current_hash=$i
-    
 
     # =========================================================
     # STEP2: CURL request to get request stored in the db
@@ -117,15 +120,21 @@ for i in $hash_key; do
     response_count=$(echo $workflow_record | wc -w)
 
     if [ $response_count == 3 ]; then
+      echo "Internal server error occurred while searching for db_key: $i in pflink"
       continue
     fi
     study_id=$(echo $workflow_record | jq '.request.PACS_directive.StudyInstanceUID')
-    if [ $study_id == "" ]; then
-      continue
-    fi
+    l_study_id+=("$study_id")
     request_date=$(echo $workflow_record | jq '.creation_time' | awk '{print $1}')
     username=$(echo $workflow_record | jq '.request.cube_user_info.username')
-
+done
+uniques=($(for v in "${l_study_id[@]}"; do echo "$v";done| sort| uniq| xargs))
+current=1
+search_count=$(echo "${#uniques[@]}")
+if (( "$search_count" == 0 )) ; then
+  echo "No LLD analysis found for PatientID: $KEYWORD in pflink for studies on $DATE "
+fi
+for study in "${uniques[@]}"; do
     # =========================================================
     # Search PACS using px-find
     # =========================================================
@@ -134,16 +143,28 @@ for i in $hash_key; do
                                 --aet 'SYNAPSERESEARCH' \
                                 --serverIP '10.20.2.28' \
                                 --serverPort '104' \
-                                --StudyInstanceUID $study_id \
-                                --withFeedBack \
-                                --StudyOnly)
-
+                                --StudyInstanceUID $study \
+                                --withFeedBack)
     G='\033[32m'
     R='\033[0m'
+    bold=$(tput bold)
+    normal=$(tput sgr0)
+    red='\033[31m'
     StudyDate=$(echo $status | awk '{print $20}' );
+    if [[ -z "$StudyDate" ]]; then
+      StudyDate=$(echo ${bold}${red}NOT FOUND${normal} )
+    fi
     AccessionNumber=$(echo $status | awk '{print $41}' );
-    StudyDescription=$(echo $status | awk -v b=62 -v e=64 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' );
-    echo -e "[$current/$search_count] ${G}StudyID:${study_id}${R} ${G}RequestedOn:${request_date}${R}  ${G}RequestedBy:${username}${R}  ${G}StudyDate:${StudyDate}${R} ${G}AccessionNumber:${AccessionNumber}${R} ${G}StudyDescription:${StudyDescription}${R}"
+    if [[ -z "$AccessionNumber" ]]; then
+      AccessionNumber=$(echo ${bold}${red}NOT FOUND${normal} )
+    fi
+    StudyDescription=$(echo $status | awk -v b=62 -v e=64 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}');
+    if [[ -z "$StudyDescription" ]]; then
+      StudyDescription=$(echo ${bold}${red}NOT FOUND${normal} )
+    fi
+    SeriesDescription=$(echo $status | awk -v b=94 -v e=97 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}'| sed -e 's/\x1b\[[0-9;]*m//g');
+    SeriesDescription=$(echo $SeriesDescription | sed 's/[^a-z A-Z 0-9]//g' | sed 's/["0xB"]//g' | sed 's/SeriesDescription//g')
+    echo -e "[$current/$search_count] ${G}PatientID:${bold}${KEYWORD}${R}${normal} ${G}StudyID:${bold}${study_id}${R}${normal} ${G}StudyDate:${StudyDate}${R} ${G}AccessionNumber:${AccessionNumber}${R} ${G}StudyDescription:${StudyDescription}${R} ${G}SeriesDescription:${bold}${SeriesDescription}${R}"
 
     ((current++))
 done

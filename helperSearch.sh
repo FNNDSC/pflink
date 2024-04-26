@@ -1,15 +1,14 @@
 #!/usr/bin/env bash
 
 
-while getopts "S:E" opt; do
+while getopts "S:K:h" opt; do
     case $opt in
 
-        S) START_DATE=$OPTARG                             ;;
+        S) STUDY_DATE=$OPTARG                             ;;
 
-        S) END_DATE=$OPTARG                             ;;
+        K) KEYWORD=$OPTARG                                ;;
 
-
-        *) exit 0                                   ;;
+        *) exit 0                                         ;;
 
     esac
 done
@@ -20,11 +19,9 @@ response=$(px-find --aet CHRISV3 \
               --db /neuro/users/chris/PACS/log \
               --verbosity 2 \
               --withFeedBack \
-              --StudyDate $START_DATE \
+              --StudyDate $STUDY_DATE \
               --Modality CT \
-              --StudyOnly | grep -A 3 -B 9 Scanogram
-
-)
+              --StudyOnly | grep -A 3 -B 9 $KEYWORD & wait)
 
 list=$response
 current=1
@@ -37,17 +34,18 @@ values=$(echo "${list_values}" | sed '/^$/N;/^\n$/D')
 test=$(echo "$values" | sed -e 's/^$/:/' )
 IFS=':'; array=($test); unset IFS;
 
-cmd=""
+study_hits=$(echo "${#array[@]}")
+if (( "$study_hits" == 1 )) ; then
+  echo "No $KEYWORD study found for Date: $STUDY_DATE in PACS"
+fi
+
 for i in "${array[@]}"; do
-  R='\033[0m'
   k=$(echo $i | awk '{print $7}' | sed -e 's/\x1b\[[0-9;]*m//g');
   if [ "$k" == "" ]; then
     continue
   fi
-  cmd+="./search.sh -L http://galena.tch.harvard.edu:30033/api/v1 -K $k  &"
-  #cmd+="./search.sh -L http://galena.tch.harvard.edu:30033/api/v1 -K $k & "
-
+  ./search.sh -L http://galena.tch.harvard.edu:30033/api/v1 -K $k -D $STUDY_DATE  &
 done
-echo "$cmd wait" | sh -v
+wait
 
 
