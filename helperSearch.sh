@@ -35,16 +35,17 @@ test=$(echo "$values" | sed -e 's/^$/:/' )
 IFS=':'; array=($test); unset IFS;
 
 study_hits=$(echo "${#array[@]}")
-if (( "$study_hits" == 1 )) ; then
-  echo "No $KEYWORD study found for Date: $STUDY_DATE in PACS"
-fi
+#if (( "$study_hits" == 1 )) ; then
+#  echo "No $KEYWORD study found for Date: $STUDY_DATE in PACS"
+#fi
 
 for i in "${array[@]}"; do
+  ANO=$(echo $i | awk '{print $6}' | sed -e 's/\x1b\[[0-9;]*m//g');
   k=$(echo $i | awk '{print $7}' | sed -e 's/\x1b\[[0-9;]*m//g');
   if [ "$k" == "" ]; then
     continue
   fi
-  ./search.sh -L http://galena.tch.harvard.edu:30033/api/v1 -K $k -D $STUDY_DATE  &
+  ./search.sh -L http://galena.tch.harvard.edu:30033/api/v1 -K $k -D $STUDY_DATE -A $ANO  &
 done
 wait
 

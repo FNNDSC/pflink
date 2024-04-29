@@ -50,8 +50,15 @@ EXAMPLES
 URL='http://localhost:8050/api/v1'
 USERNAME='pflink'
 PASSWORD='pflink1234'
-
-while getopts "L:U:P:K:D:E:K:h" opt; do
+cyan='\033[36m'
+G='\033[32m'
+R='\033[0m'
+bold=$(tput bold)
+normal=$(tput sgr0)
+red='\033[31m'
+cross='\u274c'
+tick='\u2714'
+while getopts "L:U:P:K:D:E:K:A:h" opt; do
     case $opt in
         h) printf "%s" "$SYNOPSIS"; exit 1                ;;
 
@@ -66,6 +73,8 @@ while getopts "L:U:P:K:D:E:K:h" opt; do
         E) END_DATE=$OPTARG                               ;;
 
         K) KEYWORD=$OPTARG                                ;;
+
+        A) ANO=$OPTARG                                    ;;
 
         *) exit 0                                         ;;
 
@@ -120,7 +129,7 @@ for i in $hash_key; do
     response_count=$(echo $workflow_record | wc -w)
 
     if [ $response_count == 3 ]; then
-      echo "Internal server error occurred while searching for db_key: $i in pflink"
+      #echo "Internal server error occurred while searching for db_key: $i in pflink"
       continue
     fi
     study_id=$(echo $workflow_record | jq '.request.PACS_directive.StudyInstanceUID')
@@ -131,10 +140,14 @@ done
 uniques=($(for v in "${l_study_id[@]}"; do echo "$v";done| sort| uniq| xargs))
 current=1
 search_count=$(echo "${#uniques[@]}")
+remarks=""
 if (( "$search_count" == 0 )) ; then
-  echo "No LLD analysis found for PatientID: $KEYWORD in pflink for studies on $DATE "
+  remarks=$(echo ${red}No LLD records found.)
+  # echo "No LLD analysis found for PatientID: $KEYWORD, AccessionNumber: $ANO in pflink for studies on $DATE"
+else
+  remarks="$search_count LLD records found."
 fi
-for study in "${uniques[@]}"; do
+# for study in "${uniques[@]}"; do
     # =========================================================
     # Search PACS using px-find
     # =========================================================
@@ -143,30 +156,34 @@ for study in "${uniques[@]}"; do
                                 --aet 'SYNAPSERESEARCH' \
                                 --serverIP '10.20.2.28' \
                                 --serverPort '104' \
-                                --StudyInstanceUID $study \
+                                --PatientID $KEYWORD \
+                                --AccessionNumber $ANO \
                                 --withFeedBack)
-    G='\033[32m'
-    R='\033[0m'
-    bold=$(tput bold)
-    normal=$(tput sgr0)
-    red='\033[31m'
+                                #--StudyInstanceUID $study \
+
+    #echo "Requested to synapse: $study, $KEYWORD, $ANO"
+    symbol=$(echo ${G}${bold}${tick}${R})
     StudyDate=$(echo $status | awk '{print $20}' );
     if [[ -z "$StudyDate" ]]; then
-      StudyDate=$(echo ${bold}${red}NOT FOUND${normal} )
+      StudyDate=$(echo ${bold}${red}$DATE${normal} )
+      symbol=$cross
     fi
     AccessionNumber=$(echo $status | awk '{print $41}' );
     if [[ -z "$AccessionNumber" ]]; then
-      AccessionNumber=$(echo ${bold}${red}NOT FOUND${normal} )
+      AccessionNumber=$(echo ${bold}${red}$ANO${normal} )
     fi
     StudyDescription=$(echo $status | awk -v b=62 -v e=64 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}');
-    if [[ -z "$StudyDescription" ]]; then
-      StudyDescription=$(echo ${bold}${red}NOT FOUND${normal} )
+    if [[ -z $(echo $StudyDescription | tr -s '[:blank:]') ]]; then
+      StudyDescription=$(echo ${bold}${red}NOT IN SYNAPSERESEARCH${normal} )
     fi
-    SeriesDescription=$(echo $status | awk -v b=94 -v e=97 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}'| sed -e 's/\x1b\[[0-9;]*m//g');
+    SeriesDescription=$(echo $status | awk -v b=85 -v e=89 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | sed -e 's/\x1b\[[0-9;]*m//g');
     SeriesDescription=$(echo $SeriesDescription | sed 's/[^a-z A-Z 0-9]//g' | sed 's/["0xB"]//g' | sed 's/SeriesDescription//g')
-    echo -e "[$current/$search_count] ${G}PatientID:${bold}${KEYWORD}${R}${normal} ${G}StudyID:${bold}${study_id}${R}${normal} ${G}StudyDate:${StudyDate}${R} ${G}AccessionNumber:${AccessionNumber}${R} ${G}StudyDescription:${StudyDescription}${R} ${G}SeriesDescription:${bold}${SeriesDescription}${R}"
+    if [[ -z "$SeriesDescription" ]]; then
+      SeriesDescription=$(echo ${bold}${red}NOT IN SYNAPSERESEARCH${normal} )
+    fi
+    echo -e "[${symbol}] ${G}PatientID:${bold}${KEYWORD}${R}${normal} ${G}AccessionNumber:${bold}${AccessionNumber}${R} ${G}StudyDate:${StudyDate}${R} ${G}StudyDescription:${StudyDescription}${R} ${G}SeriesDescription:${bold}${SeriesDescription}${R} ${G}Remarks:${bold}${remarks}${R}"
 
     ((current++))
-done
+#done
 # =========================================================
 
