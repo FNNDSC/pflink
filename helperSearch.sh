@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 
 
-while getopts "S:K:h" opt; do
+while getopts "S:K:F:h" opt; do
     case $opt in
 
         S) STUDY_DATE=$OPTARG                             ;;
 
         K) KEYWORD=$OPTARG                                ;;
+
+        F) FILE_NAME=$OPTARG                              ;;
 
         *) exit 0                                         ;;
 
@@ -45,7 +47,7 @@ for i in "${array[@]}"; do
   if [ "$k" == "" ]; then
     continue
   fi
-  ./search.sh -L http://galena.tch.harvard.edu:30033/api/v1 -K $k -D $STUDY_DATE -A $ANO  &
+  ./search.sh -L http://galena.tch.harvard.edu:30033/api/v1 -K $k -D $STUDY_DATE -A $ANO -F $FILE_NAME  &
 done
 wait
 

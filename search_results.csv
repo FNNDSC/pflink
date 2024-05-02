@@ -1,0 +1,7 @@
+PatientID,AccessionNumber,StudyDate,StudyDescription,SeriesDescription,Remarks,BodyPartExamined
+4587537,27218116,20240502,NOT IN SYNAPSERESEARCH,NOT IN SYNAPSERESEARCH,No LLD records found.,NOT FOUND
+5059092,27218097,20240502,XR-Scanogram Study ,Lower Limbs  ,1 LLD records found.,LEG
+5573522,27218127,20240502,XR-Scanogram Study ,Hips to Ankles ,1 LLD records found.,LEG
+4595922,27221135,20240502,XR-Scanogram Study ,Lower Limbs  ,1 LLD records found.,LEG
+4425019,27217994,20240502,XR-Scanogram Study ,Hips to Ankles ,1 LLD records found.,LEG
+4092932,27218110,20240502,NOT IN SYNAPSERESEARCH,NOT IN SYNAPSERESEARCH,1 LLD records found.,NOT FOUND

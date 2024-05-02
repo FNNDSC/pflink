@@ -54,11 +54,11 @@ cyan='\033[36m'
 G='\033[32m'
 R='\033[0m'
 bold=$(tput bold)
-normal=$(tput sgr0)
-red='\033[31m'
+normal='' # $(tput sgr0)
+red='' #\033[31m'
 cross='\u274c'
 tick='\u2714'
-while getopts "L:U:P:K:D:E:K:A:h" opt; do
+while getopts "L:U:P:K:D:E:K:A:F:h" opt; do
     case $opt in
         h) printf "%s" "$SYNOPSIS"; exit 1                ;;
 
@@ -75,6 +75,8 @@ while getopts "L:U:P:K:D:E:K:A:h" opt; do
         K) KEYWORD=$OPTARG                                ;;
 
         A) ANO=$OPTARG                                    ;;
+
+        F) FILE_NAME=$OPTARG                              ;;
 
         *) exit 0                                         ;;
 
@@ -110,6 +112,8 @@ for item in "${list[@]}"; do
 done
 l_study_id=()
 l_series_id=()
+srs_no=00
+BodyPartExamined="NOT FOUND"
 count=$(echo "${#hash_key[@]}")
 if [ $count == 0 ] ; then
   echo "No search results for $KEYWORD"
@@ -133,12 +137,36 @@ for i in $hash_key; do
       #echo "Internal server error occurred while searching for db_key: $i in pflink"
       continue
     fi
-    study_id=$(echo $workflow_record | jq '.request.PACS_directive.StudyInstanceUID')
-    series_id=$(echo $workflow_record | jq '.request.PACS_directive.SeriesInstanceUID')
+    study_id=$(echo $workflow_record | jq '.request.PACS_directive.StudyInstanceUID' | tr '""' "\n")
+    series_id=$(echo $workflow_record | jq '.request.PACS_directive.SeriesInstanceUID'| tr '""' "\n")
+
+    # =================================================================
+    # Query PACSDCM for accession_number, series_no, body_part_examined
+    # =================================================================
+    pacs_response=$(findscu -S -xi -k QueryRetrieveLevel=IMAGE -k StudyInstanceUID="$study_id" \
+       -k SeriesInstanceUID="$series_id" -k "BodyPartExamined" -k "SeriesNumber" -k "AccessionNumber" \
+       -aec PACSDCM -aet CHRISV3 134.174.12.21 104 2>&1 | strings)
+    AccessionNumber=$(echo $pacs_response | awk -v b=21 -v e=21 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | tr -d '[]')
+    BodyPartExamined=$(echo $pacs_response | awk -v b=47 -v e=47 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | tr -d '[]')
+    srs_no=$(echo $pacs_response | awk -v b=70 -v e=80 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | cut -d'[' -f 2 | cut -d']' -f 1 | tr -d '[:blank:]') #| tr -d '[,]IS#[:blank:]' | tr -s '[:blank:]')
+    if [[ ! "$AccessionNumber" == "$ANO" ]] ; then
+      continue
+    fi
+    #echo $pacs_response
+
     l_study_id+=("$study_id")
     l_series_id+=("$series_id")
     request_date=$(echo $workflow_record | jq '.creation_time' | awk '{print $1}')
     username=$(echo $workflow_record | jq '.request.cube_user_info.username')
+
+    if  [[ -z "$srs_no" ]] ; then
+      srs_no=00
+      continue
+    else
+      break
+    fi
+
+
 done
 uniques=($(for v in "${l_study_id[@]}"; do echo "$v";done| sort| uniq| xargs))
 uniques_1=($(for v in "${l_series_id[@]}"; do echo "$v";done| sort| uniq| xargs))
@@ -155,19 +183,29 @@ fi
     # =========================================================
     # Search PACS using px-find
     # =========================================================
-    response=$(findscu -S -k QueryRetrieveLevel=IMAGE -k StudyInstanceUID=${uniques[0]} \
-       -k SeriesInstanceUID=${uniques_1[0]} -k "BodyPartExamined" -k "SeriesNumber" \
-       -aec PACSDCM -aet CHRISV3 134.174.12.21 104 2>&1 | strings)
-    fmt_txt=$(echo $response | awk -v b=39 -v e=39 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | tr -d '[]')
-    srs_no=$(echo $response | awk -v b=64 -v e=65 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | tr -d '[]IS#[:blank:]' | tr -s '[:blank:]')
-    if [[ -z $(echo $srs_no | tr -s '[:blank:]') ]]; then
-      srs_no=00
-    fi
-    resp_pacs=$(findscu -S -k QueryRetrieveLevel=SERIES -k StudyInstanceUID=${uniques[0]} \
-        -k "SeriesDescription" -k SeriesNumber=$srs_no \
+#    response=$(findscu -S -k QueryRetrieveLevel=IMAGE -k StudyInstanceUID=${uniques[0]} \
+#       -k SeriesInstanceUID=${uniques_1[0]} -k "BodyPartExamined" -k "SeriesNumber" \
+#       -aec PACSDCM -aet CHRISV3 134.174.12.21 104 2>&1 | strings)
+#    fmt_txt=$(echo $response | awk -v b=39 -v e=39 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | tr -d '[]')
+#    srs_no=$(echo $response | awk -v b=64 -v e=65 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | tr -d '[]IS#[:blank:]' | tr -s '[:blank:]')
+#    if [[ -z $(echo $srs_no | tr -s '[:blank:]') ]]; then
+#      srs_no=00
+#    fi
+    resp_pacs=$(findscu -S -k QueryRetrieveLevel=SERIES -k "AccessionNumber" \
+        -k "SeriesDescription" -k "StudyInstanceUID=$study_id" -k "SeriesNumber=$srs_no" \
        -aec SYNAPSERESEARCH -aet SYNAPSERESEARCH 10.20.2.28 104 2>&1 | strings)
-    srs_desc=$(echo $resp_pacs | awk -v b=38 -v e=40 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | tr -d '[]')
-    echo $srs_desc
+    synapse_acc_no=$(echo $resp_pacs | awk -v b=21 -v e=21 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | tr -d '[]')
+    SeriesDescription=$(echo $resp_pacs | awk -v b=46 -v e=49 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | tr -d '[]'| sed 's/[#]//g' )
+    #echo $resp_pacs
+    if [[ ! "$ANO" == "$synapse_acc_no" ]] ; then
+      BodyPartExamined=$(echo ${bold}${red}NOT FOUND${normal} )
+      SeriesDescription=$(echo ${bold}${red}NOT IN SYNAPSERESEARCH${normal} )
+      StudyDate=$(echo ${bold}${red}$DATE${normal} )
+      symbol=$cross
+      AccessionNumber=$(echo ${bold}${red}$ANO${normal} )
+      StudyDate=$(echo ${bold}${red}$DATE${normal} )
+    fi
+    #echo $resp_pacs
 
 
     status=$(px-find \
@@ -183,6 +221,7 @@ fi
     #echo $status
     symbol=$(echo ${G}${bold}${tick}${R})
     StudyDate=$(echo $status | awk '{print $20}' );
+    #echo "$status"
     if [[ -z "$StudyDate" ]]; then
       StudyDate=$(echo ${bold}${red}$DATE${normal} )
       symbol=$cross
@@ -195,12 +234,13 @@ fi
     if [[ -z $(echo $StudyDescription | tr -s '[:blank:]') ]]; then
       StudyDescription=$(echo ${bold}${red}NOT IN SYNAPSERESEARCH${normal} )
     fi
-    SeriesDescription=$(echo $status | awk -v b=85 -v e=89 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | sed -e 's/\x1b\[[0-9;]*m//g');
-    SeriesDescription=$(echo $srs_desc | sed 's/[^a-z A-Z 0-9]//g' | sed 's/["0xB"]//g' | sed 's/SeriesDescription//g')
-    if [[ -z "$SeriesDescription" ]]; then
-      SeriesDescription=$(echo ${bold}${red}NOT IN SYNAPSERESEARCH${normal} )
-    fi
-    echo -e "[${symbol}] ${G}PatientID:${bold}${KEYWORD}${R}${normal} ${G}AccessionNumber:${bold}${AccessionNumber}${R} ${G}StudyDate:${StudyDate}${R} ${G}StudyDescription:${StudyDescription}${R} ${G}SeriesDescription:${bold}${SeriesDescription}${R} ${G}Remarks:${bold}${remarks}${R} ${G}BodyPartExamined:${bold}[${fmt_txt}]${R} "
+#    SeriesDescription=$(echo $status | awk -v b=85 -v e=89 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | sed -e 's/\x1b\[[0-9;]*m//g');
+#    SeriesDescription=$(echo $srs_desc | sed 's/[^a-z A-Z 0-9]//g' | sed 's/["0xB"]//g' | sed 's/SeriesDescription//g')
+#    if [[ -z "$SeriesDescription" ]]; then
+#      SeriesDescription=$(echo ${bold}${red}NOT IN SYNAPSERESEARCH${normal} )
+#    fi
+    echo -e "[${symbol}] ${G}PatientID:${bold}${KEYWORD}${R}${normal} ${G}AccessionNumber:${bold}${AccessionNumber}${R} ${G}StudyDate:${StudyDate}${R} ${G}StudyDescription:${StudyDescription}${R} ${G}SeriesDescription:${bold}${SeriesDescription}${R} ${G}Remarks:${bold}${remarks}${R} ${G}BodyPartExamined:${bold}[${BodyPartExamined}]${R} "
+    echo "${KEYWORD},${AccessionNumber},${StudyDate},$StudyDescription,${SeriesDescription},${remarks},${BodyPartExamined}" | sed -e 's/\x1b\[[0-9;]*m//g' >> $FILE_NAME
 
     ((current++))
 #done
