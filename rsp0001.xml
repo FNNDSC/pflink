@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<data-set xfer="1.2.840.10008.1.2" name="Little Endian Implicit">
+<element tag="0008,0052" vr="CS" vm="1" len="6" name="QueryRetrieveLevel">IMAGE</element>
+<element tag="0008,0054" vr="AE" vm="1" len="8" name="RetrieveAETitle">PACSDCM</element>
+<element tag="0020,000d" vr="UI" vm="1" len="58" name="StudyInstanceUID">1.2.392.200036.9125.2.15612323919330152.6566250326.7172155</element>
+<element tag="0020,000e" vr="UI" vm="1" len="58" name="SeriesInstanceUID">1.2.392.200036.9125.3.15612323919330152.6566250326.7172157</element>
+</data-set>

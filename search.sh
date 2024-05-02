@@ -109,6 +109,7 @@ for item in "${list[@]}"; do
     #hash_key=$(echo "$item" | awk '!/_id/ {print}');
 done
 l_study_id=()
+l_series_id=()
 count=$(echo "${#hash_key[@]}")
 if [ $count == 0 ] ; then
   echo "No search results for $KEYWORD"
@@ -133,11 +134,14 @@ for i in $hash_key; do
       continue
     fi
     study_id=$(echo $workflow_record | jq '.request.PACS_directive.StudyInstanceUID')
+    series_id=$(echo $workflow_record | jq '.request.PACS_directive.SeriesInstanceUID')
     l_study_id+=("$study_id")
+    l_series_id+=("$series_id")
     request_date=$(echo $workflow_record | jq '.creation_time' | awk '{print $1}')
     username=$(echo $workflow_record | jq '.request.cube_user_info.username')
 done
 uniques=($(for v in "${l_study_id[@]}"; do echo "$v";done| sort| uniq| xargs))
+uniques_1=($(for v in "${l_series_id[@]}"; do echo "$v";done| sort| uniq| xargs))
 current=1
 search_count=$(echo "${#uniques[@]}")
 remarks=""
@@ -151,17 +155,32 @@ fi
     # =========================================================
     # Search PACS using px-find
     # =========================================================
+    response=$(findscu -S -k QueryRetrieveLevel=IMAGE -k StudyInstanceUID=${uniques[0]} \
+       -k SeriesInstanceUID=${uniques_1[0]} -k "BodyPartExamined" -k "SeriesNumber" \
+       -aec PACSDCM -aet CHRISV3 134.174.12.21 104 2>&1 | strings)
+    fmt_txt=$(echo $response | awk -v b=39 -v e=39 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | tr -d '[]')
+    srs_no=$(echo $response | awk -v b=64 -v e=65 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | tr -d '[]IS#[:blank:]' | tr -s '[:blank:]')
+    if [[ -z $(echo $srs_no | tr -s '[:blank:]') ]]; then
+      srs_no=00
+    fi
+    resp_pacs=$(findscu -S -k QueryRetrieveLevel=SERIES -k StudyInstanceUID=${uniques[0]} \
+        -k "SeriesDescription" -k SeriesNumber=$srs_no \
+       -aec SYNAPSERESEARCH -aet SYNAPSERESEARCH 10.20.2.28 104 2>&1 | strings)
+    srs_desc=$(echo $resp_pacs | awk -v b=38 -v e=40 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | tr -d '[]')
+    echo $srs_desc
+
+
     status=$(px-find \
                                 --aec 'SYNAPSERESEARCH' \
                                 --aet 'SYNAPSERESEARCH' \
                                 --serverIP '10.20.2.28' \
                                 --serverPort '104' \
-                                --PatientID $KEYWORD \
                                 --AccessionNumber $ANO \
                                 --withFeedBack)
                                 #--StudyInstanceUID $study \
 
     #echo "Requested to synapse: $study, $KEYWORD, $ANO"
+    #echo $status
     symbol=$(echo ${G}${bold}${tick}${R})
     StudyDate=$(echo $status | awk '{print $20}' );
     if [[ -z "$StudyDate" ]]; then
@@ -177,11 +196,11 @@ fi
       StudyDescription=$(echo ${bold}${red}NOT IN SYNAPSERESEARCH${normal} )
     fi
     SeriesDescription=$(echo $status | awk -v b=85 -v e=89 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | sed -e 's/\x1b\[[0-9;]*m//g');
-    SeriesDescription=$(echo $SeriesDescription | sed 's/[^a-z A-Z 0-9]//g' | sed 's/["0xB"]//g' | sed 's/SeriesDescription//g')
+    SeriesDescription=$(echo $srs_desc | sed 's/[^a-z A-Z 0-9]//g' | sed 's/["0xB"]//g' | sed 's/SeriesDescription//g')
     if [[ -z "$SeriesDescription" ]]; then
       SeriesDescription=$(echo ${bold}${red}NOT IN SYNAPSERESEARCH${normal} )
     fi
-    echo -e "[${symbol}] ${G}PatientID:${bold}${KEYWORD}${R}${normal} ${G}AccessionNumber:${bold}${AccessionNumber}${R} ${G}StudyDate:${StudyDate}${R} ${G}StudyDescription:${StudyDescription}${R} ${G}SeriesDescription:${bold}${SeriesDescription}${R} ${G}Remarks:${bold}${remarks}${R}"
+    echo -e "[${symbol}] ${G}PatientID:${bold}${KEYWORD}${R}${normal} ${G}AccessionNumber:${bold}${AccessionNumber}${R} ${G}StudyDate:${StudyDate}${R} ${G}StudyDescription:${StudyDescription}${R} ${G}SeriesDescription:${bold}${SeriesDescription}${R} ${G}Remarks:${bold}${remarks}${R} ${G}BodyPartExamined:${bold}[${fmt_txt}]${R} "
 
     ((current++))
 #done
