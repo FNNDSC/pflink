@@ -18,7 +18,7 @@ while getopts "S:E:K:F:h" opt; do
     esac
 done
 
-echo "Status,PatientID,AccessionNumber,StudyDate,StudyDescription,SeriesDescription,Remarks,BodyPartExamined" > $FILE_NAME
+echo "Status,PatientID,AccessionNumber,StudyDate,StudyDescription,SeriesDescription,Remarks,BodyPartExamined,FieldOfViewDimensions" > $FILE_NAME
 while ! [[ "$START_DATE" > "$END_DATE" ]]; do
     curr_date=$(date -d "$START_DATE" +%Y%m%d)
     ./helperSearch.sh -S $curr_date -K $KEYWORD -F $FILE_NAME &
