@@ -28,6 +28,6 @@ while ! [[ "$START_DATE" > "$END_DATE" ]]; do
     START_DATE=$(date -d "$curr_date + 1 day" +%Y%m%d)
     END_DATE=$(date -d "$END_DATE" +%Y%m%d)
 done
+wait
 date=$(date)
 echo "[${date}] Search query executed successfully."
-wait

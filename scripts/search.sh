@@ -112,6 +112,9 @@ for item in "${list[@]}"; do
 done
 l_study_id=()
 l_series_id=()
+l_srs_no=()
+l_bd_part=()
+l_fov=()
 srs_no=00
 BodyPartExamined="NOT FOUND"
 count=$(echo "${#hash_key[@]}")
@@ -153,6 +156,11 @@ for i in $hash_key; do
     if [[ ! "$AccessionNumber" == "$ANO" ]] ; then
       continue
     fi
+
+    if [[ " ${l_series_id[*]} " = *"$series_id"*  ]] ; then
+      continue
+    fi
+
 #    text=($pacs_response)
 #    acc_no="${text[20]}"
 #    bod_p="${text[46]}"
@@ -164,23 +172,26 @@ for i in $hash_key; do
 
     l_study_id+=("$study_id")
     l_series_id+=("$series_id")
+    l_srs_no+=("$srs_no")
+    l_fov+=("$fov")
+    l_bd_part+=("$BodyPartExamined")
     request_date=$(echo $workflow_record | jq '.creation_time' | awk '{print $1}')
     username=$(echo $workflow_record | jq '.request.cube_user_info.username')
 
     if  [[ -z "$srs_no" ]] ; then
       srs_no=00
-      continue
-    else
-      break
+#      continue
+#    else
+#      break
     fi
 
 
-done
+#done
 
 uniques=($(for v in "${l_study_id[@]}"; do echo "$v";done| sort| uniq| xargs))
 uniques_1=($(for v in "${l_series_id[@]}"; do echo "$v";done| sort| uniq| xargs))
 current=1
-search_count=$(echo "${#uniques[@]}")
+search_count=$(echo "${#uniques_1[@]}")
 remarks=""
 if (( "$search_count" == 0 )) ; then
   remarks=$(echo ${red}No LLD records found.)
@@ -256,6 +267,53 @@ flag=VALID
     echo "${flag},${KEYWORD},${AccessionNumber},${StudyDate},$StudyDescription,${SeriesDescription},${remarks},${BodyPartExamined},${fov}" | sed -e 's/\x1b\[[0-9;]*m//g' >> $FILE_NAME
 
     ((current++))
-#done
+done
 # =========================================================
+uniques_1=($(for v in "${l_series_id[@]}"; do echo "$v";done| sort| uniq| xargs))
+current=1
+search_count=$(echo "${#uniques_1[@]}")
+remarks="No LLD records found."
+if (( "$search_count" == 0 )) ; then
+  status=$(px-find \
+                                --aec 'SYNAPSERESEARCH' \
+                                --aet 'SYNAPSERESEARCH' \
+                                --serverIP '10.20.2.28' \
+                                --serverPort '104' \
+                                --AccessionNumber $ANO \
+                                --withFeedBack)
 
+    #echo "Requested to synapse: $study, $KEYWORD, $ANO"
+    #echo $status
+    StudyDate=$(echo $status | awk '{print $20}' );
+    #echo "$status"
+    if [[ -z "$StudyDate" ]]; then
+      StudyDate=$(echo ${bold}${red}$DATE${normal} )
+      symbol=$cross
+    fi
+    AccessionNumber=$(echo $status | awk '{print $41}' );
+    if [[ -z "$AccessionNumber" ]]; then
+      AccessionNumber=$(echo ${bold}${red}$ANO${normal} )
+    fi
+    StudyDescription=$(echo $status | awk -v b=62 -v e=64 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}');
+    if [[ -z $(echo $StudyDescription | tr -s '[:blank:]') ]]; then
+      StudyDescription=$(echo ${bold}${red}NOT IN SYNAPSERESEARCH${normal} )
+    fi
+     if [[ ! "$ANO" == "$synapse_acc_no" ]] ; then
+      BodyPartExamined=$(echo ${bold}${red}NOT FOUND${normal} )
+      SeriesDescription=$(echo ${bold}${red}NOT IN SYNAPSERESEARCH${normal} )
+      StudyDate=$(echo ${bold}${red}$DATE${normal} )
+      symbol=$cross
+      AccessionNumber=$(echo ${bold}${red}$ANO${normal} )
+      StudyDate=$(echo ${bold}${red}$DATE${normal} )
+      flag=INVALID
+      StudyDescription=$(echo ${bold}${red}NOT IN SYNAPSERESEARCH${normal} )
+      fov="NOT FOUND"
+    fi
+#    SeriesDescription=$(echo $status | awk -v b=85 -v e=89 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | sed -e 's/\x1b\[[0-9;]*m//g');
+#    SeriesDescription=$(echo $srs_desc | sed 's/[^a-z A-Z 0-9]//g' | sed 's/["0xB"]//g' | sed 's/SeriesDescription//g')
+#    if [[ -z "$SeriesDescription" ]]; then
+#      SeriesDescription=$(echo ${bold}${red}NOT IN SYNAPSERESEARCH${normal} )
+#    fi
+    echo -e "[${symbol}] ${G}PatientID:${bold}${KEYWORD}${R}${normal} ${G}AccessionNumber:${bold}${AccessionNumber}${R} ${G}StudyDate:${StudyDate}${R} ${G}StudyDescription:${StudyDescription}${R} ${G}SeriesDescription:${bold}${SeriesDescription}${R} ${G}Remarks:${bold}${remarks}${R} ${G}BodyPartExamined:${bold}[${BodyPartExamined}]${R} ${G}FOV:${bold}[${fov}]${R} "
+    echo "${flag},${KEYWORD},${AccessionNumber},${StudyDate},$StudyDescription,${SeriesDescription},${remarks},${BodyPartExamined},${fov}" | sed -e 's/\x1b\[[0-9;]*m//g' >> $FILE_NAME
+fi
