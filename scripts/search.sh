@@ -176,6 +176,7 @@ for i in $hash_key; do
 
 
 done
+
 uniques=($(for v in "${l_study_id[@]}"; do echo "$v";done| sort| uniq| xargs))
 uniques_1=($(for v in "${l_series_id[@]}"; do echo "$v";done| sort| uniq| xargs))
 current=1
