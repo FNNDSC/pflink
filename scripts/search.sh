@@ -147,12 +147,14 @@ for i in $hash_key; do
     # Query PACSDCM for accession_number, series_no, body_part_examined
     # =================================================================
     pacs_response=$(findscu -S -xi -k QueryRetrieveLevel=IMAGE -k StudyInstanceUID="$study_id" -k "FieldOfViewDimensions" \
-       -k SeriesInstanceUID="$series_id" -k "BodyPartExamined" -k "SeriesNumber" -k "AccessionNumber" \
+       -k SeriesInstanceUID="$series_id" -k "BodyPartExamined" -k "SeriesNumber" -k "AccessionNumber" -k "StationName"\
        -aec PACSDCM -aet CHRISV3 134.174.12.21 104 2>&1 | strings)
     AccessionNumber=$(echo $pacs_response | awk -v b=21 -v e=21 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | tr -d '[]')
-    BodyPartExamined=$(echo $pacs_response | awk -v b=47 -v e=47 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | tr -d '[]')
-    srs_no=$(echo $pacs_response | awk -v b=80 -v e=83 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | cut -d'[' -f 2 | cut -d']' -f 1 | tr -d '[:blank:]')
-    fov=$(echo $pacs_response | awk -v b=56 -v e=58 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | cut -d'[' -f 2 | cut -d']' -f 1)
+    StationName=$(echo $pacs_response | awk -v b=47 -v e=47 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | tr -d '[]')
+    BodyPartExamined=$(echo $pacs_response | awk -v b=55 -v e=56 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | cut -d'[' -f 2 | cut -d']' -f 1)
+    fov=$(echo $pacs_response | awk -v b=64 -v e=66 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | cut -d'[' -f 2 | cut -d']' -f 1)
+    srs_no=$(echo $pacs_response | awk -v b=88 -v e=92 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | cut -d'[' -f 2 | cut -d']' -f 1 | tr -d '[:blank:]')
+
     if [[ ! "$AccessionNumber" == "$ANO" ]] ; then
       continue
     fi
@@ -161,14 +163,13 @@ for i in $hash_key; do
       continue
     fi
 
+#    echo $pacs_response
+
 #    text=($pacs_response)
 #    acc_no="${text[20]}"
 #    bod_p="${text[46]}"
 #    sr_n="${text[81]}${text[82]}${text[83]}"
 #    fov="${text[55]}"
-
-
-    #echo $pacs_response
 
     l_study_id+=("$study_id")
     l_series_id+=("$series_id")
@@ -263,7 +264,7 @@ flag=VALID
 #    if [[ -z "$SeriesDescription" ]]; then
 #      SeriesDescription=$(echo ${bold}${red}NOT IN SYNAPSERESEARCH${normal} )
 #    fi
-    echo -e "[${symbol}] ${G}PatientID:${bold}${KEYWORD}${R}${normal} ${G}AccessionNumber:${bold}${AccessionNumber}${R} ${G}StudyDate:${StudyDate}${R} ${G}StudyDescription:${StudyDescription}${R} ${G}SeriesDescription:${bold}${SeriesDescription}${R} ${G}Remarks:${bold}${remarks}${R} ${G}BodyPartExamined:${bold}[${BodyPartExamined}]${R} ${G}FOV:${bold}[${fov}]${R} "
+    echo -e "[${symbol}] ${G}PatientID:${bold}${KEYWORD}${R}${normal} ${G}AccessionNumber:${bold}${AccessionNumber}${R} ${G}StudyDate:${StudyDate}${R} ${G}StudyDescription:${StudyDescription}${R} ${G}SeriesDescription:${bold}${SeriesDescription}${R} ${G}Remarks:${bold}${remarks}${R} ${G}BodyPartExamined:${bold}[${BodyPartExamined}]${R} ${G}FOV:${bold}[${fov}]${R} ${G}StationName:${bold}[${StationName}]${R}"
     echo "${flag},${KEYWORD},${AccessionNumber},${StudyDate},$StudyDescription,${SeriesDescription},${remarks},${BodyPartExamined},${fov}" | sed -e 's/\x1b\[[0-9;]*m//g' >> $FILE_NAME
 
     ((current++))
@@ -314,6 +315,6 @@ if (( "$search_count" == 0 )) ; then
 #    if [[ -z "$SeriesDescription" ]]; then
 #      SeriesDescription=$(echo ${bold}${red}NOT IN SYNAPSERESEARCH${normal} )
 #    fi
-    echo -e "[${symbol}] ${G}PatientID:${bold}${KEYWORD}${R}${normal} ${G}AccessionNumber:${bold}${AccessionNumber}${R} ${G}StudyDate:${StudyDate}${R} ${G}StudyDescription:${StudyDescription}${R} ${G}SeriesDescription:${bold}${SeriesDescription}${R} ${G}Remarks:${bold}${remarks}${R} ${G}BodyPartExamined:${bold}[${BodyPartExamined}]${R} ${G}FOV:${bold}[${fov}]${R} "
+    echo -e "[${symbol}] ${G}PatientID:${bold}${KEYWORD}${R}${normal} ${G}AccessionNumber:${bold}${AccessionNumber}${R} ${G}StudyDate:${StudyDate}${R} ${G}StudyDescription:${StudyDescription}${R} ${G}SeriesDescription:${bold}${SeriesDescription}${R} ${G}Remarks:${bold}${remarks}${R} ${G}BodyPartExamined:${bold}[${BodyPartExamined}]${R} ${G}FOV:${bold}[${fov}]${R} ${G}StationName:${bold}[${StationName}]${R}"
     echo "${flag},${KEYWORD},${AccessionNumber},${StudyDate},$StudyDescription,${SeriesDescription},${remarks},${BodyPartExamined},${fov}" | sed -e 's/\x1b\[[0-9;]*m//g' >> $FILE_NAME
 fi
