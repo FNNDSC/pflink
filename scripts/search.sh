@@ -258,6 +258,7 @@ flag=VALID
       flag=INVALID
       StudyDescription=$(echo ${bold}${red}NOT IN SYNAPSERESEARCH${normal} )
       fov="NOT FOUND"
+      StationName="NOT FOUND"
     fi
 #    SeriesDescription=$(echo $status | awk -v b=85 -v e=89 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | sed -e 's/\x1b\[[0-9;]*m//g');
 #    SeriesDescription=$(echo $srs_desc | sed 's/[^a-z A-Z 0-9]//g' | sed 's/["0xB"]//g' | sed 's/SeriesDescription//g')
@@ -309,6 +310,7 @@ if (( "$search_count" == 0 )) ; then
       flag=INVALID
       StudyDescription=$(echo ${bold}${red}NOT IN SYNAPSERESEARCH${normal} )
       fov="NOT FOUND"
+      StationName="NOT FOUND"
     fi
 #    SeriesDescription=$(echo $status | awk -v b=85 -v e=89 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | sed -e 's/\x1b\[[0-9;]*m//g');
 #    SeriesDescription=$(echo $srs_desc | sed 's/[^a-z A-Z 0-9]//g' | sed 's/["0xB"]//g' | sed 's/SeriesDescription//g')

@@ -12,5 +12,6 @@ htmlcov
 .vscode/
 database
 venv
+*.csv
 
 
