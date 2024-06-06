@@ -113,6 +113,14 @@ for i in $hash_key; do
     echo $workflow_record | jq
 
     workflow_request=$(echo $workflow_record | jq '.request')
+    
+    workflow_request=$(jq '.pfdcm_info.cube_service = "chris2222"' <<<"$workflow_request")
+    workflow_request=$(jq '.pfdcm_info.swift_service = "chris2222"' <<<"$workflow_request")
+    workflow_request=$(jq '.workflow_info.plugin_params = "--pattern **/*dcm --CUBEurl http://rc-live.tch.harvard.edu:32222/api/v1/ --CUBEuser radstar --CUBEpassword radstar1234 --orthancURL http://galena.tch.harvard.edu:30030 --orthancuser admin --orthancpassword mrK40zPQpYWE --pftelDB http://galena.tch.harvard.edu:30035/api/v1/lld-chris2222/%timestamp/ --orthancremote SYNAPSERESEARCH"' <<<"$workflow_request")
+    
+    
+    
+    #echo $workflow_request | jq
 
     # =========================================================
     # Confirmation prompt to delete a record

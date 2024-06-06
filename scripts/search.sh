@@ -153,7 +153,7 @@ for i in $hash_key; do
     StationName=$(echo $pacs_response | awk -v b=47 -v e=47 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | tr -d '[]')
     BodyPartExamined=$(echo $pacs_response | awk -v b=55 -v e=56 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | cut -d'[' -f 2 | cut -d']' -f 1)
     fov=$(echo $pacs_response | awk -v b=64 -v e=66 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | cut -d'[' -f 2 | cut -d']' -f 1)
-    srs_no=$(echo $pacs_response | awk -v b=88 -v e=92 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | cut -d'[' -f 2 | cut -d']' -f 1 | tr -d '[:blank:]')
+    srs_no=$(echo $pacs_response | awk -v b=88 -v e=96 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | cut -d'[' -f 2 | cut -d']' -f 1 | tr -d '[:blank:]')
 
     if [[ ! "$AccessionNumber" == "$ANO" ]] ; then
       continue
@@ -163,7 +163,6 @@ for i in $hash_key; do
       continue
     fi
 
-#    echo $pacs_response
 
 #    text=($pacs_response)
 #    acc_no="${text[20]}"
@@ -200,28 +199,18 @@ if (( "$search_count" == 0 )) ; then
 else
   remarks="$search_count LLD records found."
 fi
-# for study in "${uniques[@]}"; do
-    # =========================================================
-    # Search PACS using px-find
-    # =========================================================
-#    response=$(findscu -S -k QueryRetrieveLevel=IMAGE -k StudyInstanceUID=${uniques[0]} \
-#       -k SeriesInstanceUID=${uniques_1[0]} -k "BodyPartExamined" -k "SeriesNumber" \
-#       -aec PACSDCM -aet CHRISV3 134.174.12.21 104 2>&1 | strings)
-#    fmt_txt=$(echo $response | awk -v b=39 -v e=39 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | tr -d '[]')
-#    srs_no=$(echo $response | awk -v b=64 -v e=65 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | tr -d '[]IS#[:blank:]' | tr -s '[:blank:]')
-#    if [[ -z $(echo $srs_no | tr -s '[:blank:]') ]]; then
-#      srs_no=00
-#    fi
+
 symbol=$(echo ${G}${bold}${tick}${R})
 flag=VALID
     resp_pacs=$(findscu -S -k QueryRetrieveLevel=SERIES -k "AccessionNumber"\
         -k "SeriesDescription" -k "StudyInstanceUID=$study_id" -k "SeriesNumber=$srs_no" \
        -aec SYNAPSERESEARCH -aet SYNAPSERESEARCH 10.20.2.28 104 2>&1 | strings)
     synapse_acc_no=$(echo $resp_pacs | awk -v b=21 -v e=21 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | tr -d '[]')
-    SeriesDescription=$(echo $resp_pacs | awk -v b=46 -v e=49 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | tr -d '[]'| sed 's/[#]//g' )
+    SeriesDescription=$(echo $resp_pacs | awk -v b=46 -v e=49 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | cut -d'[' -f 2 | cut -d']' -f 1 | sed 's/[#]//g' )
+
+    #echo $SeriesDescription
 
 
-    #echo $resp_pacs
 
 
     status=$(px-find \
