@@ -164,12 +164,6 @@ for i in $hash_key; do
     fi
 
 
-#    text=($pacs_response)
-#    acc_no="${text[20]}"
-#    bod_p="${text[46]}"
-#    sr_n="${text[81]}${text[82]}${text[83]}"
-#    fov="${text[55]}"
-
     l_study_id+=("$study_id")
     l_series_id+=("$series_id")
     l_srs_no+=("$srs_no")
@@ -249,11 +243,7 @@ flag=VALID
       fov="NOT FOUND"
       StationName="NOT FOUND"
     fi
-#    SeriesDescription=$(echo $status | awk -v b=85 -v e=89 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | sed -e 's/\x1b\[[0-9;]*m//g');
-#    SeriesDescription=$(echo $srs_desc | sed 's/[^a-z A-Z 0-9]//g' | sed 's/["0xB"]//g' | sed 's/SeriesDescription//g')
-#    if [[ -z "$SeriesDescription" ]]; then
-#      SeriesDescription=$(echo ${bold}${red}NOT IN SYNAPSERESEARCH${normal} )
-#    fi
+
     echo -e "[${symbol}] ${G}PatientID:${bold}${KEYWORD}${R}${normal} ${G}AccessionNumber:${bold}${AccessionNumber}${R} ${G}StudyDate:${StudyDate}${R} ${G}StudyDescription:${StudyDescription}${R} ${G}SeriesDescription:${bold}${SeriesDescription}${R} ${G}Remarks:${bold}${remarks}${R} ${G}BodyPartExamined:${bold}[${BodyPartExamined}]${R} ${G}FOV:${bold}[${fov}]${R} ${G}StationName:${bold}[${StationName}]${R}"
     echo "${flag},${KEYWORD},${AccessionNumber},${StudyDate},$StudyDescription,${SeriesDescription},${remarks},${BodyPartExamined},${fov}" | sed -e 's/\x1b\[[0-9;]*m//g' >> $FILE_NAME
 
@@ -301,11 +291,7 @@ if (( "$search_count" == 0 )) ; then
       fov="NOT FOUND"
       StationName="NOT FOUND"
     fi
-#    SeriesDescription=$(echo $status | awk -v b=85 -v e=89 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | sed -e 's/\x1b\[[0-9;]*m//g');
-#    SeriesDescription=$(echo $srs_desc | sed 's/[^a-z A-Z 0-9]//g' | sed 's/["0xB"]//g' | sed 's/SeriesDescription//g')
-#    if [[ -z "$SeriesDescription" ]]; then
-#      SeriesDescription=$(echo ${bold}${red}NOT IN SYNAPSERESEARCH${normal} )
-#    fi
+
     echo -e "[${symbol}] ${G}PatientID:${bold}${KEYWORD}${R}${normal} ${G}AccessionNumber:${bold}${AccessionNumber}${R} ${G}StudyDate:${StudyDate}${R} ${G}StudyDescription:${StudyDescription}${R} ${G}SeriesDescription:${bold}${SeriesDescription}${R} ${G}Remarks:${bold}${remarks}${R} ${G}BodyPartExamined:${bold}[${BodyPartExamined}]${R} ${G}FOV:${bold}[${fov}]${R} ${G}StationName:${bold}[${StationName}]${R}"
     echo "${flag},${KEYWORD},${AccessionNumber},${StudyDate},$StudyDescription,${SeriesDescription},${remarks},${BodyPartExamined},${fov}" | sed -e 's/\x1b\[[0-9;]*m//g' >> $FILE_NAME
 fi

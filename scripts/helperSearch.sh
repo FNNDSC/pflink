@@ -23,9 +23,10 @@ response=$(px-find --aet CHRISV3 \
               --withFeedBack \
               --StudyDate $STUDY_DATE \
               --Modality CT \
-              --StudyOnly | grep -A 3 -B 9 $KEYWORD & wait)
+              --StudyOnly | grep -A 3 -B 9 "$KEYWORD" & wait)
 
 list=$response
+
 current=1
 for item in "${list[@]}"; do
     list_values=$(echo "$item" | awk '{print $5}');

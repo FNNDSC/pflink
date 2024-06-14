@@ -24,7 +24,7 @@ echo "Status,PatientID,AccessionNumber,StudyDate,StudyDescription,SeriesDescript
 while ! [[ "$START_DATE" > "$END_DATE" ]]; do
     curr_date=$(date -d "$START_DATE" +%Y%m%d)
     ((i=i%NUM_PROC)); ((i++==0)) && wait
-    ./helperSearch.sh -S $curr_date -K $KEYWORD -F $FILE_NAME &
+    ./helperSearch.sh -S $curr_date -K "$KEYWORD" -F $FILE_NAME &
     START_DATE=$(date -d "$curr_date + 1 day" +%Y%m%d)
     END_DATE=$(date -d "$END_DATE" +%Y%m%d)
 done
