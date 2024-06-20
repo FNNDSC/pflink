@@ -255,11 +255,41 @@ current=1
 search_count=$(echo "${#uniques_1[@]}")
 remarks="No LLD records found."
 if (( "$search_count" == 0 )) ; then
-  status=$(findscu -S -k QueryRetrieveLevel=STUDY -k AccessionNumber="$ANO" -k Modality -k StudyDescription="$KEYWORD"\
-       -aec PACSDCM -aet CHRISV3 134.174.12.21 104 -v) # 2>&1 | strings)
+  study_id="1.2.392.200036.9125.2.104520217454204.6570639712.832824"
+  study_resp=$(findscu -S -k QueryRetrieveLevel=STUDY -k AccessionNumber="$ANO"\
+       -k StudyInstanceUID -aec PACSDCM -aet CHRISV3 134.174.12.21 104 2>&1 | strings)
 
-    #echo "Requested to synapse: $study, $KEYWORD, $ANO"
-    echo $status
+  study_id=$(echo $study_resp | awk -v b=42 -v e=50 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | cut -d'[' -f 2 | cut -d']' -f 1)
+  #echo $study_id
+  status=$(findscu -S -k QueryRetrieveLevel=SERIES -k AccessionNumber="$ANO" -k Modality -k StudyDescription\
+       -k StudyInstanceUID="$study_id" -k SeriesInstanceUID -aec PACSDCM -aet CHRISV3 134.174.12.21 104 2>&1 | strings)
+
+    #echo "$status"
+    str=$(echo $status  | awk '{gsub(/(Pending)/, "@"); print}' )
+    IFS='@' read -ra list <<< "$str"
+
+    for item in "${list[@]}";
+    do
+      #echo $item
+      Modality=$(echo $item | awk -v b=40 -v e=45 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | cut -d'[' -f 2 | cut -d']' -f 1)
+      SeriesInstanceUID=$(echo $item | awk -v b=45 -v e=50 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | cut -d'[' -f 2 | cut -d']' -f 1)
+      StudyInstanceUID=$(echo $item | awk -v b=50 -v e=60 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | cut -d'[' -f 2 | cut -d']' -f 1)
+
+      if [[ "$Modality" == "DX" ]]; then
+          #echo "$Modality - $SeriesInstanceUID - $StudyInstanceUID"
+          curl -X 'POST' \
+          'http://galena.tch.harvard.edu:30034/api/v1/analyze/?test=false' \
+          -H 'accept: application/json' \
+          -H 'Content-Type: application/json' \
+          -d '{
+          "imageMeta": {
+            "StudyInstanceUID": "'"$SeriesInstanceUID"'",
+            "SeriesInstanceUID": "'"$StudyInstanceUID"'"
+          },
+          "analyzeFunction": "dylld"
+        }'
+      fi
+    done
     StudyDate=$(echo $status | awk '{print $20}' );
     #echo "$status"
     if [[ -z "$StudyDate" ]]; then

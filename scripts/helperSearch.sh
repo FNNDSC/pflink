@@ -48,7 +48,7 @@ for i in "${array[@]}"; do
   if [ "$k" == "" ]; then
     continue
   fi
-  ./run_analysis.sh -L http://galena.tch.harvard.edu:30033/api/v1 -K $k -D $STUDY_DATE -A $ANO -F $FILE_NAME  &
+  ./search.sh -L http://galena.tch.harvard.edu:30033/api/v1 -K $k -D $STUDY_DATE -A $ANO -F $FILE_NAME  &
 done
 wait
 
