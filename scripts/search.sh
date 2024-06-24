@@ -150,7 +150,7 @@ for i in $hash_key; do
        -k SeriesInstanceUID="$series_id" -k "BodyPartExamined" -k "SeriesNumber" -k "AccessionNumber" -k "StationName"\
        -aec PACSDCM -aet CHRISV3 134.174.12.21 104 2>&1 | strings)
     AccessionNumber=$(echo $pacs_response | awk -v b=21 -v e=21 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | tr -d '[]')
-    StationName=$(echo $pacs_response | awk -v b=47 -v e=47 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | tr -d '[]')
+    StationName=$(echo $pacs_response | awk -v b=47 -v e=50 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | cut -d'[' -f 2 | cut -d']' -f 1)
     BodyPartExamined=$(echo $pacs_response | awk -v b=55 -v e=56 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | cut -d'[' -f 2 | cut -d']' -f 1)
     fov=$(echo $pacs_response | awk -v b=64 -v e=66 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | cut -d'[' -f 2 | cut -d']' -f 1)
     srs_no=$(echo $pacs_response | awk -v b=88 -v e=96 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | cut -d'[' -f 2 | cut -d']' -f 1 | tr -d '[:blank:]')
