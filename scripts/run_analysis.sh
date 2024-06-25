@@ -2,16 +2,16 @@
 # =========================================================
 SYNOPSIS="
 NAME
-    resetWorkflow.sh
+    run_analysis.sh
 
 SYNOPSIS
-    resetWorkflow.sh [-h]                          \\
+    run_analysis.sh [-h]                           \\
                      [-L <pflinkServiceURL>]       \\
                      [-U <pflinkUsername>]         \\
                      [-P <pflinkPassword>]         \\
                      [-K <searchKeyWord>]          \\
 DESC
-    resetWorkflow.sh is a helper script to authenticate into a
+    run_analysis.sh is a helper script to authenticate into a
     'pflink' instance and re-run an existing workflow request by
     deleting it's existing record.
 
@@ -122,12 +122,13 @@ if [ $count == 0 ] ; then
   echo "No search results for $KEYWORD"
   exit
 fi
+hash_key=""
 for i in $hash_key; do
     current_hash=$i
 
     # =========================================================
     # STEP2: CURL request to get request stored in the db
-    # =========================================================  
+    # =========================================================
     workflow_record=$(curl -s -X 'GET' \
       "$URL/workflow?workflow_key=$i" \
       -H 'accept: application/json' \
@@ -255,7 +256,6 @@ current=1
 search_count=$(echo "${#uniques_1[@]}")
 remarks="No LLD records found."
 if (( "$search_count" == 0 )) ; then
-  study_id="1.2.392.200036.9125.2.104520217454204.6570639712.832824"
   study_resp=$(findscu -S -k QueryRetrieveLevel=STUDY -k AccessionNumber="$ANO"\
        -k StudyInstanceUID -aec PACSDCM -aet CHRISV3 134.174.12.21 104 2>&1 | strings)
 
@@ -277,7 +277,7 @@ if (( "$search_count" == 0 )) ; then
 
       if [[ "$Modality" == "DX" ]]; then
           #echo "$Modality - $SeriesInstanceUID - $StudyInstanceUID"
-          curl -X 'POST' \
+          curl -s -X 'POST' \
           'http://galena.tch.harvard.edu:30034/api/v1/analyze/?test=false' \
           -H 'accept: application/json' \
           -H 'Content-Type: application/json' \
@@ -287,7 +287,7 @@ if (( "$search_count" == 0 )) ; then
             "SeriesInstanceUID": "'"$StudyInstanceUID"'"
           },
           "analyzeFunction": "dylld"
-        }'
+        }' | jq
       fi
     done
     StudyDate=$(echo $status | awk '{print $20}' );

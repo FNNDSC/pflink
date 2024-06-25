@@ -2,10 +2,10 @@
 # =========================================================
 SYNOPSIS="
 NAME
-    resetWorkflow.sh
+    search.sh
 
 SYNOPSIS
-    resetWorkflow.sh [-h]                          \\
+    search.sh        [-h]                          \\
                      [-L <pflinkServiceURL>]       \\
                      [-U <pflinkUsername>]         \\
                      [-P <pflinkPassword>]         \\

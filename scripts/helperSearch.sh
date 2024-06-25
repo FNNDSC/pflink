@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 
-while getopts "S:K:F:h" opt; do
+while getopts "S:K:F:D:h" opt; do
     case $opt in
 
         S) STUDY_DATE=$OPTARG                             ;;
@@ -9,6 +9,8 @@ while getopts "S:K:F:h" opt; do
         K) KEYWORD=$OPTARG                                ;;
 
         F) FILE_NAME=$OPTARG                              ;;
+
+        D) DO_RUN=$OPTARG                                 ;;
 
         *) exit 0                                         ;;
 
@@ -23,7 +25,7 @@ response=$(px-find --aet CHRISV3 \
               --withFeedBack \
               --StudyDate $STUDY_DATE \
               --Modality CT \
-              --StudyOnly | grep -A 3 -B 9 "$KEYWORD" & wait)
+              --StudyOnly | grep -i -A 3 -B 9 "$KEYWORD" & wait)
 
 list=$response
 
@@ -48,7 +50,11 @@ for i in "${array[@]}"; do
   if [ "$k" == "" ]; then
     continue
   fi
-  ./search.sh -L http://galena.tch.harvard.edu:30033/api/v1 -K $k -D $STUDY_DATE -A $ANO -F $FILE_NAME  &
+  if [ "$DO_RUN" == "search" ]; then
+    ./search.sh -L http://galena.tch.harvard.edu:30033/api/v1 -K $k -D $STUDY_DATE -A $ANO -F $FILE_NAME  &
+  else
+    ./run_analysis.sh -L http://galena.tch.harvard.edu:30033/api/v1 -K $k -D $STUDY_DATE -A $ANO -F $FILE_NAME  &
+  fi
 done
 wait
 
