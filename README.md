@@ -89,7 +89,7 @@ The setup script provides the following support:
 
 ### to use:
 ```commandline
-cd pflink
+cd pflink/scripts
 ./setup.sh --help
 ```
 
@@ -105,6 +105,31 @@ contains a script ``resetWorkflow`` to do so. The script does the following task
 
 ### to use:
 ```commandline
-cd pflink
+cd pflink/scripts
 ./resetWorkflow.sh --help
+```
+
+## `dateSearch.sh`
+This is one of the most important script to use. We can use this script for find the total number of studies present
+for a given study name in a give date range, and verify if any series in those studies are processed by `pflink` and 
+pushed to `SYNAPSERESEARCH`.
+
+We can also use this script to analyze all the studies matching a study name in a given date range. The parameters we 
+need to provide to run this script is  a start date, an end date, a keyword for study name and the mode we want to run
+this script on:
+1) search
+2) analyze
+
+### to search:
+```commandline
+cd pflink/scripts
+./dateSearch.sh -S 2024-07-03 -E 2024-07-08 -K "XR HIPS TO ANKLES LEG MEASUREMENTS" -D search
+
+```
+
+### to analyze:
+```commandline
+cd pflink/scripts
+./dateSearch.sh -S 2024-07-03 -E 2024-07-08 -K "XR HIPS TO ANKLES LEG MEASUREMENTS" -D analyze
+
 ```
