@@ -200,7 +200,7 @@ flag=VALID
         -k "SeriesDescription" -k "StudyInstanceUID=$study_id" -k "SeriesNumber=$srs_no" \
        -aec SYNAPSERESEARCH -aet SYNAPSERESEARCH 10.20.2.28 104 2>&1 | strings)
     synapse_acc_no=$(echo $resp_pacs | awk -v b=21 -v e=21 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | tr -d '[]')
-    SeriesDescription=$(echo $resp_pacs | awk -v b=46 -v e=49 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | cut -d'[' -f 2 | cut -d']' -f 1 | sed 's/[#]//g' )
+    SeriesDescription=$(echo $resp_pacs | awk -v b=47 -v e=49 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | cut -d'[' -f 2 | cut -d']' -f 1 | sed 's/[#]//g' )
 
     #echo $SeriesDescription
 
