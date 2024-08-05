@@ -89,7 +89,6 @@ status=$(px-find \
                                 --serverPort 104 \
                                 --AccessionNumber $ANO \
                                 --withFeedBack )
-
 StudyDescription=$(echo $status | awk -v b=62 -v e=68 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | cut -d'|' -f 2 | cut -d'|' -f 1);
 lower=$(echo $status | tr '[:upper:]' '[:lower:]')
 series="(not applicable)"
@@ -106,6 +105,7 @@ fi
 RESP=$(curl -s -X 'GET' \
        -u radstar:radstar1234 \
        "http://rc-live.tch.harvard.edu:32222/api/v1/search/?name=$KEYWORD&min_creation_date=$DATE" | jq)
+error=$(echo $RESP | jq '.collection.items[0].data[12].value' | tr '""' "\n")
 
 total=$(echo $RESP | jq '.collection.total' | tr '""' "\n")
 symbol=$cross
@@ -114,4 +114,4 @@ if [[ $total>0 ]]; then
     symbol=$(echo ${G}${bold}${tick}${R})
     remarks="${total} analysis found."
 fi
-echo -e "[${symbol}] ${G}PatientID:${bold}${KEYWORD}${R}${normal} ${G}AccessionNumber:${bold}${ANO}${R} ${G}StudyDate:${bold}${DATE}${R} ${G}StudyDescription:${StudyDescription}${R} ${G}SeriesDescription:[${bold}${series}]${R} ${G}Remarks:[${bold}${remarks}]${R}"
+echo -e "[${symbol}] ${G}PatientID:${bold}${KEYWORD}${R}${normal} ${G}AccessionNumber:${bold}${ANO}${R} ${G}StudyDate:${bold}${DATE}${R} ${G}StudyDescription:${bold}${StudyDescription}${R} ${G}SeriesDescription:[${bold}${series}]${R} ${G}Remarks:[${bold}${remarks}]${R} ${G}Error:[${bold}${error}]${R}"
