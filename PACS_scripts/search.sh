@@ -88,17 +88,12 @@ status=$(px-find \
                                 --serverIP 134.174.12.21  \
                                 --serverPort 104 \
                                 --AccessionNumber $ANO \
-                                --withFeedBack )
-StudyDescription=$(echo $status | awk -v b=62 -v e=68 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | cut -d'|' -f 2 | cut -d'|' -f 1);
-lower=$(echo $status | tr '[:upper:]' '[:lower:]')
-series="(not applicable)"
-if [[ $lower == *"lower limbs"* ]]; then
-  series="Lower Limbs"
-fi
+                                --json) #| sed -e 's/\x1b\[[0-9;]*m//g' | strings | sed 's/(B //' | sed -E 's/\<(0)\S*//g')
+StudyDescription="Not available"
+StudyDescription=$(echo $status | jq '.data[0].StudyDescription.value')
+series=$(echo $status | jq '.data[0].series')
+SeriesDescription="Not Applicable"
 
-if [[ $lower == *seriesdescription*hip* ]]; then
-  series="Hip to Ankle"
-fi
 # =========================================================
 # AUTHENTICATION
 # =========================================================
@@ -114,4 +109,17 @@ if [[ $total>0 ]]; then
     symbol=$(echo ${G}${bold}${tick}${R})
     remarks="${total} analysis found."
 fi
-echo -e "[${symbol}] ${G}PatientID:${bold}${KEYWORD}${R}${normal} ${G}AccessionNumber:${bold}${ANO}${R} ${G}StudyDate:${bold}${DATE}${R} ${G}StudyDescription:${bold}${StudyDescription}${R} ${G}SeriesDescription:[${bold}${series}]${R} ${G}Remarks:[${bold}${remarks}]${R} ${G}Error:[${bold}${error}]${R}"
+list=$(echo $series | jq -c '.[].SeriesDescription.value' | strings)
+re_list=$(echo "$list" | tr '\n' ':')
+IFS=':'; array=($re_list); unset IFS;
+for i in "${array[@]}"; do
+  lower_i=$(echo $i | tr '[:upper:]' '[:lower:]')
+  if [[ $lower_i == *'"lower'* ]]; then
+     SeriesDescription=$i
+  fi
+  if [[ $lower_i == *'"hip'* ]]; then
+     SeriesDescription=$i
+  fi
+done
+
+echo -e "[${symbol}] ${G}PatientID:${bold}${KEYWORD}${R}${normal} ${G}AccessionNumber:${bold}${ANO}${R} ${G}StudyDate:${bold}${DATE}${R} ${G}StudyDescription:${bold}${StudyDescription}${R} ${G}SeriesDescription:[${bold}${SeriesDescription}]${R} ${G}Remarks:[${bold}${remarks}]${R} ${G}Error:[${bold}${error}]${R}"
