@@ -89,6 +89,10 @@ status=$(px-find \
                                 --serverPort 104 \
                                 --AccessionNumber $ANO \
                                 --json) #| sed -e 's/\x1b\[[0-9;]*m//g' | strings | sed 's/(B //' | sed -E 's/\<(0)\S*//g')
+yyyy=$(date -d $DATE +%Y)
+mm=$(date -d $DATE +%m)
+dd=$(date -d $DATE +%d)
+echo $status > "${yyyy}/${mm}/${dd}/${ANO}/status.json"
 StudyDescription="Not available"
 StudyDescription=$(echo $status | jq '.data[0].StudyDescription.value')
 series=$(echo $status | jq '.data[0].series')

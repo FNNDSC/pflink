@@ -50,6 +50,10 @@ for i in "${array[@]}"; do
   if [ "$k" == "" ]; then
     continue
   fi
+  yyyy=$(date -d $STUDY_DATE +%Y)
+  mm=$(date -d $STUDY_DATE +%m)
+  dd=$(date -d $STUDY_DATE +%d)
+  mkdir -p "${yyyy}/${mm}/${dd}/${ANO}"
   ./search.sh -L http://galena.tch.harvard.edu:30033/api/v1 -K $k -D $STUDY_DATE -A $ANO -F $FILE_NAME  &
 done
 wait
