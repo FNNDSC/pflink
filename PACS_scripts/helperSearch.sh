@@ -10,8 +10,6 @@ while getopts "S:K:F:D:h" opt; do
 
         F) FILE_NAME=$OPTARG                              ;;
 
-        D) DO_RUN=$OPTARG                                 ;;
-
         *) exit 0                                         ;;
 
     esac
