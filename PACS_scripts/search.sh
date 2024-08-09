@@ -92,7 +92,7 @@ status=$(px-find \
 yyyy=$(date -d $DATE +%Y)
 mm=$(date -d $DATE +%m)
 dd=$(date -d $DATE +%d)
-echo $status > "${yyyy}/${mm}/${dd}/${ANO}/status.json"
+echo $status > "${FILE_NAME}/${yyyy}/${mm}/${dd}/${ANO}/status.json"
 StudyDescription="Not available"
 StudyDescription=$(echo $status | jq '.data[0].StudyDescription.value')
 series=$(echo $status | jq '.data[0].series')
@@ -125,5 +125,5 @@ for i in "${array[@]}"; do
      SeriesDescription=$i
   fi
 done
-
+echo blah >> varfile
 echo -e "[${symbol}] ${G}PatientID:${bold}${KEYWORD}${R}${normal} ${G}AccessionNumber:${bold}${ANO}${R} ${G}StudyDate:${bold}${DATE}${R} ${G}StudyDescription:${bold}${StudyDescription}${R} ${G}SeriesDescription:[${bold}${SeriesDescription}]${R} ${G}Remarks:[${bold}${remarks}]${R} ${G}Error:[${bold}${error}]${R}"
