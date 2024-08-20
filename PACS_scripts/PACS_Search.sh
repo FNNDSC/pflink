@@ -40,7 +40,7 @@ EXAMPLES
                        -D /home/sandip/PACS_results
 
 "
-FILE_NAME=""
+FILE_NAME="PACS_results"
 NUM_PROC=8
 DO_RUN="search"
 
