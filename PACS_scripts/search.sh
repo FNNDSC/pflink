@@ -88,7 +88,7 @@ status=$(px-find \
                                 --serverIP 134.174.12.21  \
                                 --serverPort 104 \
                                 --AccessionNumber $ANO \
-                                --json) #| sed -e 's/\x1b\[[0-9;]*m//g' | strings | sed 's/(B //' | sed -E 's/\<(0)\S*//g')
+                                --json)
 yyyy=$(date -d $DATE +%Y)
 mm=$(date -d $DATE +%m)
 dd=$(date -d $DATE +%d)
@@ -96,8 +96,8 @@ echo $status > "${FILE_NAME}/${yyyy}/${mm}/${dd}/${ANO}/status.json"
 StudyDescription="Not available"
 StudyDescription=$(echo $status | jq '.data[0].StudyDescription.value')
 series=$(echo $status | jq '.data[0].series')
+StationName=$(echo $status | jq '.data[0].series[0].StationName.value')
 SeriesDescription="Not Applicable"
-
 # =========================================================
 # AUTHENTICATION
 # =========================================================
@@ -113,17 +113,26 @@ if [[ $total>0 ]]; then
     symbol=$(echo ${G}${bold}${tick}${R})
     remarks="${total} analysis found."
 fi
-list=$(echo $series | jq -c '.[].SeriesDescription.value' | strings)
-re_list=$(echo "$list" | tr '\n' ':')
-IFS=':'; array=($re_list); unset IFS;
-for i in "${array[@]}"; do
-  lower_i=$(echo $i | tr '[:upper:]' '[:lower:]')
-  if [[ $lower_i == *'"lower'* ]]; then
-     SeriesDescription=$i
-  fi
-  if [[ $lower_i == *'"hip'* ]]; then
-     SeriesDescription=$i
+
+# read each item in the JSON array to an item in the Bash array
+readarray -t my_array < <(echo $series | jq --compact-output '.[]')
+
+# iterate through the Bash array
+for item in "${my_array[@]}"; do
+  sid=$(echo $item | jq '.SeriesInstanceUID.value' | tr '""' "\n")
+  stid=$(echo $item | jq '.StudyInstanceUID.value' | tr '""' "\n")
+  SeriesDescription=$(echo $item | jq '.SeriesDescription.value')
+  pacs_response=$(findscu -S -xi -k QueryRetrieveLevel=IMAGE -k "StudyInstanceUID=$stid" -k "FieldOfViewDimensions" \
+       -k "SeriesInstanceUID=$sid" -k "BodyPartExamined" -k "SeriesNumber" -k "AccessionNumber" -k "StationName"\
+       -aec PACSDCM -aet CHRISV3 134.174.12.21 104 2>&1 | strings)
+
+  StationName=$(echo $pacs_response | awk -v b=47 -v e=50 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | cut -d'[' -f 2 | cut -d']' -f 1)
+  #if [[ $StationName == *'EOS'* ]]; then
+  if [[ $SeriesDescription != *'SNAPSHOT'* ]] && [[ $SeriesDescription != *'ANNOTATIONS'* ]] && [[ $SeriesDescription != *'Information'* ]] && [[ $SeriesDescription != *'Report'* ]] && [[ $StationName != *'no value'* ]]; then
+    echo -e "[${symbol}] ${G}PatientID:${bold}${KEYWORD}${R}${normal} ${G}AccessionNumber:${bold}${ANO}${R} ${G}StudyDate:${bold}${DATE}${R} ${G}StudyDescription:${bold}${StudyDescription}${R} ${G}SeriesDescription:[${bold}${SeriesDescription}]${R} ${G}Remarks:[${bold}${remarks}]${R} ${G}Error:[${bold}${error}]${R} ${G}StationName:[${bold}${StationName}]${R}"
+    echo 1 >> varfile
   fi
 done
-echo 1 >> varfile
-echo -e "[${symbol}] ${G}PatientID:${bold}${KEYWORD}${R}${normal} ${G}AccessionNumber:${bold}${ANO}${R} ${G}StudyDate:${bold}${DATE}${R} ${G}StudyDescription:${bold}${StudyDescription}${R} ${G}SeriesDescription:[${bold}${SeriesDescription}]${R} ${G}Remarks:[${bold}${remarks}]${R} ${G}Error:[${bold}${error}]${R}"
+
+
+
