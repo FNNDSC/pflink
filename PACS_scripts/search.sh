@@ -53,11 +53,13 @@ PASSWORD='pflink1234'
 cyan='\033[36m'
 G='\033[32m'
 R='\033[0m'
+C='\033[33m'
 bold=$(tput bold)
 normal='' # $(tput sgr0)
 red='' #\033[31m'
 cross='\u274c'
 tick='\u2714 '
+warning='\u26A0'
 while getopts "L:U:P:K:D:E:K:A:F:h" opt; do
     case $opt in
         h) printf "%s" "$SYNOPSIS"; exit 1                ;;
@@ -127,9 +129,12 @@ for item in "${my_array[@]}"; do
        -aec PACSDCM -aet CHRISV3 134.174.12.21 104 2>&1 | strings)
 
   StationName=$(echo $pacs_response | awk -v b=47 -v e=50 '{for (i=b;i<=e;i++) printf "%s%s", $i, (i<e ? OFS : ORS)}' | cut -d'[' -f 2 | cut -d']' -f 1)
-  #if [[ $StationName == *'EOS'* ]]; then
+  mark=""
+  if [[ $StationName == *'EOS'* ]] && [[ $total == 0 ]]; then
+    mark=$warning
+  fi
   if [[ $SeriesDescription != *'SNAPSHOT'* ]] && [[ $SeriesDescription != *'ANNOTATIONS'* ]] && [[ $SeriesDescription != *'Information'* ]] && [[ $SeriesDescription != *'Report'* ]] && [[ $StationName != *'no value'* ]]; then
-    echo -e "[${symbol}] ${G}PatientID:${bold}${KEYWORD}${R}${normal} ${G}AccessionNumber:${bold}${ANO}${R} ${G}StudyDate:${bold}${DATE}${R} ${G}StudyDescription:${bold}${StudyDescription}${R} ${G}SeriesDescription:[${bold}${SeriesDescription}]${R} ${G}Remarks:[${bold}${remarks}]${R} ${G}Error:[${bold}${error}]${R} ${G}StationName:[${bold}${StationName}]${R}"
+    echo -e "[${symbol}] ${G}PatientID:${bold}${KEYWORD}${R}${normal} ${G}AccessionNumber:${bold}${ANO}${R} ${G}StudyDate:${bold}${DATE}${R} ${G}StudyDescription:${bold}${StudyDescription}${R} ${G}SeriesDescription:[${bold}${SeriesDescription}]${R} ${G}Remarks:[${bold}${remarks}]${R} ${G}Error:[${bold}${error}]${R} ${G}StationName:[${bold}${StationName}]${R}${C}${bold}${mark}${R}"
     echo 1 >> varfile
   fi
 done
