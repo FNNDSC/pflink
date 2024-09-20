@@ -107,13 +107,15 @@ RESP=$(curl -s -X 'GET' \
        -u radstar:radstar1234 \
        "http://rc-live.tch.harvard.edu:32222/api/v1/search/?name=$KEYWORD&min_creation_date=$DATE" | jq)
 error=$(echo $RESP | jq '.collection.items[0].data[12].value' | tr '""' "\n")
+feed_id=$(echo $RESP | jq '.collection.items[0].data[0].value' | tr '""' "\n")
+feed_ui_link="http://chris-next.tch.harvard.edu:2222/feeds/${feed_id}?type=private"
 
 total=$(echo $RESP | jq '.collection.total' | tr '""' "\n")
 symbol=$cross
 remarks="Not available in ChRIS"
 if [[ $total>0 ]]; then
     symbol=$(echo ${G}${bold}${tick}${R})
-    remarks="${total} analysis found."
+    remarks="\e]8;;${feed_ui_link}\e\\${total} analysis found.\e]8;;\e\\"
 fi
 
 # read each item in the JSON array to an item in the Bash array
@@ -134,7 +136,7 @@ for item in "${my_array[@]}"; do
     mark=$warning
   fi
   if [[ $SeriesDescription != *'SNAPSHOT'* ]] && [[ $SeriesDescription != *'ANNOTATIONS'* ]] && [[ $SeriesDescription != *'Information'* ]] && [[ $SeriesDescription != *'Report'* ]] && [[ $StationName != *'no value'* ]]; then
-    echo -e "[${symbol}] ${G}PatientID:${bold}${KEYWORD}${R}${normal} ${G}AccessionNumber:${bold}${ANO}${R} ${G}StudyDate:${bold}${DATE}${R} ${G}StudyDescription:${bold}${StudyDescription}${R} ${G}SeriesDescription:[${bold}${SeriesDescription}]${R} ${G}Remarks:[${bold}${remarks}]${R} ${G}Error:[${bold}${error}]${R} ${G}StationName:[${bold}${StationName}]${R}${C}${bold}${mark}${R}"
+    echo -e "[${symbol}] ${G}PatientID:${bold}${KEYWORD}${R}${normal} ${G}AccessionNumber:${bold}${ANO}${R} ${G}StudyDate:${bold}${DATE}${R} ${G}StudyDescription:${bold}${StudyDescription}${R} ${G}SeriesDescription:[${bold}${SeriesDescription}]${R} ${G}Remarks:[${bold}${remarks}]${R} ${G}Error:[${bold}${error}]${R} ${G}StationName:[${bold}${StationName}]${R}${bold}${C}${mark}${R}"
     echo 1 >> varfile
   fi
 done
