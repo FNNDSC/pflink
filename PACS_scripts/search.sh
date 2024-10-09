@@ -10,6 +10,7 @@ SYNOPSIS
                      [-U <pflinkUsername>]         \\
                      [-P <pflinkPassword>]         \\
                      [-K <searchKeyWord>]          \\
+                     [-N <concurrent_no_of_days>]
 DESC
     run_analysis.sh is a helper script to authenticate into a
     'pflink' instance and re-run an existing workflow request by
@@ -137,9 +138,9 @@ for item in "${my_array[@]}"; do
   fi
   if [[ $SeriesDescription != *'SNAPSHOT'* ]] && [[ $SeriesDescription != *'ANNOTATIONS'* ]] && [[ $SeriesDescription != *'Information'* ]] && [[ $SeriesDescription != *'Report'* ]] && [[ $StationName != *'no value'* ]]; then
     echo -e "[${symbol}] ${G}PatientID:${bold}${KEYWORD}${R}${normal} ${G}AccessionNumber:${bold}${ANO}${R} ${G}StudyDate:${bold}${DATE}${R} ${G}StudyDescription:${bold}${StudyDescription}${R} ${G}SeriesDescription:[${bold}${SeriesDescription}]${R} ${G}Remarks:[${bold}${remarks}]${R} ${G}Error:[${bold}${error}]${R} ${G}StationName:[${bold}${StationName}]${R}${bold}${C}${mark}${R}"
-    echo 1 >> varfile
   fi
 done
+echo 1 >> varfile
 
 
 

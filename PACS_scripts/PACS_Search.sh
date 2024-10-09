@@ -8,7 +8,9 @@ SYNOPSIS
                      [-S <startDate>]                       \\
                      [-E <endDate>]                         \\
                      [-K <searchKeyWordForStudy>]           \\
-                     [-D <savingDir>]
+                     [-D <savingDir>]                       \\
+                     [-N <concurrent_no_of_days>]
+
 DESC
     PACS_Search.sh is a script to query BCH PACS between a
     date range for a particular study and cross check the
@@ -32,19 +34,24 @@ ARGS
     If specified, use this location to store px-find JSON
     files organized date-wise
 
+    [-N <concurrent_no_of_days>]
+    If specified, parallely run `px-find` on those number of days.
+    Default value is 8.
+
 
 EXAMPLES
     $ ./PACS_Search.sh -S 2024-08-01                           \\
                        -E 2024-08-09                           \\
                        -K 'XR HIPS TO ANKLES LEG MEASUREMENTS' \\
-                       -D /home/sandip/PACS_results
+                       -D /home/sandip/PACS_results            \\
+                       -N 4
 
 "
 FILE_NAME="PACS_results"
 NUM_PROC=8
 DO_RUN="search"
 
-while getopts "S:E:K:R:N:D:h" opt; do
+while getopts "S:E:K:N:D:h" opt; do
     case $opt in
         h) printf "%s" "$SYNOPSIS"; exit 1              ;;
 
